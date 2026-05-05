@@ -1,0 +1,21 @@
+{
+  "name": "emily-music",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c cyan,magenta \"npm run dev --workspace @emily/server\" \"npm run dev --workspace @emily/web\"",
+    "dev:server": "npm run dev --workspace @emily/server",
+    "dev:web": "npm run dev --workspace @emily/web",
+    "build": "npm run build --workspace @emily/shared && npm run build --workspace @emily/server && npm run build --workspace @emily/web",
+    "typecheck": "npm run build --workspace @emily/shared && npm run typecheck --workspace @emily/server && npm run typecheck --workspace @emily/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}
