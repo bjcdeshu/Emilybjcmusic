@@ -87,9 +87,15 @@ David认为当前UI/UX丑、没有做好mm参考，明确说锁屏/小米12S验�
 - UI提交 `80484eb` 已在RN构建发布，current=`/opt/emily/releases/80484eb`，仅重启Emily application；adapter/其他业务不动。私有一致性备份 `/var/backups/emily-20260930/pre-80484eb`；前版fcf4df6保留。后端源码/数据schema/音频状态机未改。
 - 本地typecheck/build、前端28项、Chrome联合fixture回归通过（补了历史页mini play/pause）；公开HTTPS确认新hashed JS、真实歌单8→70→收起、选中后开始按钮可用、mini存在、393px无溢出/pageerror、登录200和退出成功。无需本人锁屏或设备检查；视觉是否满意由David实际反馈，不以这些技术通过替代设计认可。
 
+## 第二轮视觉与动效（2026-09-30）
+
+David再次明确第一轮前端仍不够、动效和UI都不好，80484eb不能记为视觉认可。Pi继续前端重做：桌面封面唱片区/节目控制双栏，手机层叠；真实封面为主视觉，CSS黑胶盘只作装饰。唱片展开/旋转仅在实际music playing启用，暂停停止；主持状态有柔和文案面板反馈。Canvas三层连续曲线是设计的phase指示，不是音频分析或语音时间轴；按voice/music状态区别节奏，页面隐藏/不可见/暂停稳定后停止RAF，系统reduce motion静态显示。切页/曲目/主持文字进入、控件按压/选中、封面hover有统一ease，成功消息改toast避免挤动播放器。
+
+新增 `RadioSignal.tsx`、`radio-design.css`；底层audio engine及后端未改。已实际看手机/桌面fixture截图，并在Chrome核对canvas随playing变帧、vinyl music running/pause paused、reduced-motion静态与原play/pause/quiet/seek/next/mini/logout回归通过。设计结果仍需David实际评价，功能检查不能冒充美学认可。
+
 ## 下一步
 
-1. 优先完成这一轮界面改造并发布到已授权Emily专用网站；本人授权已保留，不要求重新扫码。
+1. 发布这一轮实际视觉与动效到已授权Emily专用网站；本人授权已保留，不要求重新扫码。
 2. 后续根据David实际视觉/交互反馈继续迭代，不再以设备锁屏/PWA专项测试拖延UI工作。
 3. 维持范围内构建及浏览器交互回归，避免外观改动破坏已验证音频、QR和设置；不用大量验证日志替代设计成果。
 

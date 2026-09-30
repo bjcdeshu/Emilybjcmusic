@@ -75,9 +75,14 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       return !a.paused && a.currentSrc.includes("/api/audio/") && a.currentTime > 0;
     });
     phases.push("dj");
+    const signalFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
+    await page.waitForTimeout(120);
+    assert.notEqual(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), signalFrame);
+    assert.equal(await page.locator(".transcript-card").getAttribute("data-speaking"), "true");
     await page.getByRole("button", { name: "暂停", exact: true }).click();
     assert.equal(await page.evaluate(() => document.querySelector("audio")!.paused), true);
     assert.equal(app.services.radio.now().status, "paused");
+    assert.equal(await page.locator(".vinyl-disc").evaluate(el => getComputedStyle(el).animationPlayState), "paused");
     const stopped = await page.evaluate(() => document.querySelector("audio")!.currentTime);
     await page.waitForTimeout(250);
     assert(Math.abs(await page.evaluate(() => document.querySelector("audio")!.currentTime) - stopped) < 0.1);
@@ -89,6 +94,13 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       return !a.paused && a.currentSrc.includes("/api/media/track/101") && a.currentTime > 0;
     });
     phases.push("song-after-quiet");
+    assert.equal(await page.locator(".vinyl-disc").evaluate(el => getComputedStyle(el).animationPlayState), "running");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const stillFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
+    await page.waitForTimeout(100);
+    assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), stillFrame);
+    assert.equal(await page.locator(".vinyl-disc").evaluate(el => getComputedStyle(el).animationName), "none");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.getByLabel("歌曲播放进度").fill("1");
     assert(await page.evaluate(() => document.querySelector("audio")!.currentTime) >= 0.8);
     await page.getByRole("button", { name: "安静模式", exact: true }).click();
@@ -142,7 +154,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, animatedSignalVerified: true, vinylFollowsPlayback: true, reducedMotionVerified: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));
