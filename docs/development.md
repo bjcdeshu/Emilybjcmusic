@@ -93,9 +93,11 @@ David再次明确第一轮前端仍不够、动效和UI都不好，80484eb不能
 
 新增 `RadioSignal.tsx`、`radio-design.css`；底层audio engine及后端未改。已实际看手机/桌面fixture截图，并在Chrome核对canvas随playing变帧、vinyl music running/pause paused、reduced-motion静态与原play/pause/quiet/seek/next/mini/logout回归通过。设计结果仍需David实际评价，功能检查不能冒充美学认可。
 
+第二轮UI提交 `6493d9e` 已在RN Node22构建发布，current=`/opt/emily/releases/6493d9e`；仅停/启动Emily application，一致性私有备份pre-6493d9e，保留80484eb作为回滚。公开真实Chrome确认新asset、真实封面/Canvas/唱片/paused停止、本人登录200、8→70歌单/开始按钮/mini/退出、393px无overflow/pageerror；已看真实封面手机/桌面截图。未重新跑耗时真实模型programme或设备验收，backend/授权/私有缓存规则不改。
+
 ## 下一步
 
-1. 发布这一轮实际视觉与动效到已授权Emily专用网站；本人授权已保留，不要求重新扫码。
+1. 第二轮视觉与动效已发布；根据David实际视觉评价继续改善，不将发布等同设计认可。本人授权保留，不要求重新扫码。
 2. 后续根据David实际视觉/交互反馈继续迭代，不再以设备锁屏/PWA专项测试拖延UI工作。
 3. 维持范围内构建及浏览器交互回归，避免外观改动破坏已验证音频、QR和设置；不用大量验证日志替代设计成果。
 
