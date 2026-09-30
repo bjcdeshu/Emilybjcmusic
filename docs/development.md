@@ -1,10 +1,10 @@
 # Emily Development Guide
 
-## 当前阶段：RN部署及本人扫码前验证（2026-09-30）
+## 当前阶段：RN真实授权与连续播放通过，待小米真机验收（2026-09-30）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
-- 最新授权（2026-09-30）：David确认持续在本目录由Pi开发，并明确同意部署到RN，承接已提出的 `emily.unbow.de`、专用服务/私有适配器/TTS、独立HTTPS反代与DNS范围；不改主站、不升级系统Node、不重启其他业务。模型使用OAPI，优先Gemini；具体可用模型及Emily专用key仍需核验，未授权复制其他代理密钥或任意修改网关通道。普通实现与必要验证直接推进，需本人输入集中说明。Codex本次负责Cloudflare MCP配置，Pi负责源码及部署；已完成RN独立Emily服务、DNS及HTTPS部署，真实本人音乐授权和最终手机验收仍未完成。
+- 最新授权（2026-09-30）：David确认持续在本目录由Pi开发，并明确同意部署到RN，承接已提出的 `emily.unbow.de`、专用服务/私有适配器/TTS、独立HTTPS反代与DNS范围；不改主站、不升级系统Node、不重启其他业务。模型使用OAPI，优先Gemini；具体可用模型及Emily专用key仍需核验，未授权复制其他代理密钥或任意修改网关通道。普通实现与必要验证直接推进，需本人输入集中说明。Codex本次负责Cloudflare MCP配置，Pi负责源码及部署；已完成RN独立Emily服务、DNS及HTTPS部署，本人扫码授权、真实曲目与浏览器连续播放已通过有界验证，最终手机验收仍未完成。
 - 当前写入者：Pi，任务 `01a0f204-d57a-75b4-93d4-c35f2fa8aeae`；原交接整理与验证由 Iris / Hermes default 执行，原任务 `emily-v1-english-20260930`。
 - 本机接续目录：`C:/workspace/codex/work/Emily`；分支 `pi/emily-continue-20260930`，基于 Iris 交接提交 `c7af2c2ce8a01e023647e2047befa525aa68c6b4`。
 - 接续前已确认 `C:/workspace/codex/音乐开发` 为干净旧 main，使用独立 worktree 保留原目录和分支；来源分支 `iris/emily-v1-english-20260930`，不覆盖 main。
@@ -14,8 +14,8 @@
 - Iris 历史验证：`npm ci`、类型检查、构建和编译启动检查通过；前端26/26、后端21/23，共47通过、2失败。真实英文Edge合成、解码、缓存复用通过。锁文件修正后的当时审计报告0项漏洞。Pi 本机结果见下节，不能将历史 Linux 结果当作 Windows 实测。
 - Pi 已修复原两项失败：有界、去重的单首主持预准备；pause 不走网络动作互斥，使用暂停版本阻止迟到 play/next 恢复播放。其他准备动作仍互斥。原断言保留并新增 play、清空、声线变化与关闭竞态测试。
 - Iris 的英文主持自由文本修正已保留；`model-hosting.test.ts`三项回归通过。常见无依据事实筛选不等于完整事实认证。
-- 尚未验收：本人网易云登录/会员整曲/CDN、实际模型通道、真实外部音源的浏览器连续播放、小米物理后台与PWA行为。公开HTTPS与受保护登录/QR生成已实际验证（见第四阶段），不能因此宣称会员整曲通过。Chrome使用明确HTTP/MP3 fixture的连续播放整合链路已通过，见第二阶段结果。
-- 交接边界：允许提交和同步Git开发分支；不覆盖 `main`、丢弃本机修改或推送秘密。后续RN独立Emily部署与DNS已获David本轮批准（见最新授权），历史交接本身不授予其他生产操作权限。网站已部署，但仍处于本人扫码前的外部联调阶段，不宣称完整收听验收通过。
+- 尚未验收：小米物理后台/锁屏/PWA安装与人工试听、跨设备长时运行；未确认具体VIP档位或覆盖所有会员/地域曲目。本人授权及2首真实网易歌曲、CDN完整数据、实际Gemini编排、英文主持与浏览器连续切换已验证，见第五阶段；仅对实际测试曲目作结论。
+- 交接边界：允许提交和同步Git开发分支；不覆盖 `main`、丢弃本机修改或推送秘密。后续RN独立Emily部署与DNS已获David本轮批准（见最新授权），历史交接本身不授予其他生产操作权限。网站已部署，实际授权/真实音源浏览器链路已通过，仍不宣称物理手机与长时收听全面验收通过。
 
 Linux原工作区仅供来源定位：`/srv/agent-workspace/worktrees/bjcdeshu/Emilybjcmusic/iris/emily-v1-english-20260930`。此路径不是电脑端接续路径；Git同步不等于已更新电脑工作树。
 
@@ -66,11 +66,21 @@ David直接回复：同意部署到RN，模型使用OAPI、优先Gemini。承接
 - Windows真实Chrome154公开HTTPS、393×851：主人登录200、model configured、TTS available、music disconnected诚实、QR200/安全PNG/轮询waiting、全部图标/SW200、SW ready、退出清Cookie、无pageerror/横向溢出。不是本人扫码或真实歌曲验收。既有api200、mem307、mon200，原容器uptime未重置。
 - 窄范围回滚入口 `/var/backups/emily-20260930/rollback.txt`（初次无旧Emily数据）；停止专用Emily units、撤销新增Emily nginx/DNS即可，保留私有状态。详情见deployment.md。未覆盖main或其他工作树。
 
+## Pi 第五阶段：本人授权、真实音源与超时修复（2026-09-30）
+
+- David直接确认已扫码。公开HTTPS核验music connected=true，读取70个真实歌单；没有输出本人账号、曲目ID/歌单名称或Cookie，未写网易歌单/收藏。SQLite中授权为加密对象，升级停专用服务前一致性备份SQLite+环境key至RN root-only `/var/backups/emily-20260930/pre-fcf4df6`。服务重启后本人连接、歌单读取保持可用。
+- 真实Chrome154/393px原节目：5条模型来源队列、真实英文DJ MP3播放、221.447秒歌曲duration与目录一致，暂停位置稳定、seek→恢复成功；Range206/Content-Range/private-no-store。测试代码首次用Playwright fill直接拖曲尾没有触发第二次React input事件，不记为产品seek故障；原生audio seek加真实ended验证完成自动下一段DJ→第二首，后续键盘UI seek真实移动也通过。
+- 真实新建节目复现502非JSON：Fastify idle connectionTimeout10秒短于Gemini+首段TTS准备；应用服务仍active无restart，公网代理收到断链。改connectionTimeout150秒、保留30秒入站body timeout/16KB bodyLimit；前端programme/player准备预算135秒，普通read45秒；外部provider/model30秒与TTS60秒仍有界。新增后端/frontend回归，本地typecheck/testtypecheck/build、后端28/28+前端28/28、部署7/7、浏览器fixture1/1，共64全绿0跳过，built启动通过。
+- 提交 `fcf4df6` 已构建到RN独立release并原子切current，只停/启动emily，adapter与其他服务未重启；Node22上build/testtypecheck、后端28+前端28全通过。current=`/opt/emily/releases/fcf4df6`；私有preflight重新通过，两服务active/0restart。保留旧release478a12e与一致性备份作为窄回滚。
+- 修复后真实programme200/source=model/2条/0 warning，Gemini只编排实际已授权目录，首段TTS就绪；真实host→song→真实ended→next200/tts_ready→host→second song，UI键盘seek、pause/resume、安静模式保持音乐、退出确认登录页后音源清空，无pageerror/横溢出。音乐全字节获取两首分别3,210,388与3,543,981字节、HTTP200/private-no-store；约200.587及221.447秒的实际曲目，不凭试听短片声称整曲。
+- 额外自然播放：安静模式下第一首200.587秒未跳曲尾，暂停/恢复后实际播至ended并自动下一首成功，无媒体error；不是人工听感或真机后台验收。DJ连播的前次检查使用曲尾seek加真实ended，不能混写为整个主持节目数小时无中断。检查完成后恢复DJ enabled=true，节目保持paused；测试期间产生实际programme历史，不写永久like/dislike。
+- 登录限流在多次开发登录后曾正确返回429，未删rate_limit/绕过验证，等待窗口结束后继续；反代IP聚合限制仍保留，不为方便将trustProxy打开。
+
 ## 下一步
 
-1. 请David在 `https://emily.unbow.de` 用本机私有owner-password文件登录，再本人网易扫码确认；仅是授权入口，不要求先承担完整体验验收。密码/Cookie/QR票据均不要发聊天。
-2. 扫码后以真实目录验证本人权益、整曲/CDN、Gemini节目和主持→歌曲连续播放、seek/暂停/安静模式及重启加密授权。任何真实失败如实修正，无解灰/替换。
-3. 最后完成小米12S HTTPS/PWA安装、后台/锁屏播放与人工试听，才放行完整使用体验。
+1. David可在原网站刷新/重新打开获取新版本，再选择歌单和节目体验；本人授权已保留，无需再次扫码。
+2. 小米12S真实HTTPS/PWA安装、锁屏/后台连续至少2首及人工试听需本人设备配合；如有中断，记录发生时机/屏幕状态/显示错误，不发Cookie或密码。该项尚未通过，不拿桌面手机视口替代。
+3. 后续按实际反馈优化模型准备时间和听感；不承诺全目录VIP权益，未知曲目限制继续诚实显示，无解灰/音源替换。
 
 ## 历史基线：Phase 2 mock（保留原有贡献）
 

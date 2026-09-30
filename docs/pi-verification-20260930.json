@@ -97,7 +97,24 @@
     "ownerQrConfirmed": false,
     "fullListeningAcceptance": false
   },
-  "notVerified": ["owner NetEase QR confirmation/account entitlements/full songs/CDN", "real external NetEase DJ-to-song browser continuous playback", "physical Xiaomi 12S background/PWA"],
+  "fifthPhase": {
+    "scope": "owner QR persistence, real NetEase programme and browser playback; preparation timeout fix",
+    "ownerQrConfirmed": true,
+    "connectedAfterDedicatedServiceRestart": true,
+    "encryptedCredentialObjectPersisted": true,
+    "realPlaylistsReadable": true,
+    "consistentPrivateBackupBeforeUpgrade": true,
+    "applicationRelease": "fcf4df6",
+    "timeoutFix": { "serverConnectionMs": 150000, "inboundBodyMs": 30000, "bodyBytes": 16384, "frontendPreparationMs": 135000, "ordinaryReadMs": 45000 },
+    "tests": { "server": 28, "web": 28, "deployment": 7, "browserFixture": 1, "total": 64, "failed": 0, "skipped": 0 },
+    "rnTests": { "server": 28, "web": 28, "failed": 0, "skipped": 0 },
+    "realProgramme": { "http": 200, "selectionSource": "model", "tracks": 2, "warningCount": 0, "syntheticCatalogue": false },
+    "realPublicBrowser": { "engine": "Chrome154", "viewport": "393x851", "firstDjPlayed": true, "songDurationsSeconds": [200.586667, 221.447375], "durationMatchesCatalogue": true, "pauseStable": true, "uiKeyboardSeekMoved": true, "seekAndResume": true, "songEndedToNextDjToSecondSong": true, "nextHttp": 200, "nextDjReady": true, "quietKeepsMusic": true, "range": { "http": 206, "bytes": 1024, "contentRange": true, "noStore": true }, "completeMediaBytes": [3210388, 3543981], "completeMediaHttp": [200, 200], "logoutAudioCleared": true, "pageErrors": [], "horizontalOverflow": false },
+    "additionalNaturalPlayback": { "quietMode": true, "durationSeconds": 200.586667, "noEndSeek": true, "realEnded": true, "automaticSecondSong": true, "mediaError": false },
+    "testCleanup": { "djEnabledRestored": true, "radioPaused": true, "permanentMusicFeedbackWritten": false },
+    "limitations": ["hosted DJ continuity check used end seek followed by real ended", "natural full-song check was quiet mode", "not human listening", "no VIP-tier or all-catalogue assertion", "physical Xiaomi background/PWA not tested"]
+  },
+  "notVerified": ["specific VIP-tier and all-catalogue entitlements", "human listening quality", "physical Xiaomi 12S background/lockscreen/PWA installation", "cross-device long-duration reliability"],
   "warnings": ["Fastify FSTDEP023 deprecation", "Windows POSIX chmod does not establish an owner-only ACL; protect private data before real credentials"],
   "publicDeploymentPerformed": true
 }
