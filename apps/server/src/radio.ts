@@ -3,7 +3,8 @@ import type { DjSegment, NowPlayingState, PlayerActionResponse, ProgrammeRequest
 import type { AppConfig } from "./config.js";
 import { AppError } from "./errors.js";
 import { NeteaseAdapter } from "./netease.js";
-import { ProgrammeSelector } from "./model.js";
+import { hostingLine, ProgrammeSelector } from "./model.js";
+import { isEnglishHosting } from "./hosting-language.js";
 import { metadataTrack, Store } from "./store.js";
 import type { TtsPort } from "./tts.js";
 
@@ -23,11 +24,20 @@ export class Radio {
   constructor(private readonly config: AppConfig, private readonly store: Store, readonly music: NeteaseAdapter, readonly selector: ProgrammeSelector, readonly tts: TtsPort, private readonly clock: () => number) {
     this.defaults = { hostLanguage: "en", voice: config.voice, djEnabled: true, discovery: false, mood: "Easy and unhurried", volume: 0.65 };
     this.state = store.get<RadioState>("radio") || { status: "idle", items: [], index: 0, updatedAt: this.iso() };
+    // Repair stored mixed-language scripts and cached speech on upgrade.
+    let repaired = false;
+    for (const item of this.state.items) {
+      if (!isEnglishHosting(item.hosting) || (item.dj && (!isEnglishHosting(item.dj.text) || item.dj.text !== item.hosting))) {
+        if (!isEnglishHosting(item.hosting)) item.hosting = hostingLine(item.track);
+        delete item.dj; repaired = true;
+      }
+    }
     if (this.state.items.length) {
       this.state.status = "paused";
       this.state.warning = "Playback is paused after a restart. Press play to recheck account access and the track URL.";
     } else this.state.status = "idle";
     delete this.state.startedAt;
+    if (repaired) this.persist();
   }
   private iso(): string { return new Date(this.clock()).toISOString(); }
   settings(): RadioSettings { return this.store.settings(this.defaults); }
@@ -81,7 +91,8 @@ export class Radio {
   private async intro(item: PreparedItem, revision = this.audioRevision): Promise<void> {
     const settings = this.settings();
     if (this.closed || revision !== this.audioRevision || !settings.djEnabled) return;
-    if (item.dj?.voice === settings.voice && item.dj.status !== "tts_failed") return;
+    if (!isEnglishHosting(item.hosting)) { item.hosting = hostingLine(item.track); delete item.dj; }
+    if (item.dj?.voice === settings.voice && item.dj.text === item.hosting && isEnglishHosting(item.dj.text) && item.dj.status !== "tts_failed") return;
     const key = `${revision}:${item.id}:${settings.voice}`;
     const existing = this.intros.get(key);
     if (existing) return existing;

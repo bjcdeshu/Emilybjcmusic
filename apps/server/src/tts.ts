@@ -7,6 +7,7 @@ import type { AppConfig } from "./config.js";
 import { ENGLISH_FEMALE_VOICES } from "./config.js";
 import { privateDirectory } from "./store.js";
 import { AppError } from "./errors.js";
+import { isEnglishHosting } from "./hosting-language.js";
 
 export type TtsPort = {
   readonly audioDir: string;
@@ -65,7 +66,7 @@ export class EdgeTts implements TtsPort {
     try { return (await this.voices()).has(voice); } catch { return false; }
   }
   async segment(text: string, voice: string): Promise<DjSegment> {
-    if (!text.trim() || text.length > 600 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text) || !(ENGLISH_FEMALE_VOICES as readonly string[]).includes(voice)) {
+    if (!isEnglishHosting(text) || text.length > 600 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text) || !(ENGLISH_FEMALE_VOICES as readonly string[]).includes(voice)) {
       throw new AppError(400, "INVALID_TTS_INPUT", "DJ text or English female voice is not supported.");
     }
     const id = createHash("sha256").update(JSON.stringify({ v: 1, text, voice, rate: "-4%", volume: "-10%" })).digest("hex");

@@ -4,7 +4,8 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import type { Track, RadioSettings } from "@emily/shared";
 import { loadConfig } from "../src/config.js";
-import { ProgrammeSelector } from "../src/model.js";
+import { hostingLine, ProgrammeSelector } from "../src/model.js";
+import { isEnglishHosting } from "../src/hosting-language.js";
 
 // Synthetic catalogue and model replies are explicitly TEST FIXTURES, never production data.
 const catalogue: Track[] = [
@@ -37,6 +38,26 @@ test("model hosting accepts contextual English prose instead of only a fixed phr
     assert.equal(result.items[0]?.reason, plan.selections[0]!.reason);
     assert.deepEqual(result.items.map(item => item.track.id), ["202", "101"]);
   });
+});
+
+test("English hosting omits non-Latin names without inventing translations; catalogue stays original", async () => {
+  const tracks: Track[] = [{ id: "101", title: "慢慢喜欢你", artist: "莫文蔚", source: "netease" }, { id: "202", title: "If", artist: "Bread", source: "netease" }];
+  assert(isEnglishHosting(hostingLine(tracks[0]!)));
+  assert(!hostingLine(tracks[0]!).includes("慢慢"));
+  assert(hostingLine(tracks[1]!).includes("If by Bread"));
+  assert(isEnglishHosting(hostingLine({ ...tracks[0]!, title: "Home", artist: "歌手" })));
+  for (const hosting of ["Here is 慢慢喜欢你 by 莫文蔚.", "Next: Ｍｏｋ 中文.", "Next up, この曲."]) {
+    const plan = naturalPlan(); plan.selections[0]!.hosting = hosting;
+    await withSelector(plan, async selector => {
+      const result = await selector.select(tracks, { limit: 2 }, settings, new Map());
+      assert.equal(result.source, "playlist");
+      assert(result.items.every(item => isEnglishHosting(item.hosting)));
+      assert.equal(result.items[0]!.track.title, "慢慢喜欢你");
+      assert.equal(result.items[0]!.track.artist, "莫文蔚");
+    });
+  }
+  const plan = naturalPlan(); plan.selections[0]!.hosting = "Let's make room for the next song. There is no need to rush this evening.";
+  await withSelector(plan, async selector => { assert.equal((await selector.select(tracks, { limit: 2 }, settings, new Map())).source, "model"); });
 });
 
 test("natural hosting keeps exact catalogue ID and uniqueness boundaries", async () => {

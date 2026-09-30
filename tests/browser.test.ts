@@ -76,16 +76,28 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     });
     phases.push("dj");
     const signalFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
-    await page.waitForTimeout(120);
-    assert.notEqual(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), signalFrame);
+    assert.equal(await page.locator(".vinyl-disc").count(), 0);
+    assert.equal(await page.locator(".record-stage").count(), 0);
+    assert(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => {
+      const bytes = el.getContext("2d")!.getImageData(0, 0, el.width, el.height).data;
+      let rows = 0;
+      for (let y = 0; y < el.height; y++) { for (let x = 0; x < el.width; x++) if (bytes[(y * el.width + x) * 4 + 3]) { rows++; break; } }
+      return rows > 6;
+    }), "real audio samples produce bars taller than the silent baseline");
+    assert(signalFrame.startsWith("data:image/png"));
     assert.equal(await page.locator(".transcript-card").getAttribute("data-speaking"), "true");
+    if (env.EMILY_BROWSER_EVIDENCE_DIR) {
+      await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
+      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-speaking.png"), fullPage: true });
+    }
     await page.getByRole("button", { name: "暂停", exact: true }).click();
     assert.equal(await page.evaluate(() => document.querySelector("audio")!.paused), true);
     assert.equal(app.services.radio.now().status, "paused");
-    assert.equal(await page.locator(".vinyl-disc").evaluate(el => getComputedStyle(el).animationPlayState), "paused");
+    const pausedSignal = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
     const stopped = await page.evaluate(() => document.querySelector("audio")!.currentTime);
     await page.waitForTimeout(250);
     assert(Math.abs(await page.evaluate(() => document.querySelector("audio")!.currentTime) - stopped) < 0.1);
+    assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), pausedSignal);
     await page.getByRole("button", { name: "播放", exact: true }).click();
     await wait(page, () => !document.querySelector("audio")!.paused);
     await page.getByRole("button", { name: "安静模式", exact: true }).click();
@@ -94,12 +106,11 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       return !a.paused && a.currentSrc.includes("/api/media/track/101") && a.currentTime > 0;
     });
     phases.push("song-after-quiet");
-    assert.equal(await page.locator(".vinyl-disc").evaluate(el => getComputedStyle(el).animationPlayState), "running");
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.waitForTimeout(80); // Allow the media-query change event to redraw its static baseline.
     const stillFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
     await page.waitForTimeout(100);
     assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), stillFrame);
-    assert.equal(await page.locator(".vinyl-disc").evaluate(el => getComputedStyle(el).animationName), "none");
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.getByLabel("歌曲播放进度").fill("1");
     assert(await page.evaluate(() => document.querySelector("audio")!.currentTime) >= 0.8);
@@ -116,6 +127,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(app.services.store.feedbackMap().get("202"), "like");
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
+      await page.getByRole("button", { name: "关闭提示" }).click();
       await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-listen.png"), fullPage: true });
       await page.setViewportSize({ width: 1360, height: 1000 });
       await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "desktop-listen.png"), fullPage: true });
@@ -138,6 +150,18 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.getByRole("button", { name: "保存偏好" }).click();
     await page.getByText("已保存", { exact: true }).waitFor();
     assert.equal(app.services.radio.settings().voice, "en-GB-SoniaNeural");
+    // Simulate the upgrade dropping a legacy cached DJ: first play must resolve a
+    // fresh intro rather than silently begin music and miss repaired hosting.
+    await page.route("**/api/now", async route => {
+      const response = await route.fetch(); const payload = await response.json();
+      delete payload.data.dj;
+      await route.fulfill({ response, json: payload });
+    }, { times: 1 });
+    await page.reload(); await page.locator(".main-play").waitFor();
+    await page.getByRole("button", { name: "播放", exact: true }).click();
+    await wait(page, () => !document.querySelector("audio")!.paused && document.querySelector("audio")!.currentSrc.includes("/api/audio/"));
+    await page.getByRole("button", { name: "暂停", exact: true }).click();
+    await nav().getByRole("button", { name: "设置", exact: true }).click();
     await page.getByRole("button", { name: "退出个人电台" }).click();
     await page.getByLabel("个人登录口令").waitFor();
     assert.equal(await page.evaluate(() => document.querySelector("audio")!.getAttribute("src")), null);
@@ -154,7 +178,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, animatedSignalVerified: true, vinylFollowsPlayback: true, reducedMotionVerified: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));

@@ -39,6 +39,8 @@ test("Edge CLI uses argument arrays, allowlisted female metadata, cache and no a
     assert.equal(first.status, "tts_ready"); assert.equal(same.id, first.id);
     assert.equal((await tts.segment(text, "en-US-EmmaMultilingualNeural")).id, first.id);
     const calls = (await readFile(join(directory, "calls.jsonl"), "utf8")).trim().split("\n").map(line => JSON.parse(line));
+    for (const mixed of ["Here is 慢慢喜欢你.", "Next by 莫文蔚.", "Now: こんにちは."]) await assert.rejects(tts.segment(mixed, "en-US-EmmaMultilingualNeural"), (error: { code?: string }) => error.code === "INVALID_TTS_INPUT");
+    assert.equal((await readFile(join(directory, "calls.jsonl"), "utf8")).trim().split("\n").length, 2, "mixed-language text is rejected before invoking the CLI");
     assert.equal(calls.length, 2, "one metadata probe and one synthesis, despite parallel/cache requests");
     assert.deepEqual(calls[1].args.slice(0, 4), ["--voice", "en-US-EmmaMultilingualNeural", "--rate=-4%", "--volume=-10%"]);
     assert.equal(calls[1].args[calls[1].args.indexOf("--text") + 1], text);
