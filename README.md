@@ -8,7 +8,7 @@ Emily 是供单个主人跨设备使用的个人 Web / PWA 电台。目标是在
 - Pi 当前分支：`pi/emily-continue-20260930`，源自 `iris/emily-v1-english-20260930` 的 `c7af2c2`；不要把仍停留在旧基线的 `main` 当成最新实现。
 - 先读 [Pi 交接说明](docs/handoff-to-pi-20260930.md)。
 - 当前执行状态以 [开发入口](docs/development.md) 为准；接口以 [API 契约](docs/api-contract.md) 和 `packages/shared/src/index.ts` 为准。
-- 原交接两项失败回归已修复，保留断言并新增播放/声线/关闭边界测试；当前前后端54项、真实浏览器fixture联合检查1项，共55项通过。不得因为测试和构建通过而宣称真实账号或产品完整可用。
+- 原交接两项失败回归已修复，保留断言并新增播放/声线/关闭边界测试；当前前后端54项、真实浏览器fixture联合检查1项、离线部署预检6项，共61项通过。不得因为测试和构建通过而宣称真实账号或产品完整可用。
 
 ## 已有实现
 
@@ -27,7 +27,7 @@ Pi 本机的构建、类型检查、自动测试、真实 TTS 与浏览器检查
 
 已完成真实桌面 Chrome 登录/导航/缺配置界面、393px视口与真实 Edge 语音解码播放检查；项目内 `npm run test:browser` 已覆盖主持→歌曲→下一首、暂停/seek/安静模式及PWA离线外壳（明确测试音源）；尚未完成真实外部音源的连续播放验收、本人网易云授权、实际歌曲/CDN 与模型通道联调、物理小米 12S 后台播放和公开部署。
 
-部署方式与最少配置输入见 [上线准备](docs/deployment.md)；当前Node/SQLite/TTS后端不能只上传静态Pages就声称上线。
+部署方式与最少配置输入见 [上线准备](docs/deployment.md)；新增专用systemd/反代待审核模板及 `npm run test:deployment` 离线只读预检。Cloudflare与RN已完成有界只读核对，尚未安装模板或修改云资源。当前Node/SQLite/TTS后端不能只上传静态Pages就声称上线。
 
 ## 本地运行
 

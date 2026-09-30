@@ -41,11 +41,20 @@ Linux原工作区仅供来源定位：`/srv/agent-workspace/worktrees/bjcdeshu/E
 - 部署准备见 [deployment.md](deployment.md)：保持Node/SQLite/子进程后端与同域前端，不误将Pages静态发布当全栈上线；私有适配器、主人扫码、应用专用模型、私有目录与缓存/Range/可信代理检查列清。
 - Codex共享配置记录 `pi-cloudflare-mcp-20260930`已确认OAuth与工具发现完成；当前Pi旧会话 `mcp({connect:"cloudflare-api"})`仍返回server not found，需 `/reload` 或重启后采用配置。Pi未读取凭据、未重新安装MCP、未修改Cloudflare云资源。
 
+## Pi 第三阶段：Cloudflare核对与部署工程准备（2026-09-30）
+
+- David `/reload` 后要求继续推进；Pi已成功连接Codex配置的 `cloudflare-api`，只读GET核对 `unbow.de` active、权威NS、Emily子域无记录、SSL strict、既有origin rules及active page rules。没有修改DNS、资源、账户或费用；第二阶段旧会话不可用记录仅是历史。
+- 复用已配置SSH并严格校验主机公钥，RN/NC hostname匹配历史导航。已读RN实际运维RUNBOOK/INVENTORY；只读检查RN与Emily相关运行时、余量、端口、目录和专用用户，未安装/写入/重启服务器。RN约4.4GiB可用内存、41GiB空闲磁盘，系统Node22.23.3、npm10.9.9；3000已占用，3100/3101未占用。Node22兼容和专用TTS仍需部署前实测，不能沿用Windows验收结论。
+- 新增 `scripts/deployment-preflight.mjs` 与6项测试：只读离线检查配置完整性、HTTPS/回环、私有目录/文件及现有状态权限、构建外壳和TTS执行文件，不打开SQLite、不调用外部服务、不显示秘密；WindowsACL未核验明确阻断。
+- 新增待审核 `deploy/emily.service.example` 与 `deploy/nginx-locations.conf.example`，独立非root服务、私有数据、禁止API缓存/落盘、保留Range、关闭票据访问日志。只是本地模板，未安装或在目标OpenResty/systemd执行验证。
+- 当轮完整构建/typecheck、后端测试typecheck、后端27/27、前端27/27、部署预检6/6、Chrome fixture1/1，共61通过0跳过；编译入口再次通过，production依赖audit0报告。仍有Fastify弃用警告，真实网易/模型/手机/HTTPS未验收。
+- 方案与只读快照详见 [deployment.md](deployment.md)。RN与 `emily.unbow.de` 是候选，不是已批准发布目标。网易候选上游默认开启general unblock，必须审核固定版本并关闭后才接入，不直接运行latest。
+
 ## 下一步
 
-1. 在可核验、保护好的本机私有目录通过安全入口配置应用专用模型与主人网易适配器；不要复制其他代理身份或未知登录态。
-2. 本人扫码确认与费用事项由David控制。真实外部成功前保持缺配置状态，不把fixture当会员整曲证据。
-3. 完成真实浏览器主持/歌曲连续、seek、安静模式、暂停与切歌联调，再按当次授权部署及物理小米验收。
+1. 集中向David确认候选RN+独立Emily子域及新专用服务/适配器安装、反代/DNS发布范围；不动主站或网关。按获准目标核验machine-id并准备窄范围回滚。
+2. 通过安全文件提供Emily专用模型key并确定模型/费用；主人口令与AES key可在受保护目录生成，不复制其他代理身份。本人扫码确认另走安全页面。
+3. 专用运行时与适配器审核/固定、Linux测试与权限验证、真实浏览器外部连续音源联调后，按批准范围公开HTTPS并完成小米验收。真实外部成功前保持缺配置状态，不把fixture当会员整曲证据。
 
 ## 历史基线：Phase 2 mock（保留原有贡献）
 

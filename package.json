@@ -13,7 +13,9 @@
     "dev:web": "npm run dev --workspace @emily/web",
     "build": "npm run build --workspace @emily/shared && npm run build --workspace @emily/server && npm run build --workspace @emily/web",
     "typecheck": "npm run build --workspace @emily/shared && npm run typecheck --workspace @emily/server && npm run typecheck --workspace @emily/web && tsc -p tsconfig.tests.json",
-    "test:browser": "npm run build && tsx --test tests/browser.test.ts"
+    "test:browser": "npm run build && tsx --test tests/browser.test.ts",
+    "test:deployment": "npm run build && node --test scripts/deployment-preflight.test.mjs",
+    "check:deployment": "node scripts/deployment-preflight.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

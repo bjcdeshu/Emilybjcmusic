@@ -27,13 +27,38 @@
 
 ## Cloudflare / 反向代理注意事项
 
-- Codex负责此次Pi Cloudflare MCP接入；Pi当前旧会话需reload后发现服务，再只读核对账户、zone、已有DNS和资源。
+- Codex负责此次Pi Cloudflare MCP接入；2026-09-30 reload后Pi已连接并只读核对zone、DNS、SSL、origin rules及active page rules，未修改云资源。
 - DNS/公开入口的目标须确认；保留原记录、原服务和回滚信息，不默认创建付费资源。
 - `/api/*`、二维码、媒体音频必须绕过边缘及反代缓存；不能采用全站Cache Everything规则。尊重private/no-store，不缓存Set-Cookie；登录Cookie为Secure/HttpOnly/SameSite=Strict。
 - 保持Range/Content-Range/Accept-Ranges，不把媒体错误改写成index.html；无通用任意URL代理。
 - JS/CSS哈希资产可immutable；index、manifest、sw必须可更新。图标路径 `/icon.svg`、`/icons/emily-*.png` 必须实际200。
 - 不盲信外部Forwarded/X-Forwarded-*；当前Fastify `trustProxy=false`，反代后登录限流按代理入口聚合。若需要可信真实IP，必须按固定代理拓扑另做验证，不直接开放信任所有代理。
 - 对媒体传输/Cloudflare入口限制核对适用条款与能力，不凭MCP连通就保证音频代理合适。
+
+## 已准备的部署材料（未安装）
+
+- `deploy/emily.service.example`：专用非root账户、只写 `/var/lib/emily`、保护home和系统目录、环境文件加载、离线预检、优雅停机。只作为待审核模板，尚未在systemd运行。
+- `deploy/nginx-locations.conf.example`：独立HTTPS站点的location片段，API不缓存、不落代理临时文件、不改写错误、保持Range，关闭含QR票据的访问日志。不含证书和server块，尚未用目标OpenResty做syntax/reload验收；不能直接覆盖现有站点。
+- `scripts/deployment-preflight.mjs`：离线、只读，检查HTTPS origin/回环/专用凭据配置、现有私有环境与数据权限及恢复状态、PWA文件和TTS执行文件，不打开数据库、不启动服务、不调用模型/网易/TTS、不打印配置值。Windows没有ACL验收时明确阻断；不把chmod当ACL证明。此检查不证明适配器解灰关闭、路径未同步或外部服务可用，仍需操作者核验。
+- 测试：`npm run test:deployment`。正式预检须在构建后**以专用服务用户**执行，使用同一私有文件，不使用其他代理环境：
+
+  ```sh
+  node --env-file=/etc/emily/emily.env scripts/deployment-preflight.mjs /etc/emily/emily.env
+  ```
+
+### RN候选核对（2026-09-30只读快照）
+
+现有SSH严格主机校验及hostname匹配，已读实际运维RUNBOOK/INVENTORY；RN有OpenResty及约4.4GiB可用内存、41GiB空闲磁盘。本轮未安装、写入或重启服务器。
+
+- 系统Node为22.23.3/npm10.9.9，满足后端SQLite最低版本，但尚未在该版本跑Emily全套检查；前端Node TS-stripping测试参数差异也需实测，不能把Windows24的测试当成RN22验收。不计划为了此应用全局升级Node。
+- 已有ffmpeg/ffprobe；uvx仅在root私有home，不能借给受 `ProtectHome=true` 限制的专用用户。后续需在获准后安装独立、可复核版本的edge-tts执行文件，并将HOME及缓存限制在Emily私有目录。
+- `127.0.0.1:3000`已占用。候选Emily端口3100、私有适配器3101当时无监听，仅是建议，部署前重查。
+- 无现成 `/opt/emily`、`/etc/emily`、`/var/lib/emily`、Emily网站或emily服务账户。建议新建独立服务，不复用既有生产数据。
+- `emily.unbow.de`无DNS记录，Cloudflare zone active、SSL strict；现有origin规则仅命中panel/oapi，active page rules为空。主站与www记录未改；仍须决定音频入口是否经过Cloudflare代理并核对适用条款，不能因SSL strict就宣称Emily HTTPS完成。
+- 候选网易适配器上游README仍明确 `ENABLE_GENERAL_UNBLOCK` 默认为true；不直接pull latest即运行。必须审核并固定具体版本/摘要，显式关闭解灰、匹配及代理插件后才允许本人授权。来源：[上游README](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)，2026-09-30读取；不是已选择该版本或已接入声明。
+- 应用专用模型base/name/key与本人音乐授权尚无；不读取或复用其他代理密钥。现有 `oapi.unbow.de` 只是可选网关，需主人提供/创建Emily专用key并确认模型及费用范围。
+
+放行前需David一次确认目标RN、独立子域名及专用服务/适配器安装和反代/DNS范围。主人口令与加密key可以在获准后于私有目录生成，不要求发到聊天；模型专用key通过安全文件提供，本人扫码另走受保护页面。保留提交与旧release，首次上线前无Emily数据可回滚；之后停专用实例、一致性保存SQLite及key后升级，回滚只改Emily入口，不触碰既有服务。
 
 ## 验收与放行
 

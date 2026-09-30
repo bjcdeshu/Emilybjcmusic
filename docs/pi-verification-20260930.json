@@ -62,6 +62,23 @@
     "cloudflare": "Codex setup verified in shared record; this old Pi session has not reloaded the new server",
     "deploymentPerformed": false
   },
+  "thirdPhase": {
+    "scope": "read-only Cloudflare and RN review; local deployment preparation",
+    "cloudflareConnectedAfterReload": true,
+    "cloudflareChecks": { "zoneActive": true, "emilyDnsAbsent": true, "sslStrict": true, "activePageRules": 0, "originRulesEmilyMatch": false, "writes": 0 },
+    "rnChecks": { "strictSshHostKey": true, "hostnameMatches": true, "operationsDocsRead": true, "node": "22.23.3", "npm": "10.9.9", "port3000Occupied": true, "candidatePorts3100And3101Unoccupied": true, "emilyServiceAbsent": true, "writes": 0 },
+    "serverTests": { "passed": 27, "failed": 0, "skipped": 0 },
+    "webTests": { "passed": 27, "failed": 0, "skipped": 0 },
+    "deploymentTests": { "passed": 6, "failed": 0, "skipped": 0 },
+    "browserTests": { "passed": 1, "failed": 0, "skipped": 0 },
+    "totalTests": 61,
+    "buildAndTypecheck": "passed",
+    "builtEntrypoint": "passed",
+    "productionAuditReportedVulnerabilities": 0,
+    "templatesInstalled": false,
+    "deploymentPerformed": false,
+    "limitations": ["RN Node22 application tests not yet run", "systemd/nginx templates not validated on target", "dedicated Linux TTS executable not yet provisioned", "adapter version/unblock policy not yet verified"]
+  },
   "notVerified": ["real NetEase QR/account entitlements/full songs/CDN", "real model gateway", "real external NetEase DJ-to-song browser continuous playback", "physical Xiaomi 12S background/PWA", "owner-only Windows private data ACL", "public HTTPS deployment"],
   "warnings": ["Fastify FSTDEP023 deprecation", "Windows POSIX chmod does not establish an owner-only ACL; protect private data before real credentials"],
   "publicDeploymentPerformed": false

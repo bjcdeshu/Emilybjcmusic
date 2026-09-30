@@ -1,0 +1,33 @@
+# REVIEW TEMPLATE ONLY. Do not install/restart until David approves the target.
+# Candidate layout: immutable releases /opt/emily/releases/<commit>, current symlink.
+# Runtime: dedicated emily user; /etc/emily/emily.env owner emily mode 0600,
+# /etc/emily and /var/lib/emily owner emily mode 0700; executable outside /root.
+[Unit]
+Description=Emily single-owner personal radio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=emily
+Group=emily
+Environment=HOME=/var/lib/emily
+WorkingDirectory=/opt/emily/current
+ExecStartPre=/usr/bin/node --env-file=/etc/emily/emily.env scripts/deployment-preflight.mjs /etc/emily/emily.env
+ExecStart=/usr/bin/node --env-file=/etc/emily/emily.env apps/server/dist/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=150
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/emily
+RestrictSUIDSGID=true
+# Never log environment or request bodies. App logs only bounded sanitized events.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
