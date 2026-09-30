@@ -31,7 +31,38 @@
     "evidenceDirectory": "C:/workspace/codex/work/.tmp/emily-browser-tools/evidence",
     "limitation": "Desktop browser audio decoding/progress, not human listening, full DJ/music programme acceptance, or physical phone testing."
   },
-  "notVerified": ["real NetEase QR/account entitlements/full songs/CDN", "real model gateway", "real browser DJ-to-song continuous playback", "physical Xiaomi 12S background/PWA", "owner-only Windows private data ACL", "public HTTPS deployment"],
+  "secondPhase": {
+    "scope": "overall review and repeatable browser integration",
+    "serverTests": { "passed": 27, "failed": 0, "skipped": 0 },
+    "webTests": { "passed": 27, "failed": 0, "skipped": 0 },
+    "browserTests": { "passed": 1, "failed": 0, "skipped": 0 },
+    "totalTests": 55,
+    "npmCi": "passed",
+    "typecheckIncludingBrowser": "passed",
+    "testTypecheck": "passed",
+    "build": "passed",
+    "builtEntrypoint": "passed",
+    "realEdgeDecodeAndCache": "passed",
+    "browserFixture": {
+      "chrome": "154.0.8037.58",
+      "viewport": "393x851",
+      "djToSongAndNext": true,
+      "pausePositionStable": true,
+      "seekAndQuietMode": true,
+      "feedbackAndHistory": true,
+      "voiceSelectionAndSave": true,
+      "logoutAudioCleared": true,
+      "serviceWorkerInstalledAndControlled": true,
+      "offlineShell": true,
+      "cachedPublicFiles": 8,
+      "cachedPrivateData": false,
+      "pageErrors": [],
+      "media": "explicit generated tone MP3 and local HTTP fixtures, not real NetEase"
+    },
+    "cloudflare": "Codex setup verified in shared record; this old Pi session has not reloaded the new server",
+    "deploymentPerformed": false
+  },
+  "notVerified": ["real NetEase QR/account entitlements/full songs/CDN", "real model gateway", "real external NetEase DJ-to-song browser continuous playback", "physical Xiaomi 12S background/PWA", "owner-only Windows private data ACL", "public HTTPS deployment"],
   "warnings": ["Fastify FSTDEP023 deprecation", "Windows POSIX chmod does not establish an owner-only ACL; protect private data before real credentials"],
   "publicDeploymentPerformed": false
 }

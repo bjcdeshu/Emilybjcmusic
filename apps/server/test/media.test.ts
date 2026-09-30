@@ -89,6 +89,11 @@ test("optional built frontend serves public assets only, never dotfiles, databas
   await mkdir(join(web, "assets"), { recursive: true });
   await writeFile(join(web, "index.html"), "<!doctype html><title>Fixture UI</title>");
   await writeFile(join(web, "assets", "main.js"), "/* public fixture */");
+  await mkdir(join(web, "icons"));
+  for (const path of ["icon.svg", "manifest.webmanifest", "sw.js", "icons/emily-192.png", "icons/emily-512.png", "icons/emily-maskable-512.png"]) {
+    await writeFile(join(web, path), "PUBLIC_PWA_FIXTURE");
+  }
+  await writeFile(join(web, "icons", "private.png"), "PRIVATE_UNLISTED_ICON");
   await writeFile(join(web, ".env"), "PRIVATE_FIXTURE");
   await writeFile(join(web, "assets", "main.js.map"), "PRIVATE_FIXTURE_MAP");
   await writeFile(join(directory, "outside.js"), "PRIVATE_OUTSIDE_FIXTURE");
@@ -96,7 +101,12 @@ test("optional built frontend serves public assets only, never dotfiles, databas
   const app = fixtureApp(directory, { EMILY_WEB_DIST_DIR: web });
   try {
     assert.equal((await app.inject("/")).statusCode, 200); assert.equal((await app.inject("/assets/main.js")).statusCode, 200);
-    for (const path of ["/.env", "/%2eenv", "/assets/../.env", "/assets/%2e%2e%2f.env", "/assets/main.js.map", "/emily.sqlite", "/src/index.ts", "/assets/link.js", "/assets/%2e%2e%2foutside.js"]) {
+    for (const path of ["/icon.svg", "/manifest.webmanifest", "/sw.js", "/icons/emily-192.png", "/icons/emily-512.png", "/icons/emily-maskable-512.png"]) {
+      const result = await app.inject(path);
+      assert.equal(result.statusCode, 200, path);
+      assert.equal(result.body, "PUBLIC_PWA_FIXTURE");
+    }
+    for (const path of ["/.env", "/%2eenv", "/assets/../.env", "/assets/%2e%2e%2f.env", "/assets/main.js.map", "/emily.sqlite", "/src/index.ts", "/icons/private.png", "/assets/link.js", "/assets/%2e%2e%2foutside.js"]) {
       const result = await app.inject(path);
       assert([400, 404].includes(result.statusCode), `${path}: ${result.statusCode}`); assert(!result.body.includes("PRIVATE_"));
     }

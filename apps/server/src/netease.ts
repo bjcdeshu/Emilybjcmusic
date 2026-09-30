@@ -24,7 +24,7 @@ export class NeteaseAdapter {
     if (!store.get<boolean>("music_disabled")) this.cookie = store.credential() || config.neteaseCookie;
   }
   get configured(): boolean { return !!this.config.neteaseBase; }
-  private async call(path: string, params: Record<string, unknown>, cookie = this.cookie): Promise<Record<string, unknown>> {
+  private async call(path: string, params: Record<string, unknown>, cookie: string | undefined | null = this.cookie): Promise<Record<string, unknown>> {
     if (!this.config.neteaseBase) throw new AppError(503, "MUSIC_SETUP_REQUIRED", "Configure a private NetEase API adapter and connect your own account.");
     const body = await postJson(this.config.neteaseBase, path, { ...params, ...(cookie ? { cookie } : {}), noCookie: true, timestamp: this.clock() }, this.config.httpTimeoutMs, this.config.neteaseToken);
     const code = Number(body.code);
@@ -90,12 +90,12 @@ export class NeteaseAdapter {
     if (!this.config.credentialKey) throw new AppError(503, "CREDENTIAL_STORAGE_UNCONFIGURED", "Configure private credential encryption before QR login.");
     if (!this.store.takeRate("qr-create", 3, 60_000, this.clock())) throw new AppError(429, "QR_RATE_LIMITED", "Please wait before creating another QR code.");
     const generation = this.generation;
-    const keyBody = await this.call("login/qr/key", {}, undefined);
+    const keyBody = await this.call("login/qr/key", {}, null);
     const keyData = asRecord(keyBody.data);
     const rawKey = keyData.unikey ?? asRecord(keyData.data).unikey;
     const providerKey = typeof rawKey === "string" ? rawKey : "";
     if (!/^[a-zA-Z0-9_-]{8,256}$/.test(providerKey)) throw new AppError(502, "MUSIC_QR_FAILED", "NetEase did not return a usable QR login key.");
-    const qr = asRecord((await this.call("login/qr/create", { key: providerKey, qrimg: true }, undefined)).data);
+    const qr = asRecord((await this.call("login/qr/create", { key: providerKey, qrimg: true }, null)).data);
     const image = typeof qr.qrimg === "string" ? qr.qrimg : "";
     let qrUrl: string | undefined;
     try {
@@ -122,7 +122,7 @@ export class NeteaseAdapter {
     return ticket.polling;
   }
   private async pollTicket(ticket: QrTicket): Promise<MusicQrPollResponse> {
-    const body = await this.call("login/qr/check", { key: ticket.providerKey }, undefined);
+    const body = await this.call("login/qr/check", { key: ticket.providerKey }, null);
     if (ticket.expiresAt <= this.clock() || ticket.generation !== this.generation) return { status: "expired" };
     const code = Number(body.code);
     if (code === 800) ticket.result = { status: "expired", message: "QR code expired. Create a new one." };

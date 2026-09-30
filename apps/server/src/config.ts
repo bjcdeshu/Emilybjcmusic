@@ -1,10 +1,8 @@
 import { resolve, dirname, basename, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const ENGLISH_FEMALE_VOICES = [
-  "en-US-EmmaMultilingualNeural", "en-US-EmmaNeural", "en-US-JennyNeural",
-  "en-US-AriaNeural", "en-GB-SoniaNeural", "en-IE-EmilyNeural", "en-AU-NatashaNeural"
-] as const;
+import { ENGLISH_FEMALE_VOICES } from "@emily/shared";
+export { ENGLISH_FEMALE_VOICES } from "@emily/shared";
 export const DEFAULT_VOICE = ENGLISH_FEMALE_VOICES[0];
 export type AppConfig = {
   dataDir: string;

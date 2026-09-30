@@ -12,7 +12,7 @@ export function registerFrontend(app: FastifyInstance, directory: string): void 
     const denied = () => reply.code(404).send({ ok: false, error: { code: "NOT_FOUND", message: "File not found." } });
     if (path.includes("\\") || path.includes("\0") || path.split("/").some(part => part.startsWith("."))) return denied();
     if (path === "/") path = "/index.html";
-    if (!(["/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico"].includes(path) || path.startsWith("/assets/") || /^\/icon-[A-Za-z0-9_-]+\.(png|svg)$/.test(path))) return denied();
+    if (!(["/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/icon.svg", "/icons/emily-192.png", "/icons/emily-512.png", "/icons/emily-maskable-512.png"].includes(path) || path.startsWith("/assets/") || /^\/icon-[A-Za-z0-9_-]+\.(png|svg)$/.test(path))) return denied();
     const type = TYPES[extname(path)];
     if (!type) return denied();
     try {

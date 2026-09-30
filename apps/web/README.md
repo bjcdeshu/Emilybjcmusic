@@ -15,7 +15,7 @@ npm run dev --workspace @emily/web
 
 Development and preview bind `127.0.0.1`. Development `/api` proxies to the loopback server on port 3000. Tests use Node's test runner and TypeScript stripping; the verified local runtime was Node 26.7.0.
 
-The 26 automated tests are **explicitly test-only fixtures**, not real provider acceptance. They cover audio sequencing, pause/async-operation races, stale play promises, actual-property progress/seek, autoplay rejection, audio/TTS failure, empty queues, logout cleanup, API envelopes/401, URL boundaries, and static-only service-worker caching. `FakeAudio` is never imported by the application. Real browser decoding, audible speech/music, account authorisation, and physical Xiaomi background playback remain parent integration tests.
+The 27 automated tests are **explicitly test-only fixtures**, not real provider acceptance. They cover audio sequencing, pause/async-operation races, stale play promises, actual-property progress/seek, autoplay rejection, audio/TTS failure, empty queues, logout cleanup, API envelopes/401, URL boundaries, and static-only service-worker caching. `FakeAudio` is never imported by the application. The root `npm run test:browser` now exercises actual Chrome decoding, DJ/song/next sequencing, pause/seek/quiet mode, feedback/history/voice selection/logout and static-only offline PWA against explicit local HTTP/tone-MP3 fixtures. Real account audio, human listening and physical Xiaomi background playback remain unverified.
 
 ## Implementation boundaries
 
@@ -31,7 +31,7 @@ The 26 automated tests are **explicitly test-only fixtures**, not real provider 
 ## Parent integration checks
 
 1. Exercise every protected API against the server implementation and validate meaningful errors; no frontend contract extension is required.
-2. Validate `voice` against the backend's allowlist. The settings field submits an explicit Voice ID and shows rejection rather than inventing available voices.
+2. Validate `voice` against the backend's allowlist. The settings select uses the shared allowlist; choices are supported IDs, not a claim that online voice availability has been verified at that moment.
 3. Serve the production build at the origin root over HTTPS (or localhost), serve `sw.js` as JavaScript, and keep `/api/**` out of SPA rewrites and HTTP caches. Increment the shell cache version when changing its release policy.
 4. Supply HTTPS-compatible or same-origin-proxied audio URLs. Mixed-content, credential-bearing and non-HTTP URLs are rejected rather than played.
 5. On Xiaomi 12S Chrome, verify QR gallery scan, autoplay/return-from-authorisation, seeking, volume, DJ/song boundaries, lock-screen actions, app installation and background restrictions. Desktop build/typecheck/unit success does not prove these behaviours.

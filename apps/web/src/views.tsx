@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Headphones, History, ListMusic, LogOut, Moon, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Smartphone, Sparkles, Unplug, Volume2 } from "lucide-react";
 import type { HistoryResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track } from "@emily/shared";
+import { ENGLISH_FEMALE_VOICES, MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import { api, errorMessage } from "./api";
 import { Cover, Empty, Spinner } from "./components";
 
@@ -52,7 +53,7 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr }: Lib
     }
   }
   function generate() {
-    createProgramme({ ...(selection.length ? { trackIds: selection } : { playlistId }), prompt: prompt.trim() || programmes[selectedProgramme]!.prompt, limit: 12 });
+    createProgramme({ ...(selection.length ? { trackIds: selection } : { playlistId }), prompt: prompt.trim() || programmes[selectedProgramme]!.prompt, limit: MAX_PROGRAMME_TRACKS });
   }
   return <section className="view-panel" aria-labelledby="library-title">
     <header className="view-heading"><p className="eyebrow">THE PROGRAMME ROOM</p><h1 id="library-title">今天，想听些什么？</h1><p>从你自己的音乐出发，让 Emily 把它们串成一档节目。</p></header>
@@ -94,8 +95,12 @@ export function RadioHistory({ createProgramme, busy, refreshKey }: { createProg
     return () => controller.abort();
   }, [refreshKey, retry]);
   return <section className="view-panel" aria-labelledby="history-title"><header className="view-heading"><p className="eyebrow">PREVIOUSLY ON EMILY</p><h1 id="history-title">听过的时光</h1><p>服务端保存的节目记录。重新编排会生成新节目，不会伪造过去的播放进度。</p></header><div className="section-heading"><h2>节目历史</h2><button className="icon-button" aria-label="刷新历史" disabled={loading} onClick={() => setRetry((v) => v + 1)}><RefreshCw size={19} className={loading ? "spin" : ""} /></button></div>{loading && <Spinner />}{error && <p className="inline-error" role="alert">{error}</p>}{!loading && !error && !history?.items.length && <Empty title="第一档节目，留给现在。">开始听歌后，节目记录会出现在这里。</Empty>}
-    <div className="history-list">{history?.items.map((entry) => <article className="history-card" key={entry.id}><div className="section-heading"><span className="history-icon"><History size={20} /></span><time dateTime={entry.createdAt}>{dateLabel(entry.createdAt)}</time></div><h3>{entry.title}</h3><p className="muted tiny">{entry.tracks.length} 首音乐</p><div className="history-tracks">{entry.tracks.map((track, index) => <span key={`${track.id}-${index}`}><b>{track.title}</b><small>{track.artist}</small></span>)}</div><button className="secondary-button" disabled={busy || !entry.tracks.length} onClick={() => createProgramme({ trackIds: entry.tracks.map((track) => track.id).slice(0, 30), prompt: `Revisit this personal programme: ${entry.title}. Concise English hosting.`, limit: Math.min(entry.tracks.length, 20) })}>重新编排<ArrowUpRight size={17} /></button></article>)}</div>
+    <div className="history-list">{history?.items.map((entry) => <article className="history-card" key={entry.id}><div className="section-heading"><span className="history-icon"><History size={20} /></span><time dateTime={entry.createdAt}>{dateLabel(entry.createdAt)}</time></div><h3>{entry.title}</h3><p className="muted tiny">{entry.tracks.length} 首音乐</p><div className="history-tracks">{entry.tracks.map((track, index) => <span key={`${track.id}-${index}`}><b>{track.title}</b><small>{track.artist}</small></span>)}</div><button className="secondary-button" disabled={busy || !entry.tracks.length} onClick={() => createProgramme({ trackIds: entry.tracks.map((track) => track.id).slice(0, 30), prompt: `Revisit this personal programme: ${entry.title}. Concise English hosting.`, limit: Math.min(entry.tracks.length, MAX_PROGRAMME_TRACKS) })}>重新编排<ArrowUpRight size={17} /></button></article>)}</div>
   </section>;
+}
+function voiceLabel(id: string) {
+  const names: Record<string, string> = { "en-US-EmmaMultilingualNeural": "Emma · 美式英语（多语言）", "en-US-EmmaNeural": "Emma · 美式英语", "en-US-JennyNeural": "Jenny · 美式英语", "en-US-AriaNeural": "Aria · 美式英语", "en-GB-SoniaNeural": "Sonia · 英式英语", "en-IE-EmilyNeural": "Emily · 爱尔兰英语", "en-AU-NatashaNeural": "Natasha · 澳大利亚英语" };
+  return names[id] || id;
 }
 function dateLabel(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "日期不可用" : date.toLocaleString("zh-CN", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
 
@@ -112,7 +117,7 @@ export function Settings(props: SettingsProps) {
   const [discovery, setDiscovery] = useState(settings?.discovery ?? false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [saved, setSaved] = useState(false);
-  useEffect(() => { setVoice(settings?.voice || ""); setMood(settings?.mood || ""); setDiscovery(settings?.discovery ?? false); setSaved(false); }, [settings?.voice, settings?.mood, settings?.discovery]);
+  useEffect(() => { setVoice(settings?.voice || ""); setMood(settings?.mood || ""); setDiscovery(settings?.discovery ?? false); }, [settings?.voice, settings?.mood, settings?.discovery]);
   async function submit(e: FormEvent) { e.preventDefault(); setSaved(false); setSaved(await save({ voice: voice.trim(), mood: mood.trim(), discovery })); }
   return <section className="view-panel" aria-labelledby="settings-title"><header className="view-heading"><p className="eyebrow">MAKE YOURSELF AT HOME</p><h1 id="settings-title">按你的方式听。</h1><p>一个人，一台电台。声音和节奏都可以慢慢调整。</p></header>
     <section className="settings-card"><div className="section-heading"><div className="heading-icon"><ShieldCheck size={22} /><h2>音乐与服务</h2></div><button className="icon-button" aria-label="重新检查服务配置" onClick={props.refresh}><RefreshCw size={19} /></button></div>
@@ -126,8 +131,8 @@ export function Settings(props: SettingsProps) {
       <p className="muted tiny">Android 的系统媒体音量仍由手机音量键控制。</p>
     </section>
     <form className="settings-card settings-form" onSubmit={(e) => void submit(e)}><div className="heading-icon"><SlidersHorizontal size={22} /><h2>主持与选曲</h2></div><div className="service-row"><span><b>Hosting language</b><small>英文主持。界面语言不影响串场语言。</small></span><span className="pill">English</span></div>
-      <label className="field-label" htmlFor="voice-id">Voice ID</label><input id="voice-id" value={voice} maxLength={80} pattern="[A-Za-z0-9-]+" required disabled={!settings} onChange={(e) => { setVoice(e.target.value); setSaved(false); }} autoComplete="off" spellCheck={false} />
-      <p className="muted tiny">默认是英文女声。可输入服务端允许的声音 ID；不支持的声音会明确报错，不会偷偷替换。声音调整在下一段主持生效。</p>
+      <label className="field-label" htmlFor="voice-id">英文女声</label><select id="voice-id" value={voice} required disabled={!settings} onChange={(e) => { setVoice(e.target.value); setSaved(false); }}>{ENGLISH_FEMALE_VOICES.map(id => <option key={id} value={id}>{voiceLabel(id)}</option>)}</select>
+      <p className="muted tiny">只列出服务端允许的英文女声；这是可选声线，不保证在线语音服务此刻可用。调整在下一段主持生效。</p>
       <label className="field-label" htmlFor="default-mood">默认节目心情</label><input id="default-mood" value={mood} maxLength={120} disabled={!settings} onChange={(e) => { setMood(e.target.value); setSaved(false); }} placeholder="calm, warm, thoughtful" />
       <label className="checkbox-field"><input type="checkbox" checked={discovery} disabled={!settings} onChange={(e) => { setDiscovery(e.target.checked); setSaved(false); }} /><span><b>允许更多探索</b><small>在可播放的真实候选中，给不常听的音乐一点空间。</small></span></label>
       <div className="button-row"><button className="primary-button" type="submit" disabled={!settings || busy}>保存偏好<Check size={17} /></button>{saved && <span className="inline-good" role="status"><Check size={16} />已保存</span>}</div>

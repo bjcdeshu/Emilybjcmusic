@@ -51,6 +51,10 @@ export type SetupStatus = {
   model: { configured: boolean };
   tts: { available: boolean; voice: string; language: "en" };
 };
+export const ENGLISH_FEMALE_VOICES = [
+  "en-US-EmmaMultilingualNeural", "en-US-EmmaNeural", "en-US-JennyNeural",
+  "en-US-AriaNeural", "en-GB-SoniaNeural", "en-IE-EmilyNeural", "en-AU-NatashaNeural"
+] as const;
 export type RadioSettings = {
   hostLanguage: "en";
   voice: string;
@@ -68,6 +72,7 @@ export type MusicQrPollResponse = {
   message?: string;
   user?: MusicIdentity;
 };
+export const MAX_PROGRAMME_TRACKS = 12;
 export type ProgrammeRequest = { playlistId?: string; trackIds?: string[]; prompt?: string; limit?: number };
 export type ProgrammeResponse = PlayerActionResponse & {
   selectionSource: "model" | "playlist";

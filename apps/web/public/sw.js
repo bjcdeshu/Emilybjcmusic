@@ -1,5 +1,5 @@
 /* Static shell only. Never store API, cookies, QR, covers, or any audio. */
-const CACHE = "emily-public-shell-v1";
+const CACHE = "emily-public-shell-v2";
 const SHELL = ["/index.html", "/manifest.webmanifest", "/icon.svg", "/icons/emily-192.png", "/icons/emily-512.png", "/icons/emily-maskable-512.png"];
 const STATIC_ASSET = /^\/assets\/[A-Za-z0-9_-]+\.(?:js|css)$/;
 const eligible = (url) => url.origin === self.location.origin && !url.search && (SHELL.includes(url.pathname) || STATIC_ASSET.test(url.pathname));

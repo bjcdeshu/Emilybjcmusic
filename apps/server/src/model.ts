@@ -1,3 +1,4 @@
+import { MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import type { ProgrammeRequest, RadioSettings, Track } from "@emily/shared";
 import type { AppConfig } from "./config.js";
 import { AppError, asArray, asRecord } from "./errors.js";
@@ -39,7 +40,7 @@ export class ProgrammeSelector {
   constructor(private readonly config: AppConfig) {}
   get configured(): boolean { return !!(this.config.modelBase && this.config.modelKey && this.config.modelName); }
   async select(candidates: Track[], request: ProgrammeRequest, settings: RadioSettings, feedback: Map<string, string>, playlistTitle?: string): Promise<ModelSelection> {
-    const limit = Math.min(request.limit || 6, candidates.length);
+    const limit = Math.min(request.limit || 6, MAX_PROGRAMME_TRACKS, candidates.length);
     const fallback = (warning: string): ModelSelection => ({
       title: playlistTitle || "Your personal radio",
       items: candidates.slice(0, limit).map((track, index) => ({ track, reason: "Selected from your real music catalogue.", hosting: hostingLine(track, index === 0 ? TRANSITIONS.settle_in : TRANSITIONS.keep_flow) })),

@@ -99,6 +99,20 @@ test("owner-scoped, expiring QR login stores encrypted authorization and disconn
   } finally { await app.close(); await provider.close(); await rm(directory, { recursive: true, force: true }); }
 });
 
+test("QR refresh does not send an existing account cookie to anonymous QR endpoints", async () => {
+  const directory = await temporaryDirectory(), provider = new HttpFixture(); await provider.start();
+  const app = fixtureApp(directory, { EMILY_NETEASE_API_BASE: provider.base, EMILY_NETEASE_COOKIE: COOKIE_SENTINEL });
+  try {
+    const cookie = await login(app);
+    const created = await app.inject({ method: "POST", url: "/api/music/login/qr", headers: headers(cookie) });
+    assert.equal(created.statusCode, 200);
+    assert.equal((await app.inject({ url: `/api/music/login/qr/${created.json().data.key}`, headers: headers(cookie) })).statusCode, 200);
+    const qrRequests = provider.requests.filter(request => request.path.startsWith("/login/qr/"));
+    assert.equal(qrRequests.length, 3);
+    for (const request of qrRequests) assert.equal(request.body.cookie, undefined, request.path);
+  } finally { await cleanup(app, directory); await provider.close(); }
+});
+
 test("QR fails closed without encryption key and source remains disconnected without authorization", async () => {
   const directory = await temporaryDirectory(); const provider = new HttpFixture(); await provider.start();
   const app = fixtureApp(directory, { EMILY_NETEASE_API_BASE: provider.base, EMILY_CREDENTIAL_KEY: "" });

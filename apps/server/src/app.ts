@@ -1,5 +1,6 @@
 import { Readable } from "node:stream";
 import fastify, { type FastifyInstance } from "fastify";
+import { MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
 import { loadConfig, ENGLISH_FEMALE_VOICES, type AppConfig } from "./config.js";
@@ -95,7 +96,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     return success({ items: await music.search(query) });
   });
   app.post<{ Body: ProgrammeRequest }>("/api/programme", {
-    schema: { body: objectSchema({ playlistId: idSchema, trackIds: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: idSchema }, prompt: textSchema(600), limit: { type: "integer", minimum: 1, maximum: 12 } }), querystring: emptyQuery }
+    schema: { body: objectSchema({ playlistId: idSchema, trackIds: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: idSchema }, prompt: textSchema(600), limit: { type: "integer", minimum: 1, maximum: MAX_PROGRAMME_TRACKS } }), querystring: emptyQuery }
   }, async request => {
     const body = request.body || {};
     if (body.playlistId && body.trackIds) throw new AppError(400, "INVALID_INPUT", "Choose a playlist or explicit tracks, not both.");
