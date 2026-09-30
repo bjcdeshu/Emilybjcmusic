@@ -95,11 +95,23 @@ David再次明确第一轮前端仍不够、动效和UI都不好，80484eb不能
 
 第二轮UI提交 `6493d9e` 已在RN Node22构建发布，current=`/opt/emily/releases/6493d9e`；仅停/启动Emily application，一致性私有备份pre-6493d9e，保留80484eb作为回滚。公开真实Chrome确认新asset、真实封面/Canvas/唱片/paused停止、本人登录200、8→70歌单/开始按钮/mini/退出、393px无overflow/pageerror；已看真实封面手机/桌面截图。未重新跑耗时真实模型programme或设备验收，backend/授权/私有缓存规则不改。
 
+## 参考还原与英文朗读修复（2026-10-01本机时间，接续9月30日）
+
+David再次要求把既有mm参考做好，同时报告英文TTS夹带中文歌名/歌手名。第二轮6493d9e不能当作认可。Pi已发布 `4c70e9f`，RN current=`/opt/emily/releases/4c70e9f`。
+
+- 删除黑胶/封面舞台和双栏，回到600px单列黑色点阵主持区、重叠白色节目卡，点阵Emily字标、真实进度、小型transport、主持文案主位。辅助音量/反馈/安静模式置于文案后；success toast不再遮住页头。原图和人物/语音素材不复制。
+- `audio-analysis.ts`持有音频元素生命周期内的单个Web Audio graph；Canvas竖条读取真实频率数据，不再用phase曲线或预设波形。暂停/隐藏/离屏停止RAF，reduce motion静态；audio engine继续负责transport，不伪造逐字字幕时间轴。
+- 根因是旧prose仅要求有英文字母，fallback还直接拼原始元数据。新增 `hosting-language.ts`拒绝非Latin字母/markup/controls，模型提示提供nullable spokenTitle/spokenArtist，模型主持及TTS CLI前再拦截。混合名字整体省略，缺可靠可朗读名字用自然英文指代，不编译名/音译，UI歌名歌手保持原样。此为文字脚本边界，不是完整语言识别。
+- 重启升级会修复当前SQLite已存混合主持词、失效旧DJ引用，保留授权/曲目/队列/历史。首次播放缺DJ时先解析生成修复后的主持；新增浏览器回归防止静默直接跳过。
+- 本地typecheck、server testtypecheck、build、server31/web28/Chrome fixture1、built入口通过。首次server并行测试曾有一次无关media 502/404瞬态，单独及完整重跑通过；reduce-motion断言补等待媒体查询change重绘，不删断言。实际看fixture及公开手机/桌面截图，不能替代David设计认可。
+- RN Node22构建/testtypecheck/server31通过；一致性私有备份 `/var/backups/emily-20260930/pre-4c70e9f`，SQLite+env配对、停服务后复制并cmp核验。仅重启Emily application，保留6493d9e，adapter/其他业务未动。
+- 公开真实Chrome：本人登录200/连接保持，当前旧混合DJ引用已失效，原名可见；实际Gemini新两首节目200/model/0warnings，全英文首段TTS ready；主持实际播放→真实歌曲，voice与music均有真实分析竖条、暂停静态；393px无overflow/pageerror、8歌单/mini/退出音源清空。产生新节目历史但不写永久反馈、不改网易歌单；最后paused/退出。此轮没有重新做自然完整曲目或设备专项验证。
+
 ## 下一步
 
-1. 第二轮视觉与动效已发布；根据David实际视觉评价继续改善，不将发布等同设计认可。本人授权保留，不要求重新扫码。
-2. 后续根据David实际视觉/交互反馈继续迭代，不再以设备锁屏/PWA专项测试拖延UI工作。
-3. 维持范围内构建及浏览器交互回归，避免外观改动破坏已验证音频、QR和设置；不用大量验证日志替代设计成果。
+1. 当前4c70e9f已发布；按David实际评价继续改善参考还原和日常交互，不将发布或测试当作设计认可。本人授权保留，不要求重新扫码。
+2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
+3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 
 ## 历史基线：Phase 2 mock（保留原有贡献）
 

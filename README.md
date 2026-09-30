@@ -2,20 +2,20 @@
 
 Emily 是供单个主人跨设备使用的个人 Web / PWA 电台。目标是在独立的 unbow 子域名上登录、连接本人的网易云账号，收听由模型编排的音乐与英文女声串场。项目与个人主站无关，不是公共多人音乐平台。
 
-**当前状态：2026-09-30 Pi 已部署 RN 独立 HTTPS 网站；本人网易授权、真实歌曲与浏览器连续播放已验证；David已取消锁屏/小米专项验收门槛，当前按mm参考重做UI/UX。**
+**当前状态：2026-10-01 Pi 已发布4c70e9f：回到mm单列黑白重叠参考、实际音频频率竖条，修复英文主持夹中文及旧节目语音引用。本人授权保留；视觉仍待David评价，不以测试通过代替设计认可。锁屏/小米专项验收门槛已取消。**
 
 - 接续方：David 指定的电脑端 Pi Agent。
 - Pi 当前分支：`pi/emily-continue-20260930`，源自 `iris/emily-v1-english-20260930` 的 `c7af2c2`；不要把仍停留在旧基线的 `main` 当成最新实现。
 - 先读 [Pi 交接说明](docs/handoff-to-pi-20260930.md)。
 - 当前执行状态以 [开发入口](docs/development.md) 为准；接口以 [API 契约](docs/api-contract.md) 和 `packages/shared/src/index.ts` 为准。
-- 原交接两项失败回归已修复，保留断言并新增播放/声线/关闭边界测试；当前前后端56项、真实浏览器fixture联合检查1项、离线部署预检及私有桥接7项，共64项通过。不得因为测试和构建通过而宣称真实账号或产品完整可用。
+- 原交接两项失败回归已修复，保留断言并新增播放/声线/关闭边界测试；本轮后端31项、前端28项、真实浏览器fixture联合检查1项通过；部署预检及私有桥接7项为前轮结果，本轮未重跑。不得因为测试和构建通过而宣称真实账号或产品完整可用。
 
 ## 已有实现
 
 - React / Vite 移动优先界面：个人登录、网易云扫码连接入口、节目选择、播放器、历史、设置、安静模式和沉浸模式。
 - 单个真实 HTML 音频元素：主持 → 歌曲 → 队列推进，实际进度、跳转、音量和 Media Session。生产界面没有示例歌单或假播放进度。
 - Fastify 后端：单主人会话、输入校验、SQLite 持久化、加密的网易云授权、歌曲解析、模型编排和受保护的音频路由。
-- 英文女声 Edge TTS：参数数组调用、声线校验、缓存和超时。默认声线为 `en-US-EmmaMultilingualNeural`，不是永久选择。
+- 英文女声 Edge TTS：参数数组调用、声线校验、缓存和超时；模型/fallback/CLI前拦截中文等非Latin朗读文字，原名只保留在UI，不编造英文译名。默认声线为 `en-US-EmmaMultilingualNeural`，不是永久选择。
 - 模型可写简短自然英文主持词；曲目 ID 必须来自实际候选目录。未配置或调用失败时明确回退真实歌单，不假装 AI 或外部服务已经成功。
 - PWA 图标、manifest 和静态外壳缓存；不缓存私有 API、二维码、凭据或音乐。
 
@@ -45,7 +45,7 @@ npm test --workspace @emily/server
 npm run test:built --workspace @emily/server
 ```
 
-原失败测试已保留并修复；后端27项、前端27项和浏览器1项均通过，0跳过。可用 `npm run test:browser` 复跑真实Chrome联合检查（需Chrome及ffmpeg，或显式指定 `EMILY_BROWSER_EXECUTABLE`）；新增Playwright仅为开发依赖。
+原失败测试已保留并修复；本轮后端31项、前端28项和浏览器1项均通过，0跳过。可用 `npm run test:browser` 复跑真实Chrome联合检查（需Chrome及ffmpeg，或显式指定 `EMILY_BROWSER_EXECUTABLE`）；新增Playwright仅为开发依赖。
 
 配置采用真实实现读取的 `EMILY_*` 变量，参见 [.env.example](.env.example) 和 [后端说明](apps/server/README.md)。示例没有真实秘密。私有配置不能提交或发到聊天中。
 
