@@ -6,4 +6,7 @@ dist/
 .env.*
 !.env.example
 state/
+apps/server/data/
+*.sqlite
+*.sqlite-*
 *.log

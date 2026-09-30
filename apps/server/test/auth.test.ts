@@ -124,6 +124,13 @@ test("configured private origins only; no credential-bearing URL or remote plain
   assert.throws(() => loadConfig({ EMILY_CREDENTIAL_KEY: "insecure" }), /EMILY_CREDENTIAL_KEY/);
   assert.throws(() => loadConfig({ EMILY_OWNER_PASSWORD: "short" }), /EMILY_OWNER_PASSWORD/);
   assert.throws(() => loadConfig({ EMILY_TTS_COMMAND: "/bin/sh" }), /EMILY_TTS_COMMAND/);
+  for (const command of ["./uvx", "uvx --evil", "C:\\bad\\cmd.exe", "edge-tts.cmd", "/tmp/uvx\n"]) {
+    assert.throws(() => loadConfig({ EMILY_TTS_COMMAND: command }), /EMILY_TTS_COMMAND/);
+  }
+  if (process.platform === "win32") {
+    const command = "C:\\Program Files\\tools\\uvx.exe";
+    assert.equal(loadConfig({ EMILY_TTS_COMMAND: command }).ttsCommand, command);
+  }
 });
 
 test("real HTTP loopback health works and imports/factories never listen by accident", async () => {

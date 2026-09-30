@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-30",
+  "executor": "Pi",
+  "task": "01a0f204-d57a-75b4-93d4-c35f2fa8aeae",
+  "baseCommit": "c7af2c2ce8a01e023647e2047befa525aa68c6b4",
+  "branch": "pi/emily-continue-20260930",
+  "workspace": "C:/workspace/codex/work/Emily",
+  "environment": { "platform": "win32", "node": "v24.16.0", "npm": "11.17.0" },
+  "checks": {
+    "npmCi": "passed",
+    "typecheck": "passed",
+    "serverTestTypecheck": "passed",
+    "build": "passed",
+    "serverTests": { "passed": 26, "failed": 0, "skipped": 0 },
+    "webTests": { "passed": 26, "failed": 0, "skipped": 0 },
+    "builtEntrypoint": { "loopbackEphemeral": true, "healthStatus": 200, "protectedNowStatus": 503, "gracefulExit": 0 },
+    "realEdge": { "femaleMetadataVerified": true, "voice": "en-US-EmmaMultilingualNeural", "bytes": 36288, "durationSeconds": 6.048, "decoded": true, "cacheReused": true },
+    "auditReportedVulnerabilities": 0,
+    "diffCheck": "passed"
+  },
+  "browser": {
+    "checkedAt": "2026-09-30T12:30:35.055Z",
+    "engine": "installed Chrome 154.0.8037.58, headless",
+    "login": true,
+    "navigation": true,
+    "honestMissingMusicProviderState": true,
+    "mobileViewport": "393x851",
+    "noHorizontalOverflow": true,
+    "protectedRealEdgeAudio": { "ended": true, "duration": 6.048, "currentTime": 6.048, "readyState": 4 },
+    "pageErrors": [],
+    "evidenceDirectory": "C:/workspace/codex/work/.tmp/emily-browser-tools/evidence",
+    "limitation": "Desktop browser audio decoding/progress, not human listening, full DJ/music programme acceptance, or physical phone testing."
+  },
+  "notVerified": ["real NetEase QR/account entitlements/full songs/CDN", "real model gateway", "real browser DJ-to-song continuous playback", "physical Xiaomi 12S background/PWA", "owner-only Windows private data ACL", "public HTTPS deployment"],
+  "warnings": ["Fastify FSTDEP023 deprecation", "Windows POSIX chmod does not establish an owner-only ACL; protect private data before real credentials"],
+  "publicDeploymentPerformed": false
+}

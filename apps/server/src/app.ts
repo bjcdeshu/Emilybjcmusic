@@ -48,7 +48,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   const radio = new Radio(config, store, music, selector, tts, clock);
   const mediaOpener = options.mediaOpener || openProviderMedia;
   app.decorate("services", { store, auth, music, radio });
-  app.addHook("onClose", async () => { store.close(); });
+  app.addHook("onClose", async () => { await radio.close(); store.close(); });
   app.addHook("preValidation", async request => {
     // Empty action bodies are optional in the wire contract; explicit null/non-object bodies still fail.
     if (["POST", "PATCH"].includes(request.method) && request.body === undefined) request.body = {};

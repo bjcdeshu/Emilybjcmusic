@@ -2,7 +2,7 @@ import { request as httpsRequest } from "node:https";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { Readable } from "node:stream";
-import { open } from "node:fs/promises";
+import { lstat, open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -110,11 +110,19 @@ export function validateRange(value: unknown): string | undefined {
 export async function sendLocalAudio(directory: string, id: string, request: FastifyRequest, reply: FastifyReply): Promise<unknown> {
   if (!/^[a-f0-9]{64}$/.test(id)) throw new AppError(404, "AUDIO_NOT_FOUND", "DJ audio was not found.");
   const range = validateRange(request.headers.range);
+  const path = join(directory, `${id}.mp3`);
   let file;
-  try { file = await open(join(directory, `${id}.mp3`), constants.O_RDONLY | constants.O_NOFOLLOW); }
-  catch { throw new AppError(404, "AUDIO_NOT_FOUND", "DJ audio was not found or is no longer cached."); }
+  let before;
+  try {
+    // O_NOFOLLOW is not implemented by Windows; inspect the entry as well as the handle.
+    before = await lstat(path);
+    if (before.isSymbolicLink() || !before.isFile()) throw new Error();
+    file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+  } catch { throw new AppError(404, "AUDIO_NOT_FOUND", "DJ audio was not found or is no longer cached."); }
   const stat = await file.stat();
-  if (!stat.isFile() || stat.size === 0 || stat.size > 10_000_000) {
+  const after = await lstat(path).catch(() => undefined);
+  if (!after || after.isSymbolicLink() || before.dev !== stat.dev || before.ino !== stat.ino ||
+    after.dev !== stat.dev || after.ino !== stat.ino || !stat.isFile() || stat.size === 0 || stat.size > 10_000_000) {
     await file.close(); throw new AppError(404, "AUDIO_NOT_FOUND", "DJ audio was not found.");
   }
   let start = 0;

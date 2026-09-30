@@ -43,7 +43,7 @@ test("generated audio is authenticated, single-Range capable and cannot traverse
       assert([400, 404].includes(response.statusCode), `${invalid}: ${response.statusCode}`);
       assert(!response.body.includes("SQLite format"));
     }
-    const linkId = "b".repeat(64); await symlink(join(directory, "emily.sqlite"), join(audio.audioDir, `${linkId}.mp3`));
+    const linkId = "b".repeat(64); await symlink(join(directory, "emily.sqlite"), join(audio.audioDir, `${linkId}.mp3`), "file");
     assert.equal((await app.inject({ url: `/api/audio/${linkId}`, headers: headers(cookie) })).statusCode, 404);
   } finally { await cleanup(app, directory); }
 });
@@ -92,7 +92,7 @@ test("optional built frontend serves public assets only, never dotfiles, databas
   await writeFile(join(web, ".env"), "PRIVATE_FIXTURE");
   await writeFile(join(web, "assets", "main.js.map"), "PRIVATE_FIXTURE_MAP");
   await writeFile(join(directory, "outside.js"), "PRIVATE_OUTSIDE_FIXTURE");
-  await symlink(join(directory, "outside.js"), join(web, "assets", "link.js"));
+  await symlink(join(directory, "outside.js"), join(web, "assets", "link.js"), "file");
   const app = fixtureApp(directory, { EMILY_WEB_DIST_DIR: web });
   try {
     assert.equal((await app.inject("/")).statusCode, 200); assert.equal((await app.inject("/assets/main.js")).statusCode, 200);

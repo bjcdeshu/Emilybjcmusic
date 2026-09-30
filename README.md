@@ -2,13 +2,13 @@
 
 Emily 是供单个主人跨设备使用的个人 Web / PWA 电台。目标是在独立的 unbow 子域名上登录、连接本人的网易云账号，收听由模型编排的音乐与英文女声串场。项目与个人主站无关，不是公共多人音乐平台。
 
-**当前状态：2026-09-30 开发交接版本，不是完成版或上线版本。**
+**当前状态：2026-09-30 Pi 已接续本地开发；自动测试全绿，不是完成版或上线版本。**
 
 - 接续方：David 指定的电脑端 Pi Agent。
-- 接续分支：`iris/emily-v1-english-20260930`，不要把仍停留在旧基线的 `main` 当成最新实现。
+- Pi 当前分支：`pi/emily-continue-20260930`，源自 `iris/emily-v1-english-20260930` 的 `c7af2c2`；不要把仍停留在旧基线的 `main` 当成最新实现。
 - 先读 [Pi 交接说明](docs/handoff-to-pi-20260930.md)。
 - 当前执行状态以 [开发入口](docs/development.md) 为准；接口以 [API 契约](docs/api-contract.md) 和 `packages/shared/src/index.ts` 为准。
-- 已知有两项失败回归，分别涉及下一段主持音频预准备、下一首准备期间的暂停。具体测试及复现命令见交接说明。不得因为构建通过而宣称产品完整可用。
+- 原交接两项失败回归已修复，保留断言并新增播放/声线/关闭边界测试；当前前后端共52项通过。不得因为测试和构建通过而宣称真实账号或产品完整可用。
 
 ## 已有实现
 
@@ -23,13 +23,13 @@ Emily 是供单个主人跨设备使用的个人 Web / PWA 电台。目标是在
 
 ## 验证范围
 
-已执行的构建、类型检查、自动测试和真实 TTS 检查见 [本次交接的测试记录](docs/handoff-to-pi-20260930.md#验证结果)。自动测试使用明确标记的 HTTP / 音频 fixture，不能证明本人的网易云会员播放、实际模型通道或小米锁屏行为。
+Pi 本机的构建、类型检查、自动测试、真实 TTS 与浏览器检查见 [当前开发记录](docs/development.md)；[Iris 交接测试记录](docs/handoff-to-pi-20260930.md#验证结果)保留为历史证据。自动测试使用明确标记的 HTTP / 音频 fixture，不能证明本人的网易云会员播放、实际模型通道或小米锁屏行为。
 
-尚未完成真实浏览器联合验收、本人网易云授权、实际歌曲/CDN 与模型通道联调、物理小米 12S 后台播放和公开部署。
+已完成真实桌面 Chrome 登录/导航/缺配置界面、393px视口与真实 Edge 语音解码播放检查；尚未完成主持与歌曲连续播放的真实浏览器联合验收、本人网易云授权、实际歌曲/CDN 与模型通道联调、物理小米 12S 后台播放和公开部署。
 
 ## 本地运行
 
-当前验证环境为 Node 26.7.0。SQLite 使用 `node:sqlite`，前端测试使用 Node TypeScript stripping。电脑端应先确认现有 Node、npm、uvx、ffmpeg/ffprobe 和本地项目规则，再运行命令；不能把 Linux 验证当成 Windows 已验证。
+Pi 当前 Windows 验证环境为 Node 24.16.0、npm 11.17.0；Iris 历史 Linux 环境为 Node 26.7.0。SQLite 使用 `node:sqlite`，前端测试使用 Node TypeScript stripping。电脑端应先确认现有 Node、npm、uvx、ffmpeg/ffprobe 和本地项目规则，再运行命令；不能把 Linux 验证当成 Windows 已验证。
 
 在仓库根目录执行：
 
@@ -43,7 +43,7 @@ npm test --workspace @emily/server
 npm run test:built --workspace @emily/server
 ```
 
-其中后端测试当前会暴露已知失败，接续时保留并修复，不删除断言。
+原失败测试已保留并修复；后端26项、前端26项均通过，0跳过。
 
 配置采用真实实现读取的 `EMILY_*` 变量，参见 [.env.example](.env.example) 和 [后端说明](apps/server/README.md)。示例没有真实秘密。私有配置不能提交或发到聊天中。
 

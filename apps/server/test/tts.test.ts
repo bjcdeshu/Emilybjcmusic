@@ -1,9 +1,10 @@
 import { test } from "node:test";
+import { execFile } from "node:child_process";
 import assert from "node:assert/strict";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "../src/config.js";
-import { EdgeTts } from "../src/tts.js";
+import { EdgeTts, type TtsExecutor } from "../src/tts.js";
 import { temporaryDirectory } from "./helpers.js";
 
 // This executable is a CLI fixture, not a synthesizer. Real Edge is checked separately by test:tts.
@@ -21,10 +22,15 @@ if (args.includes('--list-voices')) {
 }
 `;
 
+// Windows cannot exec a Unix shebang. Run this explicit fixture via Node, never cmd/shell.
+const fixtureExecutor: TtsExecutor = (command, args, options, callback) => {
+  execFile(process.execPath, [command, ...args], options, callback);
+};
+
 test("Edge CLI uses argument arrays, allowlisted female metadata, cache and no application secrets in child env", async () => {
   const directory = await temporaryDirectory(); const command = join(directory, "edge-tts");
   await writeFile(command, CLI_FIXTURE); await chmod(command, 0o700);
-  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command }));
+  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command }), Date.now, fixtureExecutor);
   try {
     assert.equal(await tts.available("en-US-EmmaMultilingualNeural"), true);
     assert.equal(await tts.available("en-US-GuyNeural"), false);
@@ -47,7 +53,7 @@ test("Edge CLI uses argument arrays, allowlisted female metadata, cache and no a
 test("Edge timeout fails honestly with text, never fake audio or escaped subprocess errors", async () => {
   const directory = await temporaryDirectory(); const command = join(directory, "edge-tts");
   await writeFile(command, CLI_FIXTURE); await chmod(command, 0o700);
-  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command, EMILY_TTS_TIMEOUT_MS: "150" }));
+  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command, EMILY_TTS_TIMEOUT_MS: "1000" }), Date.now, fixtureExecutor);
   try {
     const segment = await tts.segment("TIMEOUT", "en-US-EmmaMultilingualNeural");
     assert.equal(segment.status, "tts_failed"); assert.equal(segment.audioUrl, undefined); assert.equal(segment.text, "TIMEOUT");

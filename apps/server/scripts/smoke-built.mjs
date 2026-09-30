@@ -3,14 +3,15 @@ import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 // Exercise the compiled command entrypoint with NO owner/provider credentials.
-const dir = await mkdtemp(join(process.env.TMPDIR || '/var/lib/hermes/cache/scratch', 'emily-built-smoke-'));
+const dir = await mkdtemp(join(process.env.TMPDIR || tmpdir(), 'emily-built-smoke-'));
 const env = {};
-for (const key of ['PATH', 'HOME', 'TMPDIR']) if (process.env[key] !== undefined) env[key] = process.env[key];
+for (const key of ['PATH', 'Path', 'HOME', 'USERPROFILE', 'SYSTEMROOT', 'SystemRoot', 'TMPDIR', 'TEMP', 'TMP']) if (process.env[key] !== undefined) env[key] = process.env[key];
 Object.assign(env, { EMILY_DATA_DIR: dir, EMILY_HOST: '127.0.0.1', EMILY_PORT: '0', EMILY_TTS_ENABLED: 'false' });
-const child = spawn(process.execPath, [fileURLToPath(new URL('../dist/index.js', import.meta.url))], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+const child = spawn(process.execPath, [fileURLToPath(new URL('../dist/index.js', import.meta.url))], { env, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
 let text = '';
 let stderr = '';
 child.stderr.on('data', chunk => { stderr += chunk; });
@@ -33,7 +34,9 @@ try {
   assert.equal(now.status, 503);
   assert.equal((await now.json()).error.code, 'OWNER_AUTH_UNCONFIGURED');
   const closed = once(child, 'exit');
-  child.kill('SIGTERM');
+  // Windows kill(SIGTERM) terminates, it does not deliver a graceful Unix signal.
+  if (process.platform === 'win32') child.send({ type: 'shutdown' });
+  else child.kill('SIGTERM');
   const [exitCode] = await closed;
   assert.equal(exitCode, 0);
   console.log(JSON.stringify({ compiledEntrypoint: true, loopbackEphemeral: true, healthStatus: 200, sessionConfigured: false, protectedNowStatus: 503, gracefulExit: 0 }));

@@ -1,4 +1,4 @@
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, basename, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ENGLISH_FEMALE_VOICES = [
@@ -66,7 +66,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const voice = env.EMILY_TTS_VOICE || DEFAULT_VOICE;
   if (!(ENGLISH_FEMALE_VOICES as readonly string[]).includes(voice)) throw new Error("EMILY_TTS_VOICE is not an allowlisted English female voice.");
   const ttsCommand = env.EMILY_TTS_COMMAND || "uvx";
-  if (!(ttsCommand === "uvx" || ttsCommand === "edge-tts" || /^\/(?:[^\0\r\n]+\/)?(?:uvx|edge-tts)$/.test(ttsCommand))) {
+  const executableName = basename(ttsCommand).toLowerCase();
+  const absoluteExecutable = isAbsolute(ttsCommand) && !/[\0\r\n]/.test(ttsCommand) &&
+    ["uvx", "edge-tts", ...(process.platform === "win32" ? ["uvx.exe", "edge-tts.exe"] : [])].includes(executableName);
+  if (!(ttsCommand === "uvx" || ttsCommand === "edge-tts" || absoluteExecutable)) {
     throw new Error("EMILY_TTS_COMMAND must be uvx, edge-tts, or their absolute executable path.");
   }
   if (env.EMILY_TTS_ENABLED && !["true", "false"].includes(env.EMILY_TTS_ENABLED)) throw new Error("Invalid EMILY_TTS_ENABLED.");

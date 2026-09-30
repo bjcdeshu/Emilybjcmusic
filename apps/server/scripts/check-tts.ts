@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { loadConfig } from "../src/config.js";
 import { EdgeTts } from "../src/tts.js";
 
-const directory = await mkdtemp(join(process.env.TMPDIR || "/var/lib/hermes/cache/scratch", "emily-real-edge-check-"));
+const directory = await mkdtemp(join(process.env.TMPDIR || tmpdir(), "emily-real-edge-check-"));
 try {
   const config = loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: process.env.EMILY_TTS_COMMAND || "uvx", EMILY_TTS_TIMEOUT_MS: "60000" });
   const tts = new EdgeTts(config);

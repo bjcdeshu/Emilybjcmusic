@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import type { DjSegment } from "@emily/shared";
 import { buildApp, type EmilyApp, type AppOptions } from "../src/app.js";
@@ -14,7 +15,7 @@ export const COOKIE_SENTINEL = "TEST_ONLY_NETEASE_COOKIE_SENTINEL";
 export const ORIGIN = "https://radio.example";
 export const FIXTURE_SONGS = [101, 202, 303].map(id => ({ id, name: `Fixture track ${id}`, ar: [{ name: "Fixture artist" }], al: { name: "Fixture album", picUrl: "http://p1.music.126.net/test-fixture-cover" }, dt: 120000 }));
 export async function temporaryDirectory(): Promise<string> {
-  return mkdtemp(join(process.env.TMPDIR || "/var/lib/hermes/cache/scratch", "emily-backend-test-"));
+  return mkdtemp(join(process.env.TMPDIR || tmpdir(), "emily-backend-test-"));
 }
 export class FixtureTts implements TtsPort {
   readonly audioDir: string;

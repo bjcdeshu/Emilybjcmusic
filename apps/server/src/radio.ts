@@ -15,6 +15,10 @@ type RadioState = {
 export class Radio {
   private state: RadioState;
   private busy = false;
+  private pauseRevision = 0;
+  private audioRevision = 0;
+  private closed = false;
+  private readonly intros = new Map<string, Promise<void>>();
   readonly defaults: RadioSettings;
   constructor(private readonly config: AppConfig, private readonly store: Store, readonly music: NeteaseAdapter, readonly selector: ProgrammeSelector, readonly tts: TtsPort, private readonly clock: () => number) {
     this.defaults = { hostLanguage: "en", voice: config.voice, djEnabled: true, discovery: false, mood: "Easy and unhurried", volume: 0.65 };
@@ -29,14 +33,19 @@ export class Radio {
   settings(): RadioSettings { return this.store.settings(this.defaults); }
   updateSettings(patch: Partial<RadioSettings>): RadioSettings {
     const settings = { ...this.settings(), ...patch, hostLanguage: "en" as const };
+    const previous = this.settings();
     this.store.set("settings", settings);
+    if (settings.voice !== previous.voice || settings.djEnabled !== previous.djEnabled) {
+      this.audioRevision++;
+      this.prefetch();
+    }
     return settings;
   }
   /** Conflicting actions fail clearly, rather than applying stale network results out of order. */
   async exclusive<T>(action: () => Promise<T>): Promise<T> {
     if (this.busy) throw new AppError(409, "RADIO_BUSY", "The radio is preparing another action. Please try again shortly.");
     this.busy = true;
-    try { return await action(); } finally { this.busy = false; }
+    try { return await action(); } finally { this.busy = false; this.prefetch(); }
   }
   now(): NowPlayingState {
     const current = this.state.items[this.state.index];
@@ -44,7 +53,7 @@ export class Radio {
     return {
       status: this.state.status,
       ...(current ? { track: { ...current.track, audioUrl: `/api/media/track/${current.track.id}` } } : {}),
-      ...(current?.dj && settings.djEnabled ? { dj: current.dj } : {}),
+      ...(current?.dj && settings.djEnabled && current.dj.voice === settings.voice ? { dj: current.dj } : {}),
       queue: this.state.items.map(({ hosting: _hosting, dj: _dj, ...item }) => ({ ...item, track: { ...item.track, ...(item.status !== "failed" ? { audioUrl: `/api/media/track/${item.track.id}` } : {}) } })),
       updatedAt: this.state.updatedAt,
       ...(this.state.startedAt ? { startedAt: this.state.startedAt } : {}),
@@ -58,8 +67,46 @@ export class Radio {
     this.store.set("radio", this.state);
   }
   clear(): void {
+    this.audioRevision++;
+    this.pauseRevision++;
     this.state = { status: "idle", items: [], index: 0, updatedAt: this.iso() };
     this.persist();
+  }
+  /** Drain bounded work before SQLite/private media is closed or removed. */
+  async close(): Promise<void> {
+    this.closed = true;
+    this.audioRevision++;
+    await Promise.allSettled(this.intros.values());
+  }
+  private async intro(item: PreparedItem, revision = this.audioRevision): Promise<void> {
+    const settings = this.settings();
+    if (this.closed || revision !== this.audioRevision || !settings.djEnabled) return;
+    if (item.dj?.voice === settings.voice && item.dj.status !== "tts_failed") return;
+    const key = `${revision}:${item.id}:${settings.voice}`;
+    const existing = this.intros.get(key);
+    if (existing) return existing;
+    // At most two jobs, including stale work that has not settled yet.
+    if (this.intros.size >= 2) {
+      await Promise.race(this.intros.values()).catch(() => undefined);
+      return this.intro(item, revision);
+    }
+    const work = Promise.resolve().then(() => this.tts.segment(item.hosting, settings.voice)).then(segment => {
+      if (this.closed || revision !== this.audioRevision) return;
+      item.dj = segment;
+      if (this.state.items.includes(item)) this.persist();
+    }).finally(() => {
+      this.intros.delete(key);
+      if (!this.busy && (item.dj || revision !== this.audioRevision)) this.prefetch();
+    });
+    this.intros.set(key, work);
+    return work;
+  }
+  private prefetch(): void {
+    if (this.closed || !this.settings().djEnabled || this.intros.size >= 2) return;
+    // One-track lookahead, not an unbounded whole-programme synthesis fan-out.
+    const next = this.state.items[this.state.index + 1];
+    if (!next || next.dj?.voice === this.settings().voice) return;
+    void this.intro(next).catch(() => undefined);
   }
   async programme(request: ProgrammeRequest): Promise<ProgrammeResponse> {
     return this.exclusive(() => this.assemble(request));
@@ -96,30 +143,34 @@ export class Radio {
       requestedBy: selection.source === "model" ? "model" : request.trackIds?.length ? "user" : "fallback",
       status: "resolved", hosting: item.hosting
     }));
+    this.audioRevision++;
     if (settings.djEnabled && items[0]) {
-      items[0].dj = await this.tts.segment(items[0].hosting, settings.voice);
-      if (items[0].dj.status === "tts_failed" || items[0].dj.status === "text_only") warnings.push("English DJ audio is unavailable. Hosting text is provided and music remains playable.");
+      await this.intro(items[0]);
+      if (items[0].dj?.status === "tts_failed" || items[0].dj?.status === "text_only") warnings.push("English DJ audio is unavailable. Hosting text is provided and music remains playable.");
     }
     this.state = {
       status: "paused", items, index: 0, title: selection.title, updatedAt: this.iso(),
       ...(warnings.length ? { warning: warnings.join(" ") } : {})
     };
     this.store.saveProgramme({ id: randomUUID(), title: selection.title, createdAt: this.iso(), tracks: items.map(item => item.track) }, this.state);
+    this.prefetch();
     return { now: this.now(), selectionSource: selection.source, warnings };
   }
   private async prepare(index: number): Promise<void> {
     const current = this.state.items[index];
     if (!current) throw new AppError(409, "QUEUE_EMPTY", "Create a programme before playing music.");
     await this.music.audio(current.track.id);
-    const settings = this.settings();
-    if (settings.djEnabled && (!current.dj || current.dj.voice !== settings.voice || current.dj.status === "tts_failed")) {
-      current.dj = await this.tts.segment(current.hosting, settings.voice);
+    await this.intro(current);
+    // A voice change during synthesis invalidates the old result; prepare the current voice.
+    while (!this.closed && this.settings().djEnabled && current.dj?.voice !== this.settings().voice) {
+      await this.intro(current);
     }
-    if (settings.djEnabled && current.dj?.status !== "tts_ready") this.state.warning = "English DJ audio is unavailable; the actual music track can still play.";
+    if (this.settings().djEnabled && current.dj?.status !== "tts_ready") this.state.warning = "English DJ audio is unavailable; the actual music track can still play.";
     current.status = "resolved";
   }
   async play(trackId?: string): Promise<PlayerActionResponse> {
     return this.exclusive(async () => {
+      const pauseRevision = this.pauseRevision;
       let index = trackId ? this.state.items.findIndex(item => item.track.id === trackId) : this.state.index;
       if (trackId && index < 0) {
         await this.assemble({ trackIds: [trackId], limit: 1 });
@@ -127,24 +178,29 @@ export class Radio {
       }
       if (index >= this.state.items.length && this.state.items.length) index = 0;
       await this.prepare(index);
-      this.state.index = index; this.state.status = "playing"; this.state.startedAt = this.iso();
+      this.state.index = index;
+      this.state.status = pauseRevision === this.pauseRevision ? "playing" : "paused";
+      if (this.state.status === "playing") this.state.startedAt = this.iso();
+      else delete this.state.startedAt;
       this.persist();
+      this.prefetch();
       return { now: this.now() };
     });
   }
   async pause(): Promise<PlayerActionResponse> {
-    return this.exclusive(async () => {
-      this.state.status = this.state.items[this.state.index] ? "paused" : "idle";
-      delete this.state.startedAt;
-      this.persist();
-      return { now: this.now() };
-    });
+    // Pause is synchronous transport intent, not a competing network preparation.
+    this.pauseRevision++;
+    this.state.status = this.state.items[this.state.index] ? "paused" : "idle";
+    delete this.state.startedAt;
+    this.persist();
+    return { now: this.now() };
   }
   async move(direction: 1 | -1): Promise<PlayerActionResponse> {
     return this.exclusive(async () => {
       if (!this.state.items.length) throw new AppError(409, "QUEUE_EMPTY", "Create a programme before advancing the queue.");
       const priorIndex = this.state.index;
       const playing = this.state.status === "playing";
+      const pauseRevision = this.pauseRevision;
       let index = direction === 1 ? priorIndex + 1 : Math.max(0, priorIndex - 1);
       const skipped: string[] = [];
       while (index >= 0 && index < this.state.items.length) {
@@ -158,13 +214,14 @@ export class Radio {
       }
       if (priorIndex < this.state.items.length && direction === 1) this.state.items[priorIndex]!.status = "played";
       this.state.index = index;
-      this.state.status = index >= 0 && index < this.state.items.length ? playing ? "playing" : "paused" : "idle";
+      this.state.status = index >= 0 && index < this.state.items.length ? playing && pauseRevision === this.pauseRevision ? "playing" : "paused" : "idle";
       delete this.state.startedAt;
       if (this.state.status === "playing") this.state.startedAt = this.iso();
       if (skipped.length) this.state.warning = `${skipped.length} track(s) were skipped because full account playback is no longer available.`;
       else if (this.state.status === "idle") this.state.warning = "End of programme. Choose a new programme or replay a track.";
       // Navigation does not write feedback. A skip is never a permanent dislike.
       this.persist();
+      this.prefetch();
       return { now: this.now() };
     });
   }

@@ -55,8 +55,11 @@ test("real configured HTTP fixture: playlists/search, playable queue, pause/navi
     assert(urlRequests.length >= 2);
     for (const request of urlRequests) { assert.equal(request.body.unblock, "false"); assert.equal(request.body.level, "standard"); assert.equal(request.body.cookie, COOKIE_SENTINEL); }
     for (const request of provider.requests) { assert.equal(request.body.noCookie, true); assert(!request.path.includes(COOKIE_SENTINEL)); }
-    assert.equal((await stat(directory)).mode & 0o777, 0o700);
-    assert.equal((await stat(join(directory, "emily.sqlite"))).mode & 0o777, 0o600);
+    if (process.platform !== "win32") {
+      // POSIX mode bits are not Windows ACLs; encryption/redaction assertions still run everywhere.
+      assert.equal((await stat(directory)).mode & 0o777, 0o700);
+      assert.equal((await stat(join(directory, "emily.sqlite"))).mode & 0o777, 0o600);
+    }
     assert(!(await readFile(join(directory, "emily.sqlite"))).includes(Buffer.from(COOKIE_SENTINEL)), "environment cookies are never persisted in plaintext");
   } finally { await app.close(); await provider.close(); await rm(directory, { recursive: true, force: true }); }
 });

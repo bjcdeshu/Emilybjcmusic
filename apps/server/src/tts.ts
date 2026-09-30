@@ -13,6 +13,10 @@ export type TtsPort = {
   available(voice: string): Promise<boolean>;
   segment(text: string, voice: string): Promise<DjSegment>;
 };
+export type TtsExecutor = (command: string, args: string[], options: {
+  timeout: number; killSignal: "SIGKILL"; maxBuffer: number; windowsHide: boolean; env: NodeJS.ProcessEnv;
+}, callback: (error: Error | null, stdout: string) => void) => void;
+const defaultExecutor: TtsExecutor = (command, args, options, callback) => { execFile(command, args, options, callback); };
 export class EdgeTts implements TtsPort {
   readonly audioDir: string;
   private metadata: Set<string> | undefined;
@@ -20,19 +24,20 @@ export class EdgeTts implements TtsPort {
   private probe: Promise<Set<string>> | undefined;
   private readonly pending = new Map<string, Promise<DjSegment>>();
   private active = 0;
-  constructor(private readonly config: AppConfig, private readonly clock: () => number = Date.now) {
+  // Explicit CLI test seam; the production app always uses execFile without a shell.
+  constructor(private readonly config: AppConfig, private readonly clock: () => number = Date.now, private readonly execute: TtsExecutor = defaultExecutor) {
     this.audioDir = join(config.dataDir, "audio");
     privateDirectory(this.audioDir);
   }
   private run(args: string[]): Promise<string> {
-    const prefix = basename(this.config.ttsCommand) === "uvx" ? ["--from", "edge-tts", "edge-tts"] : [];
+    const prefix = basename(this.config.ttsCommand).toLowerCase().replace(/\.exe$/, "") === "uvx" ? ["--from", "edge-tts", "edge-tts"] : [];
     // Do not propagate application credentials to a child process.
     const env: NodeJS.ProcessEnv = {};
-    for (const name of ["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "UV_CACHE_DIR", "SSL_CERT_FILE", "SSL_CERT_DIR", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]) {
+    for (const name of ["PATH", "Path", "HOME", "USERPROFILE", "SYSTEMROOT", "SystemRoot", "TEMP", "TMP", "LANG", "LC_ALL", "TMPDIR", "UV_CACHE_DIR", "SSL_CERT_FILE", "SSL_CERT_DIR", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]) {
       if (process.env[name] !== undefined) env[name] = process.env[name];
     }
     return new Promise((resolve, reject) => {
-      execFile(this.config.ttsCommand, [...prefix, ...args], {
+      this.execute(this.config.ttsCommand, [...prefix, ...args], {
         timeout: this.config.ttsTimeoutMs, killSignal: "SIGKILL", maxBuffer: 512_000, windowsHide: true, env
       }, (error, stdout) => {
         if (error) reject(new AppError(503, "TTS_UNAVAILABLE", "English DJ synthesis is currently unavailable."));
