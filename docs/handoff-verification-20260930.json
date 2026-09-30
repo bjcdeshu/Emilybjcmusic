@@ -1,0 +1,108 @@
+{
+  "generated_at": "2026-09-30T11:19:22.586482+00:00",
+  "branch": "iris/emily-v1-english-20260930",
+  "base_commit": "2accf31966ea4b5778e4bd0f1ccab6a6df4e421b",
+  "node": "v26.7.0",
+  "npm": "11.19.0",
+  "test_totals": {
+    "tests": 49,
+    "pass": 47,
+    "fail": 2,
+    "skipped": 0
+  },
+  "scope": "WIP handoff; not product acceptance or deployment",
+  "performed_by": "Iris / Hermes default",
+  "checks": [
+    {
+      "name": "install",
+      "command": "npm ci",
+      "exit_code": 0,
+      "seconds": 7.51
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "seconds": 11.72
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "exit_code": 0,
+      "seconds": 17.15
+    },
+    {
+      "name": "web_tests",
+      "command": "npm run test --workspace @emily/web",
+      "exit_code": 0,
+      "seconds": 0.71,
+      "counts": {
+        "tests": 26,
+        "pass": 26,
+        "fail": 0,
+        "skipped": 0
+      },
+      "failed_tests": []
+    },
+    {
+      "name": "server_test_types",
+      "command": "npm run typecheck:tests --workspace @emily/server",
+      "exit_code": 0,
+      "seconds": 5.12
+    },
+    {
+      "name": "server_tests",
+      "command": "npm test --workspace @emily/server",
+      "exit_code": 1,
+      "seconds": 6.88,
+      "counts": {
+        "tests": 23,
+        "pass": 21,
+        "fail": 2,
+        "skipped": 0
+      },
+      "failed_tests": [
+        "upcoming DJ audio is prefetched while the current programme is available",
+        "owner pause succeeds and stays authoritative while next-track preparation is pending"
+      ]
+    },
+    {
+      "name": "built_smoke",
+      "command": "npm run test:built --workspace @emily/server",
+      "exit_code": 0,
+      "seconds": 1.32,
+      "summary": [
+        "{\"compiledEntrypoint\":true,\"loopbackEphemeral\":true,\"healthStatus\":200,\"sessionConfigured\":false,\"protectedNowStatus\":503,\"gracefulExit\":0}"
+      ]
+    },
+    {
+      "name": "real_tts",
+      "command": "npm run test:tts --workspace @emily/server",
+      "exit_code": 0,
+      "seconds": 3.5,
+      "summary": [
+        "{\"realEdge\":true,\"femaleMetadataVerified\":true,\"voice\":\"en-US-EmmaMultilingualNeural\",\"bytes\":36288,\"format\":\"mp3\",\"durationSeconds\":6.048,\"decoded\":true,\"cacheReused\":true}"
+      ]
+    },
+    {
+      "name": "audit",
+      "command": "npm audit --json",
+      "exit_code": 0,
+      "seconds": 0.84,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      }
+    },
+    {
+      "name": "diff_check",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "seconds": 0.01
+    }
+  ]
+}

@@ -1,410 +1,84 @@
 ﻿# Emily
 
-服务器部署版个人 AI 电台 / AI DJ 播放器项目说明
+Emily 是供单个主人跨设备使用的个人 Web / PWA 电台。目标是在独立的 unbow 子域名上登录、连接本人的网易云账号，收听由模型编排的音乐与英文女声串场。项目与个人主站无关，不是公共多人音乐平台。
 
-> 说明：当前仓库仅包含 3 张项目截图。本文档一方面整理截图中能确认的产品与架构信息，另一方面合并当前已确认的第一版开发决策。当截图设想与当前计划冲突时，以“第一版范围”和“部署与访问方式”章节为准。
+**当前状态：2026-09-30 开发交接版本，不是完成版或上线版本。**
 
-## 项目简介
+- 接续方：David 指定的电脑端 Pi Agent。
+- 接续分支：`iris/emily-v1-english-20260930`，不要把仍停留在旧基线的 `main` 当成最新实现。
+- 先读 [Pi 交接说明](docs/handoff-to-pi-20260930.md)。
+- 当前执行状态以 [开发入口](docs/development.md) 为准；接口以 [API 契约](docs/api-contract.md) 和 `packages/shared/src/index.ts` 为准。
+- 已知有两项失败回归，分别涉及下一段主持音频预准备、下一首准备期间的暂停。具体测试及复现命令见交接说明。不得因为构建通过而宣称产品完整可用。
 
-Emily 是一个围绕“个性化音乐陪伴”构建的 AI 电台系统。它不只是一个播放器，而是一个能够理解用户口味、结合环境信息、自动挑选音乐并生成串场语音的 AI DJ。
+## 已有实现
 
-项目的核心目标，是把以下几类信息整合到一次完整的听歌体验中：
+- React / Vite 移动优先界面：个人登录、网易云扫码连接入口、节目选择、播放器、历史、设置、安静模式和沉浸模式。
+- 单个真实 HTML 音频元素：主持 → 歌曲 → 队列推进，实际进度、跳转、音量和 Media Session。生产界面没有示例歌单或假播放进度。
+- Fastify 后端：单主人会话、输入校验、SQLite 持久化、加密的网易云授权、歌曲解析、模型编排和受保护的音频路由。
+- 英文女声 Edge TTS：参数数组调用、声线校验、缓存和超时。默认声线为 `en-US-EmmaMultilingualNeural`，不是永久选择。
+- 模型可写简短自然英文主持词；曲目 ID 必须来自实际候选目录。未配置或调用失败时明确回退真实歌单，不假装 AI 或外部服务已经成功。
+- PWA 图标、manifest 和静态外壳缓存；不缓存私有 API、二维码、凭据或音乐。
 
-- 用户长期口味与收藏歌单
-- 用户当下情境，例如时间、天气、日程和状态
-- 音乐检索、推荐与播放能力
-- 语音合成与 AI 主持词生成能力
-- Web / PWA 播放器与服务端协同能力
+源码已存在；旧的「仓库仅有三张截图」说明不再代表当前状态。
 
-最终呈现出来的效果，是一个会“播歌 + 说话 + 解释为什么播这首歌”的私人电台。
+## 验证范围
 
-## 第一版范围
+已执行的构建、类型检查、自动测试和真实 TTS 检查见 [本次交接的测试记录](docs/handoff-to-pi-20260930.md#验证结果)。自动测试使用明确标记的 HTTP / 音频 fixture，不能证明本人的网易云会员播放、实际模型通道或小米锁屏行为。
 
-当前已经确认的第一版范围如下：
+尚未完成真实浏览器联合验收、本人网易云授权、实际歌曲/CDN 与模型通道联调、物理小米 12S 后台播放和公开部署。
 
-- 项目名称确定为 `Emily`
-- 部署目标是公网服务器，而不是仅在本地运行
-- 前端形态优先选择 `Web App`，并保留升级为 `PWA` 的空间
-- 用户通过浏览器访问子域名使用系统，例如 `https://emily.example.com`
-- 前端与后端采用同域部署，对外 API 路径使用 `/api/*`
-- 实时状态同步使用 `WebSocket`，路径建议为 `/stream`
-- 正式环境使用 `HTTPS`
-- 第一版暂不做家庭音响控制，也不做 `UPnP`
-- 第一版音频直接在浏览器中播放
+## 本地运行
 
-## 产品定位
+当前验证环境为 Node 26.7.0。SQLite 使用 `node:sqlite`，前端测试使用 Node TypeScript stripping。电脑端应先确认现有 Node、npm、uvx、ffmpeg/ffprobe 和本地项目规则，再运行命令；不能把 Linux 验证当成 Windows 已验证。
 
-Emily 更适合被理解为一个“个人 AI 电台”系统，而不是传统意义上的音乐播放器。
+在仓库根目录执行：
 
-与普通播放器相比，它强调：
-
-- 从“点播”转向“编排”：不仅播放歌曲，还决定播放顺序与上下文
-- 从“推荐算法”转向“可解释陪伴”：不仅推荐音乐，还给出语言化的过渡和理由
-- 从“单一播放”转向“AI 主持体验”：让音乐、串场文案、语音播报形成连续节目感
-
-## 核心体验
-
-- 根据用户口味与历史歌单，自动挑选适合当前场景的歌曲
-- 结合天气、时间、日程等信息，为音乐选择生成语义上的理由
-- 通过 TTS 生成类似电台主持人的串场语音
-- 在 Web / PWA 播放器中展示当前歌曲、AI 文案和时间轴
-- 在手机或电脑浏览器中直接播放音频
-
-## 第一版系统总览
-
-从截图和当前规划综合来看，Emily 第一版可以归纳为三层：
-
-1. 播放器前端
-2. Node.js 应用服务
-3. 多个外部 API / 能力服务
-
-其中：
-
-- 播放器前端负责展示与交互
-- Node.js 应用服务负责调度、拼装上下文、调用模型和执行动作
-- 外部 API 负责提供音乐、语音、天气、日程等能力
-
-与截图中“本地服务器”的表达不同，当前第一版计划将这套服务部署到服务器上，对外提供统一的 HTTPS 访问入口。
-
-## 部署与访问方式
-
-第一版推荐采用“单子域名、同域前后端”的部署方案：
-
-- 前端入口：`https://emily.example.com`
-- 后端 API：`https://emily.example.com/api/*`
-- 实时连接：`wss://emily.example.com/stream`
-
-推荐部署形态：
-
-- `Nginx` 或 `Caddy` 作为反向代理和 HTTPS 终止层
-- 前端静态资源由反向代理直接分发
-- Node.js 服务运行在内网端口，例如 `127.0.0.1:3000`
-- `/api/*` 和 `/stream` 由反向代理转发给 Node.js
-
-这样做的好处：
-
-- 前后端同域，避免第一版就处理复杂的 `CORS`
-- 部署结构清晰，适合快速迭代
-- 浏览器、手机和平板都能直接访问
-- 方便后续升级为 PWA
-
-协议建议：
-
-- 本地开发环境：`http://localhost`
-- 正式环境：`https://emily.example.com`
-
-## 架构图
-
-```mermaid
-flowchart TB
-    U["用户画像与规则<br/>taste.md / routines.md / playlists.json / mood-rules.md"]
-    FE["播放器前端<br/>Web App / PWA / Mobile First"]
-    RP["反向代理<br/>Nginx / Caddy / HTTPS"]
-    S["应用服务<br/>Node.js / router / context / state / tts"]
-    B["AI 编排层<br/>OAI-compatible Model / JSON 输出"]
-    M["音乐能力<br/>NeteaseCloudMusicApi"]
-    V["语音与环境信息<br/>Fish Audio / Feishu / Weather"]
-
-    FE --> RP
-    RP --> S
-    U --> S
-    S --> B
-    S --> M
-    S --> V
-    S --> FE
+```sh
+npm ci
+npm run typecheck
+npm run build
+npm run test --workspace @emily/web
+npm run typecheck:tests --workspace @emily/server
+npm test --workspace @emily/server
+npm run test:built --workspace @emily/server
 ```
 
-## 模块拆解
+其中后端测试当前会暴露已知失败，接续时保留并修复，不删除断言。
 
-### 1. Player / Web App / PWA
+配置采用真实实现读取的 `EMILY_*` 变量，参见 [.env.example](.env.example) 和 [后端说明](apps/server/README.md)。示例没有真实秘密。私有配置不能提交或发到聊天中。
 
-前端播放器是用户直接接触的界面，截图中表现为移动端风格的卡片式播放器。
+完成本地私有 `.env` 配置后，使用已构建的同域应用：
 
-第一版主要职责：
+```sh
+node --env-file=.env apps/server/dist/index.js
+```
 
-- 展示当前播放歌曲、艺人、进度、波形等信息
-- 展示 AI 串场文案或实时字幕
-- 提供播放、暂停、切歌等交互
-- 通过 HTTP 或 WebSocket 与后端同步状态
+示例配置的本地 Origin 是 `http://127.0.0.1:3000`。命令不会自动开放公网。主人口令未配置时，受保护接口关闭访问；音乐/模型未配置时只显示实际缺失状态。
 
-当前建议：
+`npm run dev` 是历史双进程开发命令，不自动读取根 `.env`。使用 Vite 开发时需显式向服务端进程提供环境变量，并将 `EMILY_PUBLIC_ORIGIN` 配置为准确的 Vite Origin，例如 `http://127.0.0.1:5173`。不要混用 `localhost` 和 `127.0.0.1`。
 
-- 首先实现 `Web App`
-- 设计上移动端优先
-- 后续再补 `PWA` 能力
-
-### 2. Server / Node.js
-
-Node.js 服务是整个系统的编排中心。
-
-主要职责：
-
-- 接收来自前端或定时任务的触发
-- 组装用户画像、环境信息、历史记录和系统提示词
-- 调用通用模型接口获取结构化决策结果
-- 按决策调用音乐、TTS、天气、日程等服务
-- 维护当前状态与记忆
-
-它在整个系统中相当于“导演台”或“中控台”。
-
-### 3. BRAIN / OAI Model Gateway
-
-模型编排层在系统中承担“大脑”角色，负责理解上下文并给出高层决策。第一版不直接绑定具体模型供应商，而是通过 OAI-compatible HTTP API 调用模型。
-
-从截图可推断，它的输出不是直接给用户看的自然语言，而更像是结构化结果，例如：
-
-- 是否要讲话
-- 说什么
-- 播放哪首歌
-- 是否需要切换队列
-- 是否需要执行某个序列动作
-
-截图里可见的输出字段包括：
-
-- `say`
-- `play[]`
-- `reason`
-- `segue`
-
-这意味着模型更像“节目编排器”，而不仅是文案生成器。业务层只依赖模型网关抽象，后续可以替换为 OpenAI、兼容 OpenAI 协议的网关或本地模型服务。
-
-### 4. MUSIC / 网易云音乐
-
-音乐能力主要由 `NeteaseCloudMusicApi` 提供。
-
-截图中可见的能力包括：
-
-- `search`
-- `song_url`
-- `lyric`
-- `recommend`
-
-因此它至少承担：
-
-- 检索歌曲
-- 获取可播放链接
-- 获取歌词
-- 提供推荐候选
-
-### 5. VOICE / I-O
-
-语音与外部输入输出能力由多个服务组成。
-
-截图中明确出现：
-
-- Fish Audio：语音合成
-- Feishu：读取日程或外部信息
-- Weather / OpenWeather：天气信息
-
-在当前第一版中，这些能力主要用于“环境理解 + 串场语音生成”，不包含家庭音响投放。
-
-### 6. 用户画像与规则
-
-截图中的用户侧配置非常关键，说明这个项目并不是完全依赖在线推荐，而是强调“长期可配置的个性化”。
-
-已出现的文件包括：
-
-- `taste.md`
-- `routines.md`
-- `playlists.json`
-- `mood-rules.md`
-
-这些文件大致对应：
-
-- 音乐口味偏好
-- 日常作息与习惯
-- 用户自己的歌单数据
-- 情绪或场景到音乐风格的映射规则
-
-### 7. 中控模块
-
-截图中出现了一组明显的后端模块：
-
-- `router.js`
-- `context.js`
-- `model.js`
-- `scheduler.js`
-- `tts.js`
-- `state.js`
-
-根据命名可推断其职责如下：
-
-#### `router.js`
-
-负责意图分流与动作编排，例如决定是先播音乐、先说话，还是同时准备下一首。
-
-#### `context.js`
-
-负责拼接系统提示、用户画像、环境信息、历史状态和本轮输入，生成发送给模型的最终上下文。
-
-#### `model.js`
-
-负责和 OAI-compatible 模型接口交互，将上下文发送给模型并接收结构化响应。
-
-#### `scheduler.js`
-
-负责基于时间的触发，例如早晚固定栏目、整点播报和定时编排任务。
-
-#### `tts.js`
-
-负责将 AI 文案转换为音频文件，并接入后续播放流水线。
-
-#### `state.js`
-
-负责维护运行状态与记忆，例如消息历史、播放历史、计划、偏好和队列。
-
-## 上下文构成
-
-截图中提到一个 `CONTEXT WINDOW`，会在每次触发时拼装若干块信息后再发给模型。可归纳为以下几类：
-
-- 系统提示词：如 DJ 风格、节目规则、输出格式
-- 用户语料：如口味、歌单、偏好规则
-- 历史记忆：最近播放记录、最近说过的话、当前状态
-- 用户输入 / 工具结果：例如搜索结果、播放状态、事件结果
-- 环境注入：天气、日历、当前时间等
-- 执行轨迹：定时器、webhook 或其他触发来源
-
-这一设计说明项目的关键不在单次问答，而在“多来源上下文拼装 + 稳定结构化输出”。
-
-## 典型工作流
-
-一个典型的第一版运行流程可以描述为：
-
-1. 用户在浏览器中打开 `https://emily.example.com`
-2. 前端请求 `/api/now` 获取当前状态
-3. Node.js 服务读取用户画像、当前状态和环境信息
-4. `context.js` 组装本轮 prompt
-5. `model.js` 调用 OAI-compatible 模型接口，获取结构化决策
-6. `router.js` 解析决策并分发执行
-7. 音乐服务获取歌曲链接、歌词或推荐结果
-8. `tts.js` 将主持词转为音频
-9. 浏览器前端播放音乐，并展示 AI 文案与实时状态
-10. `state.js` 记录本轮结果，为下一轮生成提供记忆
-
-## 接口约定
-
-从截图中能识别出的接口形式，已经比较接近第一版所需的 HTTP / WebSocket 协议层。
-
-已能识别出的接口包括：
-
-- `GET /api/now`
-- `GET /api/taste`
-- `GET /api/plan/today`
-- `WS /stream`
-
-结合当前部署决策，建议它们对外统一挂在同一子域名下：
-
-- `https://emily.example.com/api/now`
-- `https://emily.example.com/api/taste`
-- `https://emily.example.com/api/plan/today`
-- `wss://emily.example.com/stream`
-
-从命名推测：
-
-- `/api/now`：返回当前播放与当前节目状态
-- `/api/taste`：返回用户偏好或画像数据
-- `/api/plan/today`：返回当天计划、节目安排或日程上下文
-- `/stream`：推送实时状态，例如当前句子、播放进度和队列变化
-
-## 技术栈
-
-根据截图和当前规划，可以明确或高概率判断出的技术栈如下：
-
-- 前端：Web App，后续可扩展为 PWA
-- 后端：Node.js
-- 模型层：OAI-compatible Model Gateway
-- 音乐能力：NeteaseCloudMusicApi
-- 语音能力：Fish Audio
-- 环境能力：Weather / OpenWeather
-- 外部信息接入：Feishu API
-- 网关层：Nginx 或 Caddy
-- 传输协议：HTTPS + WSS
-
-## 建议的仓库结构
-
-如果后续要把这个仓库补全为可维护的工程，建议按职责拆成下面的结构：
+## 目录
 
 ```text
-.
-├─ README.md
-├─ docs/
-│  ├─ architecture.md
-│  ├─ api.md
-│  └─ deployment.md
-├─ user/
-│  ├─ taste.md
-│  ├─ routines.md
-│  ├─ playlists.json
-│  └─ mood-rules.md
-├─ prompts/
-│  ├─ dj-persona.md
-│  └─ output-schema.md
-├─ state/
-│  └─ state.db or state.json
-├─ server/
-│  ├─ router.js
-│  ├─ context.js
-│  ├─ model.js
-│  ├─ scheduler.js
-│  ├─ tts.js
-│  └─ state.js
-├─ integrations/
-│  ├─ music/
-│  ├─ voice/
-│  ├─ weather/
-│  └─ calendar/
-├─ web/
-│  ├─ src/
-│  └─ public/
-└─ deploy/
-   └─ nginx/
+apps/web/             界面、真实音频状态逻辑、PWA、前端测试
+apps/server/          鉴权、SQLite、网易云、模型、TTS、后端测试
+packages/shared/      TypeScript 接口类型
+.env.example          无秘密的配置示例
+AGENTS.md             接续与权限边界
+docs/development.md   项目当前执行状态
+docs/api-contract.md  当前接口契约
+docs/handoff-to-pi-20260930.md 本次交接快照
 ```
 
-## 当前仓库状态
+## 参考与历史
 
-目前仓库中可见内容只有三张截图：
+- 原始体验参考：mmguo 的 [Claudio x mmguo FM](https://mmguo.dev)。保存的原截图显示 Claudio、Monday Night Exhale 和“把我十四年的歌单，蒸馏成了AI电台”。不把角色名当成其他产品或代理的身份。
+- 账号和播放实现参考：[OpenMusic](https://github.com/qq01-hub/openmusic)、[Meting-API](https://github.com/qq01-hub/Meting-API)。参考不等于整项目复制或共享会员授权。
+- 视觉扩展参考：[Mineradio](https://github.com/XxHuberrr/Mineradio)，已标停更，不作为必须采用的基础依赖。
+- [历史原型说明](https://github.com/bjcdeshu/Emilybjcmusic/blob/2accf31966ea4b5778e4bd0f1ccab6a6df4e421b/README.md) 保存在原提交中。天气、日历、WebSocket、Fish Audio 和散落的用户画像文件是历史设想，不是当前首版已批准的必做项。
 
-- `PixPin_2026-04-23_14-41-44.png`
-- `PixPin_2026-04-23_14-42-09.png`
-- `PixPin_2026-04-23_14-44-06.png`
+原有三张截图保留原位：
 
-这意味着当前文档属于“项目说明 + 第一版方向确认版 README”，适合用于：
-
-- 对外介绍项目概念
-- 统一团队对第一版架构的理解
-- 为后续补全源码、接口和部署文档提供基线
-
-不适合直接作为：
-
-- 完整上线手册
-- 真实 API 文档
-- 精确的代码结构说明
-
-## 后续建议
-
-为了让 Emily 从概念走向可运行工程，建议下一步优先补齐以下内容：
-
-1. 明确 OAI-compatible 模型接口的输入输出协议，固定 JSON schema
-2. 明确前端与后端之间的接口契约
-3. 明确浏览器播放链路，确认音频源、歌词和 TTS 的时序
-4. 把用户画像、规则和状态存储落实为真实目录结构
-5. 增补 `deployment.md`，固化 `Nginx + HTTPS + Node.js` 的上线方案
-6. 为编排流程补一份时序图，明确“说话”和“播歌”的调度关系
-
-## 项目截图
-
-### 整体结构图
-
-![整体结构图](./PixPin_2026-04-23_14-41-44.png)
-
-### 模块施工图
-
-![模块施工图](./PixPin_2026-04-23_14-42-09.png)
-
-### 成品体验图
-
-![成品体验图](./PixPin_2026-04-23_14-44-06.png)
-
-## 一句话定义
-
-Emily 是一个部署在服务器上、通过 HTTPS 子域名访问、以前端 Web / PWA 为入口、以 Node.js 为中枢、以 OAI-compatible 模型接口为编排大脑的个人 AI 电台系统。
+![原始整体结构参考](./PixPin_2026-04-23_14-41-44.png)
+![原始模块参考](./PixPin_2026-04-23_14-42-09.png)
+![原始体验参考](./PixPin_2026-04-23_14-44-06.png)

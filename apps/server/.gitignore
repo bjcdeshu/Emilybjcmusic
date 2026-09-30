@@ -1,0 +1,9 @@
+# Application-private state must never be committed.
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.env*
+!*.env.example
+dist/

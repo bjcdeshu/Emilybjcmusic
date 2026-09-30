@@ -1,142 +1,251 @@
-import { useEffect, useState } from "react";
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
-import type { ApiResponse, NowPlayingState, PlayerActionResponse, QueueResponse } from "@emily/shared";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowRight, ArrowUpRight, Check, ChevronRight, CircleAlert, History as HistoryIcon, ListMusic, LockKeyhole, Radio, RefreshCw, Settings2, ShieldCheck, WifiOff, X } from "lucide-react";
+import type { AuthSession, FeedbackRequest, NowPlayingState, PlayerActionResponse, ProgrammeRequest, ProgrammeResponse, QueueItem, QueueResponse, RadioSettings, SetupStatus } from "@emily/shared";
+import { api, errorMessage, post } from "./api";
+import { MusicQrDialog, SetupIndicators, Spinner } from "./components";
+import { useMediaSession, usePwa, useRadioAudio } from "./hooks";
+import { Player } from "./Player";
+import { Library, RadioHistory, Settings } from "./views";
 
-type LoadState = "loading" | "ready" | "error";
+type View = "listen" | "library" | "history" | "settings";
+type Notice = { text: string; kind: "info" | "error" | "success" };
+const tabs = [{ id: "listen" as const, name: "收听", icon: Radio }, { id: "library" as const, name: "节目", icon: ListMusic }, { id: "history" as const, name: "历史", icon: HistoryIcon }, { id: "settings" as const, name: "设置", icon: Settings2 }];
 
 export function App() {
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [sessionError, setSessionError] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [sessionRetry, setSessionRetry] = useState(0);
   const [now, setNow] = useState<NowPlayingState | null>(null);
-  const [queueCount, setQueueCount] = useState(0);
-  const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [error, setError] = useState<string | null>(null);
-
-  async function refresh() {
-    try {
-      const [nowResponse, queueResponse] = await Promise.all([
-        fetchJson<NowPlayingState>("/api/now"),
-        fetchJson<QueueResponse>("/api/queue")
-      ]);
-
-      setNow(nowResponse);
-      setQueueCount(queueResponse.items.length);
-      setLoadState("ready");
-      setError(null);
-    } catch (caught) {
-      setLoadState("error");
-      setError(caught instanceof Error ? caught.message : "Unable to reach Emily API.");
-    }
-  }
-
-  async function runAction(action: "play" | "pause" | "next") {
-    const endpoint = action === "play" ? "/api/player/play" : `/api/player/${action}`;
-    const init: RequestInit = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [setup, setSetup] = useState<SetupStatus | null>(null);
+  const [settings, setSettings] = useState<RadioSettings | null>(null);
+  const [view, setView] = useState<View>("listen");
+  const [loading, setLoading] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<Record<string, FeedbackRequest["kind"]>>({});
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [immersive, setImmersive] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
+  const epoch = useRef(0);
+  const actionId = useRef(0);
+  const settingsWrites = useRef<Promise<unknown>>(Promise.resolve());
+  const volumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const { audioRef, playerRef, playback } = useRadioAudio({
+    advance: async () => (await post<PlayerActionResponse>("/api/player/next")).now,
+    onResolved: (value) => {
+      setNow(value); setQueue(value.queue); setHistoryRefresh((v) => v + 1);
+      if (!playerRef.current?.snapshot.wantsPlayback && value.status === "playing") {
+        void post("/api/player/pause").catch(() => { /* Local pause stays authoritative. */ });
       }
-    };
-
-    if (action === "play") {
-      init.body = JSON.stringify({ trackId: now?.track?.id });
     }
+  });
+  const pwa = usePwa();
 
-    const response = await fetchJson<PlayerActionResponse>(endpoint, init);
-
-    setNow(response.now);
-    setQueueCount(response.now.queue.length);
+  function clearPrivateState() {
+    epoch.current++; actionId.current++;
+    if (volumeTimer.current) clearTimeout(volumeTimer.current);
+    playerRef.current?.stop();
+    setNow(null); setQueue([]); setSetup(null); setSettings(null); setFeedbacks({});
+    setQrOpen(false); setNotice(null); setActionBusy(false); setSettingsBusy(false); setFeedbackBusy(false); setLoading(false);
+    setView("listen"); setImmersive(false);
   }
 
   useEffect(() => {
-    void refresh();
+    const expired = () => {
+      clearPrivateState();
+      setSession({ authenticated: false, configured: true });
+      setSessionError("个人登录已过期，请重新登录。");
+    };
+    window.addEventListener("emily:session-expired", expired);
+    return () => window.removeEventListener("emily:session-expired", expired);
   }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setCheckingSession(true); setSessionError("");
+    void api<AuthSession>("/api/session", { signal: controller.signal })
+      .then((value) => { if (!controller.signal.aborted) setSession(value); })
+      .catch((e) => { if (!controller.signal.aborted) setSessionError(errorMessage(e)); })
+      .finally(() => { if (!controller.signal.aborted) setCheckingSession(false); });
+    return () => controller.abort();
+  }, [sessionRetry]);
 
-  const isPlaying = now?.status === "playing";
+  async function refreshPrivate(signal?: AbortSignal) {
+    const currentEpoch = epoch.current;
+    setLoading(true);
+    const results = await Promise.allSettled([
+      api<SetupStatus>("/api/setup", { signal: signal ?? null }), api<RadioSettings>("/api/settings", { signal: signal ?? null }),
+      api<NowPlayingState>("/api/now", { signal: signal ?? null }), api<QueueResponse>("/api/queue", { signal: signal ?? null })
+    ] as const);
+    if (signal?.aborted || currentEpoch !== epoch.current) return;
+    const [setupResult, settingsResult, nowResult, queueResult] = results;
+    if (setupResult.status === "fulfilled") setSetup(setupResult.value);
+    if (settingsResult.status === "fulfilled") { setSettings(settingsResult.value); playerRef.current?.configure(settingsResult.value); }
+    if (nowResult.status === "fulfilled" && !playerRef.current?.current) { setNow(nowResult.value); playerRef.current?.restore(nowResult.value); }
+    if (queueResult.status === "fulfilled") setQueue(queueResult.value.items);
+    const failures = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    if (failures.length) setNotice({ kind: "error", text: `部分电台数据未能载入：${errorMessage(failures[0]!.reason)}` });
+    setLoading(false);
+  }
+  useEffect(() => {
+    if (!session?.authenticated) return;
+    const controller = new AbortController();
+    void refreshPrivate(controller.signal);
+    return () => controller.abort();
+  }, [session?.authenticated]);
+  useEffect(() => () => { if (volumeTimer.current) clearTimeout(volumeTimer.current); }, []);
 
-  return (
-    <main className="shell">
-      <section className="player" aria-label="Emily player">
-        <div className="topbar">
-          <div>
-            <p className="eyebrow">Phase 2 mock loop</p>
-            <h1>Emily</h1>
+  async function perform(resolve: () => Promise<NowPlayingState>) {
+    const id = ++actionId.current;
+    setActionBusy(true); setView("listen");
+    await playerRef.current?.perform(resolve, true);
+    if (id === actionId.current) setActionBusy(false);
+  }
+  function transportPause() {
+    playerRef.current?.pause();
+    const currentEpoch = epoch.current;
+    void post<PlayerActionResponse>("/api/player/pause").catch((e) => {
+      if (currentEpoch === epoch.current) setNotice({ kind: "error", text: `本机已暂停，但服务端未同步：${errorMessage(e)}` });
+    });
+  }
+  function transportPlay() {
+    const player = playerRef.current;
+    if (!player || !sessionRef.current?.authenticated) return;
+    if (playback.status === "error" || !now?.track || playback.phase === "idle" || playback.status === "ended") {
+      void perform(async () => (await post<PlayerActionResponse>("/api/player/play", now?.track ? { trackId: now.track.id } : {})).now);
+    } else {
+      // Resume synchronously in the gesture; never replay a DJ intro on a pause/resume.
+      void player.play();
+      const currentEpoch = epoch.current;
+      void post<PlayerActionResponse>("/api/player/play", {}).catch((e) => {
+        if (currentEpoch === epoch.current) setNotice({ kind: "error", text: `播放状态未同步：${errorMessage(e)}` });
+      });
+    }
+  }
+  function next() { if (!actionBusy && sessionRef.current?.authenticated) void perform(async () => (await post<PlayerActionResponse>("/api/player/next")).now); }
+  function previous() { if (!actionBusy && sessionRef.current?.authenticated) void perform(async () => (await post<PlayerActionResponse>("/api/player/previous")).now); }
+  function playTrack(id: string) { if (!actionBusy) void perform(async () => (await post<PlayerActionResponse>("/api/player/play", { trackId: id })).now); }
+  function createProgramme(request: ProgrammeRequest) {
+    if (actionBusy) return;
+    setNotice(null);
+    const currentEpoch = epoch.current;
+    void perform(async () => {
+      const response = await post<ProgrammeResponse>("/api/programme", request);
+      if (currentEpoch === epoch.current) {
+        const messages = [...response.warnings];
+        if (response.selectionSource === "playlist") messages.unshift("本次为真实歌单编排，不是模型选曲。");
+        if (messages.length) setNotice({ kind: "info", text: [...new Set(messages)].join(" ") });
+      }
+      return response.now;
+    });
+  }
+  useMediaSession(now, playback, { play: transportPlay, pause: transportPause, next, previous, seek: (time) => playerRef.current?.seek(time) });
+
+  async function saveSettings(patch: Partial<RadioSettings>, showSaved = false): Promise<boolean> {
+    const currentEpoch = epoch.current;
+    setSettingsBusy(true);
+    const work = settingsWrites.current.catch(() => {}).then(async () => {
+      if (currentEpoch !== epoch.current) return false;
+      try {
+        const result = await api<RadioSettings>("/api/settings", { method: "PATCH", body: JSON.stringify(patch) });
+        if (currentEpoch !== epoch.current) return false;
+        setSettings({ ...result, volume: playerRef.current?.snapshot.volume ?? result.volume });
+        // Do not let an earlier saved volume undo a later, real slider movement.
+        playerRef.current?.setDjEnabled(result.djEnabled);
+        if (showSaved) setNotice({ kind: "success", text: "偏好已保存。" });
+        return true;
+      } catch (e) {
+        if (currentEpoch === epoch.current) setNotice({ kind: "error", text: `偏好未保存：${errorMessage(e)}` });
+        return false;
+      }
+    });
+    settingsWrites.current = work;
+    const saved = await work;
+    if (currentEpoch === epoch.current && settingsWrites.current === work) setSettingsBusy(false);
+    return saved;
+  }
+  function setVolume(volume: number) {
+    playerRef.current?.setVolume(volume);
+    if (volumeTimer.current) clearTimeout(volumeTimer.current);
+    const currentEpoch = epoch.current;
+    volumeTimer.current = setTimeout(() => { if (currentEpoch === epoch.current) void saveSettings({ volume }); }, 500);
+  }
+  async function sendFeedback(kind: FeedbackRequest["kind"]) {
+    const trackId = now?.track?.id;
+    if (!trackId) return;
+    const currentEpoch = epoch.current;
+    setFeedbackBusy(true);
+    try {
+      const response = await post<{ saved: true }>("/api/feedback", { trackId, kind });
+      if (currentEpoch !== epoch.current) return;
+      if (response.saved) { setFeedbacks((old) => ({ ...old, [trackId]: kind })); setNotice({ kind: "success", text: kind === "like" ? "已记下：你喜欢这首歌。" : "已记下：少来一点类似音乐。跳过歌曲不会自动点踩。" }); }
+    } catch (e) { if (currentEpoch === epoch.current) setNotice({ kind: "error", text: errorMessage(e) }); }
+    finally { if (currentEpoch === epoch.current) setFeedbackBusy(false); }
+  }
+  async function disconnect() {
+    const currentEpoch = epoch.current;
+    setSettingsBusy(true);
+    playerRef.current?.stop(); setNow(null); setQueue([]);
+    try {
+      const response = await post<SetupStatus>("/api/music/disconnect");
+      if (currentEpoch === epoch.current) { setSetup(response); setNotice({ kind: "info", text: "已断开你的音乐账号。" }); }
+    } catch (e) { if (currentEpoch === epoch.current) setNotice({ kind: "error", text: errorMessage(e) }); }
+    finally { if (currentEpoch === epoch.current) setSettingsBusy(false); }
+  }
+  async function logout() {
+    playerRef.current?.pause();
+    setSettingsBusy(true);
+    try {
+      const result = await post<AuthSession>("/api/logout");
+      if (result.authenticated) throw new Error("服务端尚未确认退出，请重试。");
+      clearPrivateState(); setSession(result); setNotice(null);
+    } catch (e) { setNotice({ kind: "error", text: errorMessage(e) }); }
+    finally { setSettingsBusy(false); }
+  }
+  function openQr() { if (setup?.music.configured) setQrOpen(true); else setNotice({ kind: "error", text: "音乐服务还未配置。需要服务端连接授权的网易云适配器。" }); }
+  function navigate(nextView: View) { setView(nextView); setImmersive(false); window.scrollTo({ top: 0, behavior: "instant" }); }
+
+  return <>
+    <audio ref={audioRef} preload="metadata" className="audio-element" aria-hidden="true" />
+    {!session?.authenticated ? <Login session={session} checking={checkingSession} error={sessionError} retry={() => setSessionRetry((v) => v + 1)} loggedIn={(value) => { setSessionError(""); setSession(value); }} online={pwa.online} /> : <div className={`app-shell ${immersive && view === "listen" ? "immersive" : ""}`}>
+      <a className="skip-link" href="#main-content">跳到内容</a>
+      <header className="app-header"><button className="wordmark" aria-label="Emily 首页" onClick={() => navigate("listen")}>emily<span>PERSONAL RADIO</span></button><nav className="desktop-nav" aria-label="电台导航">{tabs.map(({ id, name }) => <button key={id} aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}>{name}</button>)}</nav><button className="account-pill" onClick={() => navigate("settings")}><LockKeyhole size={13} /><span>PRIVATE</span><Settings2 size={15} /></button></header>
+      {!pwa.online && <div className="offline-banner" role="status"><WifiOff size={17} />当前离线。外壳可打开，音乐和个人数据仍需要网络。</div>}
+      {notice && <div className={`notice notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.kind === "success" ? <Check size={18} /> : <CircleAlert size={18} />}<p>{notice.text}</p><button className="icon-button" aria-label="关闭提示" onClick={() => setNotice(null)}><X size={17} /></button></div>}
+      <main id="main-content" className={view === "listen" ? "listen-layout" : "single-view"}>
+        {view === "listen" ? <>
+          <aside className="editorial"><p className="eyebrow">AN INTIMATE LISTENING ROOM</p><h2>Good music.<br />A little company.</h2><p className="editorial-copy">不需要观众，也不需要热闹。<br />这里的音乐与声音，只为你留着。</p><div className="editorial-rule" /><p className="editorial-note">YOUR MUSIC.<br />HER VOICE.<br />YOUR OWN PACE.</p><button className="editorial-link" onClick={() => navigate("library")}>Find your programme<ArrowUpRight size={20} /></button><span className="editorial-stamp">e / fm</span></aside>
+          <div className="listen-column"><Player now={now} queue={queue} playback={playback} settings={settings} setup={setup} loading={loading} busy={actionBusy} feedbackBusy={feedbackBusy} feedbackKind={now?.track ? feedbacks[now.track.id] : undefined} immersive={immersive} toggleImmersive={() => setImmersive((v) => !v)} play={transportPlay} pause={transportPause} next={next} previous={previous} seek={(time) => playerRef.current?.seek(time)} volume={setVolume} quiet={() => { if (settings && !settingsBusy) void saveSettings({ djEnabled: !settings.djEnabled }); }} library={() => navigate("library")} feedback={(kind) => void sendFeedback(kind)} selectTrack={playTrack} retry={() => { if (now?.track) playTrack(now.track.id); }} />
+            <SetupIndicators setup={setup} openQr={openQr} showSettings={() => navigate("settings")} />
+            {!loading && !setup?.music.connected && <div className="setup-callout"><div><b>{setup?.music.configured ? "你的音乐，还差一次连接。" : "先把真实音乐接进来。"}</b><p>{setup?.music.configured ? "用自己的网易云账号扫码，然后选择一档节目。" : "音乐适配器未就绪；这里不会播放示例歌曲。"}</p></div><button className="icon-button" aria-label={setup?.music.configured ? "连接网易云" : "查看服务设置"} onClick={setup?.music.configured ? openQr : () => navigate("settings")}><ChevronRight size={22} /></button></div>}
+            {notice?.kind === "error" && <button className="retry-data text-button" disabled={loading} onClick={() => void refreshPrivate()}><RefreshCw size={16} />重新读取电台数据</button>}
           </div>
-          <span className={`badge ${loadState}`}>{badgeText(loadState, now?.status)}</span>
-        </div>
-
-        <div
-          className="artwork"
-          style={now?.track?.coverUrl ? { backgroundImage: `url(${now.track.coverUrl})` } : undefined}
-          aria-hidden="true"
-        >
-          <div className="artwork-core">E</div>
-        </div>
-
-        <section className="track-copy">
-          <p className="kicker">{now?.track?.album ?? "Mock player state"}</p>
-          <h2>{now?.track?.title ?? "正在连接 Emily"}</h2>
-          <p>{now?.track?.artist ?? "等待后端返回当前播放状态"}</p>
-        </section>
-
-        <section className="dj-card" aria-label="DJ segment">
-          <p>Emily says</p>
-          <strong>{now?.dj?.text ?? error ?? "准备读取 mock 串场文案。"}</strong>
-        </section>
-
-        <div className="controls" aria-label="Player controls">
-          <button type="button" aria-label="Previous track" disabled>
-            <SkipBack aria-hidden="true" size={20} />
-          </button>
-          <button
-            type="button"
-            className="play"
-            aria-label={isPlaying ? "Pause" : "Play"}
-            onClick={() => void runAction(isPlaying ? "pause" : "play")}
-          >
-            {isPlaying ? <Pause aria-hidden="true" size={24} fill="currentColor" /> : <Play aria-hidden="true" size={24} fill="currentColor" />}
-          </button>
-          <button type="button" aria-label="Next track" onClick={() => void runAction("next")}>
-            <SkipForward aria-hidden="true" size={20} />
-          </button>
-        </div>
-
-        <div className="progress" aria-hidden="true">
-          <span />
-        </div>
-
-        <section className="queue">
-          <div>
-            <p>Status</p>
-            <strong>{now?.status ?? "loading"}</strong>
-          </div>
-          <div>
-            <p>Queue</p>
-            <strong>{queueCount} tracks</strong>
-          </div>
-        </section>
-      </section>
-    </main>
-  );
+        </> : view === "library" ? <Library setup={setup} busy={actionBusy} createProgramme={createProgramme} playTrack={playTrack} openQr={openQr} /> : view === "history" ? <RadioHistory createProgramme={createProgramme} busy={actionBusy} refreshKey={historyRefresh} /> : <Settings settings={settings} setup={setup} busy={settingsBusy} save={saveSettings} disconnect={disconnect} logout={() => void logout()} openQr={openQr} refresh={() => void refreshPrivate()} volume={playback.volume} setVolume={setVolume} canInstall={pwa.canInstall} install={pwa.install} updateReady={pwa.updateReady} />}
+      </main>
+      <footer className="page-footer"><span>EMILY — A PRIVATE FREQUENCY</span><span>English hosting · Your own music</span></footer>
+      <nav className="mobile-nav" aria-label="电台导航">{tabs.map(({ id, name, icon: Icon }) => <button key={id} aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}><Icon size={20} strokeWidth={view === id ? 2.3 : 1.6} /><span>{name}</span>{id === "listen" && playback.status === "playing" && <i />}</button>)}</nav>
+      {qrOpen && <MusicQrDialog close={() => setQrOpen(false)} connected={() => { void refreshPrivate(); }} />}
+    </div>}
+  </>;
 }
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
-  const payload = (await response.json()) as ApiResponse<T>;
-
-  if (!payload.ok) {
-    throw new Error(payload.error.message);
+function Login({ session, checking, error, retry, loggedIn, online }: { session: AuthSession | null; checking: boolean; error: string; retry: () => void; loggedIn: (value: AuthSession) => void; online: boolean }) {
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  async function login(e: FormEvent) {
+    e.preventDefault(); setSubmitting(true); setLoginError("");
+    try {
+      const value = await post<AuthSession>("/api/login", { password });
+      if (!value.authenticated) throw new Error("尚未完成个人登录。");
+      setPassword(""); loggedIn(value);
+    } catch (e) { setLoginError(errorMessage(e)); setPassword(""); }
+    finally { setSubmitting(false); }
   }
-
-  return payload.data;
-}
-
-function badgeText(loadState: LoadState, playerStatus?: string) {
-  if (loadState === "loading") {
-    return "Checking API";
-  }
-
-  if (loadState === "error") {
-    return "API offline";
-  }
-
-  return `API ok · ${playerStatus ?? "idle"}`;
+  return <main className="login-shell"><div className="login-brand wordmark">emily<span>PERSONAL RADIO</span></div><section className="login-device"><div className="login-host"><p className="eyebrow">A PRIVATE FREQUENCY</p><div className="emily-emblem" aria-hidden="true"><span>e</span><i /><i /></div><h1>A little room<br />for music.</h1><p>Your music. Her voice. Your own pace.</p></div><div className="login-paper"><div className="login-title"><span className="mint-tag"><LockKeyhole size={12} />ONLY YOU</span><h2>欢迎回到自己的电台。</h2><p>Emily 是你的个人电台，不开放注册。<br />先登录，再连接你本人的网易云音乐。</p></div>{!online && <p className="inline-error"><WifiOff size={16} />当前离线，需要网络才能登录。</p>}{checking ? <div className="session-check"><Spinner label="正在检查个人登录状态" /></div> : !session ? <div className="session-check"><p className="inline-error" role="alert">{error || "尚未连接服务。"}</p><button className="secondary-button" onClick={retry}><RefreshCw size={16} />重新连接</button></div> : !session.configured ? <div className="owner-unconfigured"><ShieldCheck size={26} /><h3>个人登录还没配置。</h3><p>请在 Emily 服务端配置专用的个人口令。此页面不会开放注册，也不会使用其他服务的凭据。</p><button className="text-button" onClick={retry}>重新检查<RefreshCw size={16} /></button></div> : <form onSubmit={(e) => void login(e)} className="login-form"><label htmlFor="owner-password" className="field-label">个人登录口令</label><div className="password-field"><LockKeyhole size={18} /><input id="owner-password" type="password" autoComplete="current-password" required maxLength={256} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="你的电台，你的钥匙" disabled={submitting} /></div>{(loginError || error) && <p className="inline-error" role="alert">{loginError || error}</p>}<button className="primary-button" disabled={submitting || !password || !online} type="submit">{submitting ? <Spinner label="正在登录" /> : <>进入电台<ArrowRight size={19} /></>}</button></form>}<p className="login-privacy"><ShieldCheck size={14} />口令不会保存在浏览器离线缓存中。</p></div></section><p className="login-footer">NO ROOMS. NO AUDIENCE. JUST YOU AND THE MUSIC.</p></main>;
 }

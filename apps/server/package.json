@@ -6,9 +6,13 @@
   "main": "./dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/clean-stale-build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "node dist/index.js"
+    "typecheck:tests": "tsc -p tsconfig.test.json",
+    "start": "node dist/index.js",
+    "test": "tsx --test test/*.test.ts",
+    "test:tts": "tsx scripts/check-tts.ts",
+    "test:built": "node scripts/smoke-built.mjs"
   },
   "dependencies": {
     "@emily/shared": "file:../../packages/shared",
