@@ -1,0 +1,50 @@
+# Emily independent HTTPS site. Review filesystem paths on the target.
+server {
+    listen 80;
+    server_name emily.unbow.de;
+    access_log off;
+    error_log /dev/null crit;
+    location ^~ /.well-known/acme-challenge/ {
+        root /www/sites/emily.unbow.de/acme;
+        default_type text/plain;
+    }
+    location / { return 308 https://emily.unbow.de$request_uri; }
+}
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name emily.unbow.de;
+    ssl_certificate /www/sites/emily.unbow.de/ssl/fullchain.pem;
+    ssl_certificate_key /www/sites/emily.unbow.de/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    access_log off;
+    error_log /dev/null crit;
+    client_max_body_size 16k;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    location /api/ {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "";
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header X-Forwarded-Host "";
+        proxy_set_header X-Forwarded-Proto "";
+        proxy_set_header Forwarded "";
+        proxy_set_header Range $http_range;
+        proxy_set_header If-Range $http_if_range;
+        proxy_cache off;
+        proxy_store off;
+        proxy_buffering off;
+        proxy_intercept_errors off;
+        proxy_read_timeout 150s;
+    }
+    location / {
+        proxy_pass http://127.0.0.1:3100;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "";
+        proxy_cache off;
+        proxy_store off;
+        proxy_intercept_errors off;
+    }
+}

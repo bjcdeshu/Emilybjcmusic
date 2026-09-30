@@ -1,6 +1,6 @@
 # Emily 上线准备
 
-本页是部署方案和验收清单，不是已上线声明；当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，尚未完成本人音乐授权/整曲与手机验收。当前状态以 [development.md](development.md) 为准。
 
 ## 当前适合的部署方式
 
@@ -35,10 +35,10 @@
 - 不盲信外部Forwarded/X-Forwarded-*；当前Fastify `trustProxy=false`，反代后登录限流按代理入口聚合。若需要可信真实IP，必须按固定代理拓扑另做验证，不直接开放信任所有代理。
 - 对媒体传输/Cloudflare入口限制核对适用条款与能力，不凭MCP连通就保证音频代理合适。
 
-## 已准备的部署材料（未安装）
+## 部署材料与检查
 
-- `deploy/emily.service.example`：专用非root账户、只写 `/var/lib/emily`、保护home和系统目录、环境文件加载、离线预检、优雅停机。只作为待审核模板，尚未在systemd运行。
-- `deploy/nginx-locations.conf.example`：独立HTTPS站点的location片段，API不缓存、不落代理临时文件、不改写错误、保持Range，关闭含QR票据的访问日志。不含证书和server块，尚未用目标OpenResty做syntax/reload验收；不能直接覆盖现有站点。
+- `deploy/emily.service.example`：专用非root账户、只写 `/var/lib/emily`、保护home和系统目录、环境文件加载、离线预检、优雅停机。已按该模板在RN安装专用systemd服务；运行/回滚导航见下节。
+- `deploy/nginx-locations.conf.example`：独立HTTPS站点的location片段，API不缓存、不落代理临时文件、不改写错误、保持Range，关闭含QR票据的访问日志。不含证书和server块，完整 `deploy/nginx-site.conf.example` 已用于独立Emily站点，目标OpenResty syntax/reload通过；不能直接覆盖其他站点。
 - `scripts/deployment-preflight.mjs`：离线、只读，检查HTTPS origin/回环/专用凭据配置、现有私有环境与数据权限及恢复状态、PWA文件和TTS执行文件，不打开数据库、不启动服务、不调用模型/网易/TTS、不打印配置值。Windows没有ACL验收时明确阻断；不把chmod当ACL证明。此检查不证明适配器解灰关闭、路径未同步或外部服务可用，仍需操作者核验。
 - 测试：`npm run test:deployment`。正式预检须在构建后**以专用服务用户**执行，使用同一私有文件，不使用其他代理环境：
 
@@ -58,7 +58,22 @@
 - 候选网易适配器上游README仍明确 `ENABLE_GENERAL_UNBLOCK` 默认为true；不直接pull latest即运行。必须审核并固定具体版本/摘要，显式关闭解灰、匹配及代理插件后才允许本人授权。来源：[上游README](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)，2026-09-30读取；不是已选择该版本或已接入声明。
 - 应用专用模型base/name/key与本人音乐授权尚无；不读取或复用其他代理密钥。现有 `oapi.unbow.de` 只是可选网关，需主人提供/创建Emily专用key并确认模型及费用范围。
 
-2026-09-30 David已确认目标RN与OAPI优先Gemini，承接独立子域名及专用服务/适配器安装和反代/DNS范围；不再重复询问方向。RN/NC hostname及stripped machine-id SHA256均已匹配fleet入口。主人口令与加密key可以于私有目录生成，不要求发到聊天；模型专用key通过安全文件提供，本人扫码另走受保护页面。本机已创建空白 `C:/Users/David/AppData/Local/Emily-private/oapi-key.txt`，核验目录关闭继承且目录/文件只允许David、SYSTEM及Administrators访问，不在源码或同步目录；该文件当前没有key。授权不包括复制代理密钥或任意修改OAPI通道，需用Emily专用令牌核验实际Gemini可用性。保留提交与旧release，首次上线前无Emily数据可回滚；之后停专用实例、一致性保存SQLite及key后升级，回滚只改Emily入口，不触碰既有服务。
+2026-09-30 David已确认目标RN与OAPI优先Gemini，承接独立子域名及专用服务/适配器安装和反代/DNS范围；不再重复询问方向。RN/NC hostname及stripped machine-id SHA256均已匹配fleet入口。主人口令与加密key可以于私有目录生成，不要求发到聊天；模型专用key通过安全文件提供，本人扫码另走受保护页面。本机已创建空白 `C:/Users/David/AppData/Local/Emily-private/oapi-key.txt`，核验目录关闭继承且目录/文件只允许David、SYSTEM及Administrators访问，不在源码或同步目录；David已保存专用key，Pi权限核验及OAPI模型/实际编排调用通过；值不进入正文或工具输出。授权不包括复制代理密钥或任意修改OAPI通道，需用Emily专用令牌核验实际Gemini可用性。保留提交与旧release，首次上线前无Emily数据可回滚；之后停专用实例、一致性保存SQLite及key后升级，回滚只改Emily入口，不触碰既有服务。
+
+## RN运行导航（2026-09-30已部署，非最终收听验收）
+
+- URL：`https://emily.unbow.de`，Cloudflare DNS-only A/TTL300，直连RN，不代理音乐到CDN；Let's Encrypt独立证书。
+- App：`/opt/emily/current` → `/opt/emily/releases/478a12e`（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
+- Music：`/opt/emily/adapter-135df9e` upstream4.40.1/135df9eddab12cc8879f63c090c0ce808040504f，专用lockfile与MIT LICENSE；解灰依赖/分支/route移除，audit0。仅 `/opt/emily/netease-bridge.cjs` 私有桥接，`emily-adapter.service` 回环3101；ENABLE_GENERAL_UNBLOCK/ENABLE_PROXY/ENABLE_RANDOM_CN_IP=false。新xeapi注册在RN超时，桥接把xeapi请求改成网易eapi原始传输；QR生成/轮询通过，不证明账号整曲。重建补丁用 `deploy/prepare-netease-upstream.mjs`，拒绝不匹配的上游文件hash；bridge test为明确fixture安全测试。
+- 私有环境：`/etc/emily/emily.env`、`adapter.env`（0600/emily），data=`/var/lib/emily/radio`（0700），SQLite0600；模型=`https://oapi.unbow.de/v1` / `gemini-3.8-flash` / Emily专用key，timeout30秒。主人密码本机安全副本 `C:/Users/David/AppData/Local/Emily-private/owner-password.txt`，已核验ACL；不打印/上传/提交。
+- TTS：`/opt/emily/tools/tts/bin/edge-tts` 7.2.3专用venv，requirements-resolved.txt记录依赖；专用用户真实合成与解码/缓存成功。应用无需使用root uvx。
+- HTTPS：`/opt/1panel/www/conf.d/emily.unbow.de.conf`，专用网站SSL/ACME路径；API无缓存/无代理落盘/无票据日志，保留Range，TLS1.2/1.3、HTTP308。只做nginx-t+平滑reload，原容器和业务未重启。已有nginx listen-http2弃用警告未顺手处理。
+- 续期：`/etc/emily/acme` 为本应用专用acme配置，`emily-cert-renew.timer` 每日随机延迟/持久化，实际cron检查Result=success；reloadcmd先nginx-t再reload。不更改其他ACME账户/证书/任务。
+- 查看：`systemctl status emily emily-adapter`，`systemctl list-timers emily-cert-renew.timer`；不得用 `systemctl show Environment`、输出private env或raw provider日志。health=/api/health，未登录保护接口401。
+- 首次回滚：`/var/backups/emily-20260930/rollback.txt`；停止并禁用Emily两个units及专用续期timer，移出新增Emily nginx配置后nginx-t/reload，撤销仅Emily新增DNS记录；保留 `/etc/emily` 与 `/var/lib/emily`，不删除主人授权或修改主站/网关。DNS对象ID仅留运行记录，不保留令牌。
+- 升级：停止Emily专用实例或一致性备份SQLite，与AES key同等保护；新release构建/test/权限预检后原子换current，再仅restart emily。适配器单独审核与锁版本，不更新latest/整个fleet。权限、TLS和续期检查分别记录，不把网页200当最终体验通过。
+
+实际验证：RN build/typecheck/testtypecheck，后端27+前端27+预检6共60全绿，built启动通过；公开Chrome393px登录、QR等待、PWA外壳和退出通过，RN实际Gemini编排12.1秒。未完成本人音乐与手机验收。
 
 ## 验收与放行
 

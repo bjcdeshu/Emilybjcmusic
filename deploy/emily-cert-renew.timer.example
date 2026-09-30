@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Emily HTTPS renewal daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=2h
+Persistent=true
+Unit=emily-cert-renew.service
+
+[Install]
+WantedBy=timers.target

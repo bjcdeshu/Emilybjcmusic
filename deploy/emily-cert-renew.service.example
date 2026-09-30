@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew Emily dedicated HTTPS certificate
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/root/.acme.sh/acme.sh --cron --config-home /etc/emily/acme --home /root/.acme.sh

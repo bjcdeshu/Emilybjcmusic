@@ -79,7 +79,25 @@
     "deploymentPerformed": false,
     "limitations": ["RN Node22 application tests not yet run", "systemd/nginx templates not validated on target", "dedicated Linux TTS executable not yet provisioned", "adapter version/unblock policy not yet verified"]
   },
-  "notVerified": ["real NetEase QR/account entitlements/full songs/CDN", "real model gateway", "real external NetEase DJ-to-song browser continuous playback", "physical Xiaomi 12S background/PWA", "owner-only Windows private data ACL", "public HTTPS deployment"],
+  "fourthPhase": {
+    "scope": "authorized isolated RN deployment and pre-owner-QR acceptance",
+    "rnRuntime": { "node": "22.23.3", "npm": "10.9.9", "globalNodeChanged": false },
+    "rnTests": { "server": 27, "web": 27, "preflight": 6, "failed": 0, "skipped": 0 },
+    "windowsBridgeFixtureTests": { "passed": 1, "failed": 0, "skipped": 0 },
+    "rnCiBuildTypecheckTestTypecheck": "passed",
+    "rnBuiltEntrypoint": "passed",
+    "rnPrivatePermissionPreflight": "passed",
+    "rnEdge": { "version": "7.2.3", "voice": "en-US-EmmaMultilingualNeural", "bytes": 36864, "durationSeconds": 6.144, "decoded": true, "cacheReused": true },
+    "oapiGemini": { "model": "gemini-3.8-flash", "modelList": "verified with Emily key", "windowsSelectionMs": 5586, "rnSelectionMs": 12060, "source": "model", "items": 2, "catalogue": "explicit synthetic test metadata, not stored in production" },
+    "adapter": { "upstreamCommit": "135df9eddab12cc8879f63c090c0ce808040504f", "upstreamVersion": "4.40.1", "unlockDependencyAndBranchesRemoved": true, "publicUpstreamServerUsed": false, "fixedPostRoutes": 9, "bearerRequired": true, "rawLogsDisabled": true, "xeapiInitialization": "RN key registration timed out; eapi original-provider transport used", "qrCreated": true, "qrPoll": "waiting", "auditReportedVulnerabilities": 0 },
+    "services": { "emily": "active/running", "adapter": "active/running", "loopbackPorts": [3100, 3101], "restartCountsAfterConvergence": [0, 0] },
+    "https": { "url": "https://emily.unbow.de", "dnsProxy": false, "dnsTtl": 300, "certificate": "Let's Encrypt", "nginxSyntax": "passed", "gracefulReload": "passed", "otherContainersRestarted": false, "dedicatedRenewalTimerEnabled": true, "renewalCronCheck": "success" },
+    "publicChrome": { "version": "154.0.8037.58", "viewport": "393x851", "loginStatus": 200, "modelConfigured": true, "ttsAvailable": true, "musicConnected": false, "qrStatus": 200, "safePng": true, "qrPoll": "waiting", "publicIconsAndSwStatus": 200, "swReady": true, "logoutStatus": 200, "privateCookiesRemoved": true, "horizontalOverflow": false, "pageErrors": [] },
+    "deploymentPerformed": true,
+    "ownerQrConfirmed": false,
+    "fullListeningAcceptance": false
+  },
+  "notVerified": ["owner NetEase QR confirmation/account entitlements/full songs/CDN", "real external NetEase DJ-to-song browser continuous playback", "physical Xiaomi 12S background/PWA"],
   "warnings": ["Fastify FSTDEP023 deprecation", "Windows POSIX chmod does not establish an owner-only ACL; protect private data before real credentials"],
-  "publicDeploymentPerformed": false
+  "publicDeploymentPerformed": true
 }

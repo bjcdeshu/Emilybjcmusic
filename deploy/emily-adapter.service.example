@@ -1,0 +1,30 @@
+[Unit]
+Description=Emily private NetEase adapter (no unlocking)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=emily
+Group=emily
+WorkingDirectory=/opt/emily
+Environment=HOME=/var/lib/emily/adapter
+Environment=TMPDIR=/var/lib/emily/adapter
+ExecStart=/usr/bin/node --env-file=/etc/emily/adapter.env /opt/emily/netease-bridge.cjs
+Restart=on-failure
+RestartSec=20
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/emily/adapter
+RestrictSUIDSGID=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
