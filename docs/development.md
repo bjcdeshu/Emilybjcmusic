@@ -4,7 +4,7 @@
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
-- 最新授权：David 确认后续都在本目录推进，要求Pi整体检查后持续开发，需本人输入时集中说明，不逐步重复确认。Codex负责Pi的Cloudflare MCP配置；Pi负责Emily源码和后续网站准备，本轮未做公开部署、DNS或费用变更。
+- 最新授权（2026-09-30）：David确认持续在本目录由Pi开发，并明确同意部署到RN，承接已提出的 `emily.unbow.de`、专用服务/私有适配器/TTS、独立HTTPS反代与DNS范围；不改主站、不升级系统Node、不重启其他业务。模型使用OAPI，优先Gemini；具体可用模型及Emily专用key仍需核验，未授权复制其他代理密钥或任意修改网关通道。普通实现与必要验证直接推进，需本人输入集中说明。Codex本次负责Cloudflare MCP配置，Pi负责源码及部署；截至当前尚未公开部署或修改DNS。
 - 当前写入者：Pi，任务 `01a0f204-d57a-75b4-93d4-c35f2fa8aeae`；原交接整理与验证由 Iris / Hermes default 执行，原任务 `emily-v1-english-20260930`。
 - 本机接续目录：`C:/workspace/codex/work/Emily`；分支 `pi/emily-continue-20260930`，基于 Iris 交接提交 `c7af2c2ce8a01e023647e2047befa525aa68c6b4`。
 - 接续前已确认 `C:/workspace/codex/音乐开发` 为干净旧 main，使用独立 worktree 保留原目录和分支；来源分支 `iris/emily-v1-english-20260930`，不覆盖 main。
@@ -15,7 +15,7 @@
 - Pi 已修复原两项失败：有界、去重的单首主持预准备；pause 不走网络动作互斥，使用暂停版本阻止迟到 play/next 恢复播放。其他准备动作仍互斥。原断言保留并新增 play、清空、声线变化与关闭竞态测试。
 - Iris 的英文主持自由文本修正已保留；`model-hosting.test.ts`三项回归通过。常见无依据事实筛选不等于完整事实认证。
 - 尚未验收：本人网易云登录/会员整曲/CDN、实际模型通道、真实外部音源的浏览器连续播放、小米物理后台与PWA行为、公开HTTPS部署。Chrome使用明确HTTP/MP3 fixture的整合链路已通过，见第二阶段结果。
-- 交接边界：本次允许提交和同步Git开发分支；不据此覆盖 `main`、丢弃本机修改、推送秘密、修改DNS或重启/发布生产服务。没有部署的网站可用性声明。
+- 交接边界：允许提交和同步Git开发分支；不覆盖 `main`、丢弃本机修改或推送秘密。后续RN独立Emily部署与DNS已获David本轮批准（见最新授权），历史交接本身不授予其他生产操作权限。没有部署的网站可用性声明。
 
 Linux原工作区仅供来源定位：`/srv/agent-workspace/worktrees/bjcdeshu/Emilybjcmusic/iris/emily-v1-english-20260930`。此路径不是电脑端接续路径；Git同步不等于已更新电脑工作树。
 
@@ -50,11 +50,15 @@ Linux原工作区仅供来源定位：`/srv/agent-workspace/worktrees/bjcdeshu/E
 - 当轮完整构建/typecheck、后端测试typecheck、后端27/27、前端27/27、部署预检6/6、Chrome fixture1/1，共61通过0跳过；编译入口再次通过，production依赖audit0报告。仍有Fastify弃用警告，真实网易/模型/手机/HTTPS未验收。
 - 方案与只读快照详见 [deployment.md](deployment.md)。RN与 `emily.unbow.de` 是候选，不是已批准发布目标。网易候选上游默认开启general unblock，必须审核固定版本并关闭后才接入，不直接运行latest。
 
+## 本轮发布批准（2026-09-30）
+
+David直接回复：同意部署到RN，模型使用OAPI、优先Gemini。承接上轮已说明的独立子域和窄范围服务安装/反代/DNS方案；不再重复询问这两个方向。已读取NC实际网关RUNBOOK和RN fleet身份校验入口，没有读取网关密钥、复制其他代理凭据或修改网关。Gemini可用性尚未通过Emily专用令牌核验；缺少令牌时不声称模型已连通。
+
 ## 下一步
 
-1. 集中向David确认候选RN+独立Emily子域及新专用服务/适配器安装、反代/DNS发布范围；不动主站或网关。按获准目标核验machine-id并准备窄范围回滚。
-2. 通过安全文件提供Emily专用模型key并确定模型/费用；主人口令与AES key可在受保护目录生成，不复制其他代理身份。本人扫码确认另走安全页面。
-3. 专用运行时与适配器审核/固定、Linux测试与权限验证、真实浏览器外部连续音源联调后，按批准范围公开HTTPS并完成小米验收。真实外部成功前保持缺配置状态，不把fixture当会员整曲证据。
+1. 按批准的RN+Emily子域方案核验machine-id、准备窄范围回滚、审核固定适配器并关闭解灰、建立专用运行时/私有目录，完成Linux测试；不改主站或网关渠道，不升级全局Node。
+2. David通过安全文件提供/创建Emily专用OAPI令牌；Pi用专用令牌核验Gemini可用型号，优先合适的Flash型号，验证实际编排返回；不得自动切换到其他付费服务。主人口令与AES key在受保护目录生成，不复制其他代理身份。
+3. 本人扫码确认另走安全页面；真实音源浏览器联调、按批准范围公开HTTPS与小米验收。真实外部成功前保持缺配置状态，不把fixture当会员整曲证据。
 
 ## 历史基线：Phase 2 mock（保留原有贡献）
 

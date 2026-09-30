@@ -58,7 +58,7 @@
 - 候选网易适配器上游README仍明确 `ENABLE_GENERAL_UNBLOCK` 默认为true；不直接pull latest即运行。必须审核并固定具体版本/摘要，显式关闭解灰、匹配及代理插件后才允许本人授权。来源：[上游README](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)，2026-09-30读取；不是已选择该版本或已接入声明。
 - 应用专用模型base/name/key与本人音乐授权尚无；不读取或复用其他代理密钥。现有 `oapi.unbow.de` 只是可选网关，需主人提供/创建Emily专用key并确认模型及费用范围。
 
-放行前需David一次确认目标RN、独立子域名及专用服务/适配器安装和反代/DNS范围。主人口令与加密key可以在获准后于私有目录生成，不要求发到聊天；模型专用key通过安全文件提供，本人扫码另走受保护页面。保留提交与旧release，首次上线前无Emily数据可回滚；之后停专用实例、一致性保存SQLite及key后升级，回滚只改Emily入口，不触碰既有服务。
+2026-09-30 David已确认目标RN与OAPI优先Gemini，承接独立子域名及专用服务/适配器安装和反代/DNS范围；不再重复询问方向。RN/NC hostname及stripped machine-id SHA256均已匹配fleet入口。主人口令与加密key可以于私有目录生成，不要求发到聊天；模型专用key通过安全文件提供，本人扫码另走受保护页面。本机已创建空白 `C:/Users/David/AppData/Local/Emily-private/oapi-key.txt`，核验目录关闭继承且目录/文件只允许David、SYSTEM及Administrators访问，不在源码或同步目录；该文件当前没有key。授权不包括复制代理密钥或任意修改OAPI通道，需用Emily专用令牌核验实际Gemini可用性。保留提交与旧release，首次上线前无Emily数据可回滚；之后停专用实例、一致性保存SQLite及key后升级，回滚只改Emily入口，不触碰既有服务。
 
 ## 验收与放行
 
