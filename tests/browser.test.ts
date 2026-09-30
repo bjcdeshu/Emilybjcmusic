@@ -58,7 +58,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.goto(origin);
     await page.getByLabel("个人登录口令").fill(OWNER_PASSWORD);
     await page.getByRole("button", { name: "进入电台" }).click();
-    await page.getByText("Fixture owner", { exact: true }).waitFor();
+    await page.locator(".main-play").waitFor();
     await page.evaluate(() => {
       const audio = document.querySelector("audio")!;
       (window as any).emilyAudioEvents = [];
@@ -102,8 +102,25 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await page.getByRole("button", { name: "喜欢这首歌" }).click();
     assert.equal(app.services.store.feedbackMap().get("202"), "like");
+    if (env.EMILY_BROWSER_EVIDENCE_DIR) {
+      await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
+      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-listen.png"), fullPage: true });
+      await page.setViewportSize({ width: 1360, height: 1000 });
+      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "desktop-listen.png"), fullPage: true });
+      await page.setViewportSize({ width: 393, height: 851 });
+    }
     await nav().getByRole("button", { name: "历史", exact: true }).click();
     await page.getByRole("button", { name: "重新编排" }).waitFor();
+    const mini = page.getByRole("complementary", { name: "正在收听" });
+    await mini.getByRole("button", { name: "播放", exact: true }).click();
+    await wait(page, () => !document.querySelector("audio")!.paused);
+    await mini.getByRole("button", { name: "暂停", exact: true }).click();
+    assert.equal(await page.evaluate(() => document.querySelector("audio")!.paused), true);
+    if (env.EMILY_BROWSER_EVIDENCE_DIR) {
+      await nav().getByRole("button", { name: "节目", exact: true }).click();
+      await page.getByRole("button", { name: /Fixture owner playlist/ }).waitFor();
+      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-library.png"), fullPage: true });
+    }
     await nav().getByRole("button", { name: "设置", exact: true }).click();
     await page.getByLabel("英文女声", { exact: true }).selectOption("en-GB-SoniaNeural");
     await page.getByRole("button", { name: "保存偏好" }).click();

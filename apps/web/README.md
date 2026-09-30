@@ -34,6 +34,6 @@ The 27 automated tests are **explicitly test-only fixtures**, not real provider 
 2. Validate `voice` against the backend's allowlist. The settings select uses the shared allowlist; choices are supported IDs, not a claim that online voice availability has been verified at that moment.
 3. Serve the production build at the origin root over HTTPS (or localhost), serve `sw.js` as JavaScript, and keep `/api/**` out of SPA rewrites and HTTP caches. Increment the shell cache version when changing its release policy.
 4. Supply HTTPS-compatible or same-origin-proxied audio URLs. Mixed-content, credential-bearing and non-HTTP URLs are rejected rather than played.
-5. On Xiaomi 12S Chrome, verify QR gallery scan, autoplay/return-from-authorisation, seeking, volume, DJ/song boundaries, lock-screen actions, app installation and background restrictions. Desktop build/typecheck/unit success does not prove these behaviours.
+5. David's 2026-09-30 correction cancels physical Xiaomi/lockscreen/PWA acceptance as delivery gates. Focus on mmguo-inspired visual quality and normal browser interaction regressions; do not ask the owner for a device-test checklist or falsely mark untested device behaviour as passed.
 
 No commits, external publishing, DNS/service changes, root manifest/lockfile writes, backend writes or credential discovery were performed by this worker.
