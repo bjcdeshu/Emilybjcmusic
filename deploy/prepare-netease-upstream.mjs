@@ -7,14 +7,15 @@ const directory=process.argv[2];
 if(!directory)throw new Error('Provide a fresh upstream staging directory.');
 const root=resolve(directory);
 const expected={
- 'package.json':'2d4a440be68f5e0e2ee33f19f30ab7fcff0dfcb08aa710d7eabe6a995e18ecea',
- 'module/song_url_v1.js':'379e7e634d42d3953b1973fc04d1ae4243552b6f1250dada93c5b8b5f9b4a40a'
+ 'package.json':'6428f82a1a9ed75c8557aae596829e46194ace01c2dac31d94b20c75748edf98',
+ 'module/song_url_v1.js':'623d86b61967dd1f2e1a2facdf1d5cd00850a47a55a09eab74c6d749d081a24f'
 };
 const original={};
 for(const [name,hash] of Object.entries(expected)){
- const bytes=await readFile(join(root,name));
- if(createHash('sha256').update(bytes).digest('hex')!==hash)throw new Error('Upstream does not match audited commit 135df9eddab12cc8879f63c090c0ce808040504f.');
- original[name]=bytes.toString('utf8');
+ const text=(await readFile(join(root,name),'utf8')).replace(/\r\n/g,'\n');
+ // Git archive/Windows checkout may convert EOL; hash canonical LF source bytes.
+ if(createHash('sha256').update(text).digest('hex')!==hash)throw new Error('Upstream does not match audited commit 135df9eddab12cc8879f63c090c0ce808040504f.');
+ original[name]=text;
 }
 const pkg=JSON.parse(original['package.json']);
 delete pkg.dependencies['@neteasecloudmusicapienhanced/unblockmusic-utils'];
@@ -28,6 +29,7 @@ const branchStart=song.indexOf("  if (query.unblock === 'true') {");
 const branchEnd=song.indexOf("  if (data.level == 'sky')",branchStart);
 if(branchStart<0||branchEnd<0)throw new Error('Audited branch boundary missing.');
 song=song.slice(0,branchStart)+song.slice(branchEnd);
+song=song.split('\n').filter(line=>!line.trimStart().startsWith('// 当unblock')).join('\n');
 if(song.includes('matchID')||song.includes('unblockmusic-utils'))throw new Error('Unlock code survived patch.');
 await writeFile(join(root,'package.json'),JSON.stringify(pkg,null,2));
 await writeFile(join(root,'module/song_url_v1.js'),song);
