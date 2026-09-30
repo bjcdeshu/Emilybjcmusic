@@ -16,7 +16,9 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!path.startsWith("/api/")) throw new ApiError("无效的 API 地址。", "INVALID_PATH");
   const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), 45_000);
+  // Programme preparation is bounded by provider selection plus first TTS.
+  // Ordinary controls stay short; do not abort a valid preparation at 45 seconds.
+  const timer = setTimeout(() => timeout.abort(), path === "/api/programme" || path.startsWith("/api/player/") ? 135_000 : 45_000);
   const signal = init.signal ? AbortSignal.any([init.signal, timeout.signal]) : timeout.signal;
   try {
     const response = await fetch(path, {

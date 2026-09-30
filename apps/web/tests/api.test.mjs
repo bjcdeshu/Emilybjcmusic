@@ -29,6 +29,14 @@ test("network messages do not expose raw provider transport errors", async (t) =
   await assert.rejects(api("/api/test-only"), (error) => !error.message.includes("private transport"));
   await assert.rejects(api("https://external.test/private"), (error) => error.code === "INVALID_PATH");
 });
+test("programme and provider-backed controls get a bounded preparation budget; ordinary reads remain short", async (t) => {
+  const budgets = [];
+  t.mock.method(globalThis, "setTimeout", (_fn, ms) => { budgets.push(ms); return 0; });
+  t.mock.method(globalThis, "clearTimeout", () => {});
+  t.mock.method(globalThis, "fetch", async () => Response.json({ ok: true, data: {} }));
+  await post("/api/programme", {}); await post("/api/player/next"); await api("/api/settings");
+  assert.deepEqual(budgets, [135_000, 135_000, 45_000]);
+});
 test("URL boundary rejects scripting, credentials, mixed content and unsafe image data", () => {
   for (const url of ["javascript:alert(1)", "file:///test-only", "https://owner:secret@example.test/audio", "http://example.test/audio"]) assert.equal(safeUrl(url), undefined);
   assert.equal(safeUrl("/api/audio/test-only"), "https://emily.test/api/audio/test-only");

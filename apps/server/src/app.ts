@@ -38,7 +38,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   const clock = options.clock || Date.now;
   const app = fastify({
     logger: options.logger ?? false, disableRequestLogging: true,
-    bodyLimit: 16_384, requestTimeout: 30_000, connectionTimeout: 10_000,
+    bodyLimit: 16_384, requestTimeout: 30_000, connectionTimeout: 150_000,
     trustProxy: false, ajv: { customOptions: { removeAdditional: false, coerceTypes: false, useDefaults: false } }
   }) as unknown as EmilyApp;
   const store = new Store(config.dataDir, config.credentialKey);
