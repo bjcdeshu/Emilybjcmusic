@@ -114,6 +114,7 @@
     "testCleanup": { "djEnabledRestored": true, "radioPaused": true, "permanentMusicFeedbackWritten": false },
     "limitations": ["hosted DJ continuity check used end seek followed by real ended", "natural full-song check was quiet mode", "not human listening", "no VIP-tier or all-catalogue assertion", "physical Xiaomi background/PWA not tested"]
   },
+  "uiRedesign": { "source": "David direct rejection of current UI/UX and cancellation of Xiaomi/lockscreen testing gates", "reference": "mmguo Claudio FM live ENTER RADIO and original screenshots; Apple Music cover library", "release": "80484eb", "published": true, "frontendUnitPass": 28, "browserFixturePass": 1, "miniPlayerPlayPause": true, "publicUiAssetVerified": true, "visibleRealPlaylists": 8, "expandedRealPlaylists": 70, "launchEnabledAfterSelection": true, "publicPageErrors": [], "mobileOverflow": false, "ownerDesignAcceptance": "awaiting feedback", "physicalDeviceAcceptanceGate": false },
   "notVerified": ["specific VIP-tier and all-catalogue entitlements", "human listening quality", "physical Xiaomi 12S background/lockscreen/PWA installation", "cross-device long-duration reliability"],
   "warnings": ["Fastify FSTDEP023 deprecation", "Windows POSIX chmod does not establish an owner-only ACL; protect private data before real credentials"],
   "publicDeploymentPerformed": true

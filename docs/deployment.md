@@ -1,6 +1,6 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；物理手机和人工听感尚待验收。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新UI80484eb已发布，设计反馈优先。当前状态以 [development.md](development.md) 为准。
 
 ## 当前适合的部署方式
 
@@ -63,7 +63,7 @@
 ## RN运行导航（2026-09-30已部署，非最终收听验收）
 
 - URL：`https://emily.unbow.de`，Cloudflare DNS-only A/TTL300，直连RN，不代理音乐到CDN；Let's Encrypt独立证书。
-- App：`/opt/emily/current` → `/opt/emily/releases/fcf4df6`（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
+- App：`/opt/emily/current` → `/opt/emily/releases/80484eb`（UI重做；后端功能同fcf4df6）（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
 - Music：`/opt/emily/adapter-135df9e` upstream4.40.1/135df9eddab12cc8879f63c090c0ce808040504f，专用lockfile与MIT LICENSE；解灰依赖/分支/route移除，audit0。仅 `/opt/emily/netease-bridge.cjs` 私有桥接，`emily-adapter.service` 回环3101；ENABLE_GENERAL_UNBLOCK/ENABLE_PROXY/ENABLE_RANDOM_CN_IP=false。新xeapi注册在RN超时，桥接把xeapi请求改成网易eapi原始传输；本人QR授权、实际2首安全网易CDN整曲数据与浏览器连播通过；不代表全目录/VIP档位验收。重建补丁用 `deploy/prepare-netease-upstream.mjs`，拒绝不匹配的上游文件hash；bridge test为明确fixture安全测试。
 - 私有环境：`/etc/emily/emily.env`、`adapter.env`（0600/emily），data=`/var/lib/emily/radio`（0700），SQLite0600；模型=`https://oapi.unbow.de/v1` / `gemini-3.8-flash` / Emily专用key，timeout30秒。主人密码本机安全副本 `C:/Users/David/AppData/Local/Emily-private/owner-password.txt`，已核验ACL；不打印/上传/提交。
 - TTS：`/opt/emily/tools/tts/bin/edge-tts` 7.2.3专用venv，requirements-resolved.txt记录依赖；专用用户真实合成与解码/缓存成功。应用无需使用root uvx。
@@ -73,7 +73,7 @@
 - 首次回滚：`/var/backups/emily-20260930/rollback.txt`；停止并禁用Emily两个units及专用续期timer，移出新增Emily nginx配置后nginx-t/reload，撤销仅Emily新增DNS记录；保留 `/etc/emily` 与 `/var/lib/emily`，不删除主人授权或修改主站/网关。DNS对象ID仅留运行记录，不保留令牌。
 - 升级：停止Emily专用实例或一致性备份SQLite，与AES key同等保护；新release构建/test/权限预检后原子换current，再仅restart emily。适配器单独审核与锁版本，不更新latest/整个fleet。权限、TLS和续期检查分别记录，不把网页200当最终体验通过。
 
-实际验证更新：fcf4df6后本地后端28+前端28+部署7+Chrome fixture1=64全绿，RN后端28+前端28/build/testtypecheck通过，私有preflight再次全通过。本人扫码及服务重启后连接保留；真实Gemini 2首programme200/0 warning、真实TTS/歌曲切换、pause/seek/quiet/logout与Range通过，两首完整媒体3,210,388/3,543,981bytes。另一次安静模式自然播完200.587秒并自动下一首成功。未知VIP档位、未测试曲目和小米物理后台仍未验收。
+实际验证更新：fcf4df6后本地后端28+前端28+部署7+Chrome fixture1=64全绿，RN后端28+前端28/build/testtypecheck通过，私有preflight再次全通过。本人扫码及服务重启后连接保留；真实Gemini 2首programme200/0 warning、真实TTS/歌曲切换、pause/seek/quiet/logout与Range通过，两首完整媒体3,210,388/3,543,981bytes。另一次安静模式自然播完200.587秒并自动下一首成功。未知VIP档位和未测试曲目不泛化通过；小米物理后台未测试但已取消门槛。
 
 超时修复：Fastify idle connection150秒（原10秒造成真实programme502），入站body timeout30秒/16KB不变；前端programme/player135秒，普通read45秒。现有model/provider30秒、TTS60秒有限制，不把等待伪装进度。修复只更新Emily application、保留旧release和 `/var/backups/emily-20260930/pre-fcf4df6` 一致性SQLite/env备份。密钥备份必须和数据库配对；无schema改动，不用备份覆盖新授权/历史作为默认回滚。
 
