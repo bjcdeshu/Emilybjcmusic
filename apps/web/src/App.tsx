@@ -240,7 +240,7 @@ export function App() {
   }
   useEffect(() => {
     if (!immersive || conversationOpen || qrOpen) return;
-    const exit = (event: KeyboardEvent) => { if (event.key === "Escape") setImmersive(false); };
+    const exit = (event: KeyboardEvent) => { if (event.key === "Escape" && !document.querySelector('dialog[open]')) setImmersive(false); };
     window.addEventListener("keydown", exit);
     return () => window.removeEventListener("keydown", exit);
   }, [immersive, conversationOpen, qrOpen]);

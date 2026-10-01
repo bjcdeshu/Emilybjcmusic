@@ -74,12 +74,11 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
         if (name === 'listen') {
           const lower = await page.evaluate(() => {
             const title=document.querySelector('.programme-title')!.getBoundingClientRect();
-            const transcript=document.querySelector('.transcript-card')!;
-            const text=document.querySelector('.transcript-heading')!.getBoundingClientRect();
+            const transcript=document.querySelector('.host-preview')!;
+            const text=transcript.getBoundingClientRect();
             const tools=document.querySelector('.listening-tools')!;
             const paper=document.querySelector('.player-paper')!;
-            const stage=document.querySelector('.host-panel')!.getBoundingClientRect();
-            return {continuous:getComputedStyle(paper).backgroundColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(paper).borderTopLeftRadius==='0px'&&Math.abs(paper.getBoundingClientRect().top-stage.bottom)<1,aligned:Math.abs(title.left-text.left)<1,transparent:getComputedStyle(transcript).backgroundColor==='rgba(0, 0, 0, 0)',naturalOrder:!!(transcript.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING)&&getComputedStyle(tools).order==='0',quietTarget:document.querySelector('.quiet-button')!.getBoundingClientRect().height>=44};
+            return {continuous:getComputedStyle(paper).backgroundColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(paper).borderTopLeftRadius==='0px'&&Math.abs(paper.getBoundingClientRect().top-text.bottom)<1,aligned:Math.abs(title.left-(text.left+28))<2,transparent:getComputedStyle(transcript).backgroundColor==='rgba(0, 0, 0, 0)' ,naturalOrder:!!(transcript.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING)&&getComputedStyle(tools).order==='0',quietTarget:document.querySelector('.queue-entry')!.getBoundingClientRect().height>=44};
           });
           assert(lower.continuous && lower.aligned && lower.transparent && lower.naturalOrder && lower.quietTarget, `integrated listening surface at ${width}px`);
         }
@@ -98,11 +97,10 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
         await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
         await page.waitForTimeout(100);
         const result=await page.evaluate(()=>{
-          const nav=document.querySelector('.mobile-nav')!.getBoundingClientRect();
-          const selectors=['.on-air','.current-track','.transport-controls','.transport-progress','.listening-tools','.queue-details summary','.listening-options summary'];
-          return {width:innerWidth,height:innerHeight,cutoff:nav.top,targets:selectors.map(selector=>({selector,top:document.querySelector(selector)!.getBoundingClientRect().top,bottom:document.querySelector(selector)!.getBoundingClientRect().bottom})),overflow:document.documentElement.scrollWidth>innerWidth,optionsClosed:!(document.querySelector('.listening-options') as HTMLDetailsElement).open,transcriptClosed:!(document.querySelector('.transcript-card') as HTMLDetailsElement).open,headerHidden:getComputedStyle(document.querySelector('.app-header')!).display==='none'};
+          const selectors=['.radio-entry','.on-air','.current-track','.transport-controls','.transport-progress','.listening-tools'];
+          return {width:innerWidth,height:innerHeight,cutoff:innerHeight,targets:selectors.map(selector=>({selector,top:document.querySelector(selector)!.getBoundingClientRect().top,bottom:document.querySelector(selector)!.getBoundingClientRect().bottom})),overflow:document.documentElement.scrollWidth>innerWidth,optionsClosed:!document.querySelector('.radio-sheet[open]'),transcriptClosed:!document.querySelector('.radio-sheet[open]'),headerHidden:getComputedStyle(document.querySelector('.app-header')!).display==='none',navHidden:getComputedStyle(document.querySelector('.mobile-nav')!).display==='none',edge:getComputedStyle(document.querySelector('.radio-device')!).borderRadius};
         });
-        assert(!result.overflow && result.optionsClosed && result.transcriptClosed && result.headerHidden);
+        assert(!result.overflow && result.optionsClosed && result.transcriptClosed && result.headerHidden && result.navHidden && result.edge==='0px');
         assert(result.targets.every(target=>target.top>=0 && target.bottom<=result.cutoff),`key listening content above mobile navigation at ${width}x${height}: ${JSON.stringify(result)}`);
         if(height===560) {
           const stress=await page.evaluate(()=>{
@@ -113,10 +111,9 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
             title.textContent='A very long original track title / 一首名字很长很长的原始歌曲';
             artist.textContent='Original artist with a very long name / 原始歌手姓名';
             if(speech)speech.textContent='A long real hosting passage remains available in full through its clearly marked disclosure. '.repeat(20);
-            const nav=document.querySelector('.mobile-nav')!.getBoundingClientRect();
-            const bottom=document.querySelector('.listening-options summary')!.getBoundingClientRect().bottom;
+            const bottom=document.querySelector('.listening-tools')!.getBoundingClientRect().bottom;
             title.textContent=originals[0]!;artist.textContent=originals[1]!;if(speech)speech.textContent=originals[2]!;
-            return {bottom,cutoff:nav.top,overflow:document.documentElement.scrollWidth>innerWidth};
+            return {bottom,cutoff:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth};
           });
           assert(!stress.overflow && stress.bottom<=stress.cutoff,`long catalogue/hosting content still exposes actions: ${JSON.stringify(stress)}`);
           checks.push({stress});
@@ -126,12 +123,28 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       await page.setViewportSize({width:393,height:851});
       const source=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
       const paused=await page.evaluate(()=>document.querySelector('audio')!.paused);
-      await page.locator('.transcript-card summary').click();
+      await page.getByRole('button',{name:'阅读主持全文'}).click();
       assert(await page.locator('.transcript-full').isVisible(),'full hosting remains accessible');
-      await page.locator('.transcript-card summary').click();
-      await page.locator('.listening-options summary').click();
+      assert(await page.locator('.sheet-transport .main-play').isVisible());
+      await page.keyboard.press('Escape');
+      assert.equal(await page.getByRole('button',{name:'阅读主持全文'}).evaluate(el=>el===document.activeElement),true,'sheet returns focus');
+      await page.getByRole('button',{name:'听感与节目',exact:true}).click();
       assert(await page.getByLabel('音量',{exact:true}).isVisible());
-      await page.locator('.listening-options summary').click();
+      await page.getByRole('button',{name:'关闭播放面板'}).click();
+      // Long sheet content scrolls internally, never hides its own transport.
+      await page.setViewportSize({width:360,height:560});
+      await page.getByRole('button',{name:'阅读主持全文'}).click();
+      await page.locator('.transcript-full').evaluate(el=>{el.textContent='Explicit browser-only long hosting fixture. '.repeat(160);});
+      await page.waitForTimeout(350);
+      assert(await page.locator('.radio-sheet-content').evaluate(el=>el.scrollHeight>el.clientHeight));
+      const sheetBounds=await page.evaluate(()=>({footer:document.querySelector('.sheet-transport')!.getBoundingClientRect().bottom,height:innerHeight,dialog:document.querySelector('.radio-sheet')!.getBoundingClientRect().toJSON()}));
+      assert(sheetBounds.footer<=sheetBounds.height,JSON.stringify(sheetBounds));
+      await page.locator('.radio-sheet-content').evaluate(el=>el.scrollTo({top:el.scrollHeight}));
+      await page.keyboard.press('Tab');
+      assert(await page.evaluate(()=>!!document.activeElement?.closest('.radio-sheet')),'native modal keeps keyboard focus');
+      await page.mouse.click(8,8); // Explicit backdrop dismissal.
+      assert.equal(await page.locator('.radio-sheet').count(),0);
+      await page.setViewportSize({width:393,height:851});
       assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),source,'disclosure never changes audio');
       assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),paused);
       await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
@@ -162,7 +175,12 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
         (window as any).emilyAudioEvents.push({ event, src: audio.currentSrc, time: audio.currentTime });
       });
     });
-    const nav = () => page.locator(".mobile-nav");
+    // Full-screen listen has an explicit return; other pages retain navigation.
+    const nav = () => ({ getByRole: (_role: string, options: {name:string;exact?:boolean}) => ({ click: async () => {
+      if(!await page.locator('.mobile-nav').isVisible()) await page.locator('.radio-entry').getByRole('button',{name:'节目',exact:true}).click();
+      await page.locator('.mobile-nav').getByRole('button',options).click();
+    } }) });
+    async function toggleQuiet() { await page.getByRole('button',{name:'听感与节目',exact:true}).click(); await page.getByRole('button',{name:'安静模式',exact:true}).click(); await page.getByRole('button',{name:'关闭播放面板'}).click(); }
     await nav().getByRole("button", { name: "历史", exact: true }).click();
     await page.getByText("第一档节目，留给现在。", {exact:true}).waitFor();
     await reviewScreen('empty-history');
@@ -187,7 +205,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       return rows > 6;
     }), "real audio samples produce bars taller than the silent baseline");
     assert(signalFrame.startsWith("data:image/png"));
-    assert.equal(await page.locator(".transcript-card").getAttribute("data-speaking"), "true");
+    assert.equal(await page.locator(".host-preview").getAttribute("data-speaking"), "true");
     await mobileFirstScreen();
     await page.waitForFunction(()=>Number((document.querySelector('.radio-device') as HTMLElement)!.style.getPropertyValue('--signal-energy'))>0);
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'live');
@@ -195,10 +213,12 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'running');
     assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
     assert(await page.locator('.player-paper').evaluate(el=>Number(getComputedStyle(el,'::before').opacity)>0),'light extends into lower playback area');
+    await page.setViewportSize({width:1360,height:1000});
     await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),false,'immersion never interrupts audio');
     if(env.EMILY_BROWSER_EVIDENCE_DIR) await page.screenshot({path:join(env.EMILY_BROWSER_EVIDENCE_DIR,'mobile-immersive-playing.png'),fullPage:true});
     await page.getByRole('button',{name:'退出沉浸模式',exact:true}).click();
+    await page.setViewportSize({width:393,height:851});
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-speaking.png"), fullPage: true });
@@ -215,23 +235,28 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'paused');
     assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
     assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-energy')),'0.000');
+    await page.setViewportSize({width:1360,height:1000});
     await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
     for(const width of [393,1360,360,768]) {
       await page.setViewportSize({width,height:width>740?1000:851});
       assert.equal(await page.locator('.app-header').isVisible(),false);
       assert.equal(await page.locator('.mobile-nav').isVisible(),false);
-      assert.equal(await page.getByRole('button',{name:'退出沉浸模式',exact:true}).isVisible(),true);
+      assert.equal(await page.locator('.radio-entry').getByRole('button',{name:'节目',exact:true}).isVisible(),true);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
       assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),true);
       if(env.EMILY_BROWSER_EVIDENCE_DIR && [393,1360].includes(width)) await page.screenshot({path:join(env.EMILY_BROWSER_EVIDENCE_DIR,`${width>740?'desktop':'mobile'}-immersive.png`),fullPage:true});
     }
     await page.setViewportSize({width:393,height:851});
+    await page.getByRole('button',{name:'听感与节目',exact:true}).click();
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.mobile-nav').isVisible(),true);
+    assert.equal(await page.locator('.radio-sheet').count(),0);
+    assert(await page.locator('.app-shell').evaluate(el=>el.classList.contains('immersive')),'first Escape closes sheet, not immersive layout');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.mobile-nav').isVisible(),false,'mobile listen is already immersive');
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc.includes('/api/audio/')),true);
     await page.getByRole("button", { name: "播放", exact: true }).click();
     await wait(page, () => !document.querySelector("audio")!.paused);
-    await page.getByRole("button", { name: "安静模式", exact: true }).click();
+    await toggleQuiet();
     await wait(page, () => {
       const a = document.querySelector("audio")!;
       return !a.paused && a.currentSrc.includes("/api/media/track/101") && a.currentTime > 0;
@@ -248,7 +273,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.getByLabel("歌曲播放进度").fill("1");
     assert(await page.evaluate(() => document.querySelector("audio")!.currentTime) >= 0.8);
-    await page.getByRole("button", { name: "安静模式", exact: true }).click();
+    await toggleQuiet();
     await wait(page, () => document.querySelector("audio")!.currentSrc.includes("/api/audio/"));
     await wait(page, () => {
       const a = document.querySelector("audio")!;
@@ -264,10 +289,24 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       await page.getByRole("button", { name: "关闭提示" }).click();
       await reviewScreen('listen');
     }
-    await page.locator('.queue-details summary').click();
+    await page.getByRole('button',{name:/查看队列/}).click();
     await page.locator('.queue-row').first().waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    await page.locator('.queue-details summary').click();
+    assert(await page.locator('.sheet-transport').isVisible());
+    await page.waitForTimeout(400);
+    if(env.EMILY_BROWSER_EVIDENCE_DIR) await page.screenshot({path:join(env.EMILY_BROWSER_EVIDENCE_DIR,'mobile-queue-sheet.png')});
+    for(const width of [360,393,768,1360]) {
+      await page.setViewportSize({width,height:width<=740?560:1000});
+      const bounds=await page.locator('.radio-sheet').evaluate(el=>{const r=el.getBoundingClientRect();return {fits:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,footer:document.querySelector('.sheet-transport')!.getBoundingClientRect().bottom<=innerHeight};});
+      assert(bounds.fits&&bounds.footer,`sheet at ${width}`);
+    }
+    await page.setViewportSize({width:393,height:851});
+    const sheetSource=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+    await page.locator('.sheet-transport').getByRole('button',{name:'播放',exact:true}).click();
+    await wait(page,()=>!document.querySelector('audio')!.paused);
+    await page.locator('.sheet-transport').getByRole('button',{name:'暂停',exact:true}).click();
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),sheetSource,'sheet resume/pause does not replace source');
+    await page.getByRole('button',{name:'关闭播放面板'}).click();
     await nav().getByRole("button", { name: "历史", exact: true }).click();
     await page.getByRole("button", { name: "重新编排" }).waitFor();
     await reviewScreen('history');
@@ -342,7 +381,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.getByRole('button',{name:/Fixture owner playlist/}).click();
     await page.getByLabel('原歌单自动漫游').check();
     await page.getByRole('button',{name:'开始这档节目'}).click();
-    await page.getByRole('button',{name:'安静模式',exact:true}).click();
+    await toggleQuiet();
     for(let i=0;i<12;i++){
       const old=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
       await page.getByLabel('歌曲播放进度').fill('2.9');
@@ -352,14 +391,14 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert(app.services.radio.now().queue.some(item=>item.track.id==='1013'),'batch13 is reached through actual ended/auto-refill');
     assert.equal(new Set(app.services.radio.now().queue.map(i=>i.track.id)).size,app.services.radio.now().queue.length);
     const pausedSource = await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
-    await page.locator('.listening-options summary').click();
+    await page.getByRole('button',{name:'听感与节目',exact:true}).click();
     await page.getByRole('button',{name:'原歌单漫游 · 开启',exact:true}).click();
     await page.getByRole('button',{name:'原歌单漫游 · 关闭',exact:true}).waitFor();
     assert.equal(await page.getByText('正在准备下一批',{exact:true}).count(),0);
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),pausedSource);
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),true);
-    await page.locator('.listening-options summary').click();
     await page.getByRole('button',{name:'安静模式',exact:true}).click();
+    await page.getByRole('button',{name:'关闭播放面板'}).click();
     await nav().getByRole('button',{name:'设置',exact:true}).click();
     // Inspect QR failure state without reconnecting/changing the real fixture auth.
     await page.route('**/api/setup', async route => {
@@ -388,7 +427,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, mobileFirstScreenAndDisclosuresVerified:true, continuousDarkListeningSurfaceVerified:true, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, fullScreenRadioAndBottomSheetsVerified:true, mobileFirstScreenAndDisclosuresVerified:true, continuousDarkListeningSurfaceVerified:true, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));
