@@ -11,7 +11,7 @@ try {
   const config = loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: process.env.EMILY_TTS_COMMAND || "uvx", EMILY_TTS_VOICE: process.env.EMILY_TTS_VOICE, EMILY_TTS_TIMEOUT_MS: "60000" });
   const tts = new EdgeTts(config);
   assert.equal(await tts.available(config.voice), true, "Selected female voice was not found in real Edge metadata");
-  const text = config.voice.startsWith("zh-") ? "忙了一天，先把那些没做完的事放一放。让音乐陪你坐一会儿，接下来这首歌，慢慢听。" : "You're listening to Emily. Take a breath, settle in, and let the music find its pace.";
+  const text = config.voice.startsWith("zh-") ? "好，那就听这一首。听完以后，我们再接着选。" : "You're listening to Emily. Take a breath, settle in, and let the music find its pace.";
   const segment = await tts.segment(text, config.voice);
   assert.equal(segment.status, "tts_ready", "Real Edge synthesis failed");
   const file = join(tts.audioDir, `${segment.id}.mp3`);

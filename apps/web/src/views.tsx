@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Headphones, History, ListMusic, LogOut, Moon, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Smartphone, Sparkles, Unplug, Volume2 } from "lucide-react";
 import type { HistoryResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track } from "@emily/shared";
 import { FEMALE_VOICES, MAX_PROGRAMME_TRACKS } from "@emily/shared";
@@ -104,7 +104,7 @@ export function RadioHistory({ createProgramme, busy, refreshKey }: { createProg
   </section>;
 }
 function voiceLabel(id: string) {
-  const names: Record<string, string> = { "zh-CN-XiaoxiaoNeural":"晓晓 · 普通话（推荐）", "zh-CN-XiaoyiNeural":"晓伊 · 普通话", "en-US-EmmaMultilingualNeural": "Emma · 美式英语（多语言）", "en-US-EmmaNeural": "Emma · 美式英语", "en-US-JennyNeural": "Jenny · 美式英语", "en-US-AriaNeural": "Aria · 美式英语", "en-GB-SoniaNeural": "Sonia · 英式英语", "en-IE-EmilyNeural": "Emily · 爱尔兰英语", "en-AU-NatashaNeural": "Natasha · 澳大利亚英语" };
+  const names: Record<string, string> = { "zh-CN-XiaoxiaoNeural":"晓晓 · 普通话", "zh-CN-XiaoyiNeural":"晓伊 · 普通话", "zh-TW-HsiaoChenNeural":"晓臻 · 台湾国语", "zh-TW-HsiaoYuNeural":"晓雨 · 台湾国语", "en-US-EmmaMultilingualNeural": "Emma · 美式英语（多语言）", "en-US-EmmaNeural": "Emma · 美式英语", "en-US-JennyNeural": "Jenny · 美式英语", "en-US-AriaNeural": "Aria · 美式英语", "en-GB-SoniaNeural": "Sonia · 英式英语", "en-IE-EmilyNeural": "Emily · 爱尔兰英语", "en-AU-NatashaNeural": "Natasha · 澳大利亚英语" };
   return names[id] || id;
 }
 function dateLabel(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? "日期不可用" : date.toLocaleString("zh-CN", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -114,6 +114,7 @@ type SettingsProps = {
   save: (patch: Partial<RadioSettings>) => Promise<boolean>; disconnect: () => Promise<void>;
   logout: () => void; openQr: () => void; refresh: () => void; volume: number; setVolume: (value: number) => void;
   canInstall: boolean; install: () => Promise<void>; updateReady: boolean;
+  previewVoice: (voice: string) => Promise<void>; stopPreview: () => void; previewing: boolean;
 };
 export function Settings(props: SettingsProps) {
   const { settings, setup, busy, save } = props;
@@ -122,6 +123,10 @@ export function Settings(props: SettingsProps) {
   const [discovery, setDiscovery] = useState(settings?.discovery ?? false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [previewLoading,setPreviewLoading] = useState(false), [previewError,setPreviewError] = useState('');
+  const stop = useRef(props.stopPreview); stop.current = props.stopPreview;
+  useEffect(()=>()=>stop.current(),[]);
+  async function audition() { setPreviewLoading(true); setPreviewError(''); try { await props.previewVoice(voice); } catch(e) { setPreviewError(errorMessage(e)); } finally { setPreviewLoading(false); } }
   useEffect(() => { setVoice(settings?.voice || ""); setMood(settings?.mood || ""); setDiscovery(settings?.discovery ?? false); }, [settings?.voice, settings?.mood, settings?.discovery]);
   async function submit(e: FormEvent) { e.preventDefault(); setSaved(false); setSaved(await save({ voice: voice.trim(), mood: mood.trim(), discovery })); }
   return <section className="view-panel" aria-labelledby="settings-title"><PageHeading id="settings-title" section="设置" title="按你的方式听。">调整主持声音、选曲偏好和你的音乐连接。</PageHeading>
@@ -130,7 +135,9 @@ export function Settings(props: SettingsProps) {
     </section>
     <form className="settings-card settings-form" onSubmit={(e) => void submit(e)}><div className="heading-icon"><SlidersHorizontal size={22} /><h2>主持与选曲</h2></div><div className="service-row"><span><b>主持语言</b><small>随所选声线切换；默认中文，简短自然。</small></span><span className="pill">{voice.startsWith("zh-") ? "中文" : "English"}</span></div>
       <label className="field-label" htmlFor="voice-id">主持女声</label><select id="voice-id" value={voice} required disabled={!settings} onChange={(e) => { setVoice(e.target.value); setSaved(false); }}>{FEMALE_VOICES.map(id => <option key={id} value={id}>{voiceLabel(id)}</option>)}</select>
-      <p className="muted tiny">推荐晓晓：更适合简短、自然的电台串场；也可试晓伊。只列允许的女声，不保证在线服务此刻可用。调整在下一段主持生效。</p>
+      <div className="voice-audition"><button type="button" className="secondary-button" disabled={!settings||busy||previewLoading} onClick={()=>{if(props.previewing)props.stopPreview();else void audition();}}>{previewLoading?<Spinner label="准备试听"/>:props.previewing?'停止试听':'试听这条声线'}<Volume2 size={16}/></button><small>试听会暂停音乐，结束后仍暂停。未保存前不更换主持声线。</small></div>
+      {previewError&&<p className="inline-error" role="alert">{previewError}</p>}
+      <p className="muted tiny">中文串场缩为一两句，语速轻缓，不强加抒情套话。可比较普通话与台湾国语；这不是自然听感的保证，请按实际听感选择。保存后在下一段主持生效。</p>
       <label className="field-label" htmlFor="default-mood">默认节目心情</label><input id="default-mood" value={mood} maxLength={120} disabled={!settings} onChange={(e) => { setMood(e.target.value); setSaved(false); }} placeholder="calm, warm, thoughtful" />
       <label className="checkbox-field"><input type="checkbox" checked={discovery} disabled={!settings} onChange={(e) => { setDiscovery(e.target.checked); setSaved(false); }} /><span><b>允许更多探索</b><small>在可播放的真实候选中，给不常听的音乐一点空间。</small></span></label>
       <div className="button-row"><button className="primary-button" type="submit" disabled={!settings || busy}>保存偏好<Check size={17} /></button>{saved && <span className="inline-good" role="status"><Check size={16} />已保存</span>}</div>

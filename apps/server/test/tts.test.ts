@@ -14,7 +14,7 @@ const path = require('node:path');
 const args = process.argv.slice(2);
 fs.appendFileSync(path.join(__dirname, 'calls.jsonl'), JSON.stringify({ args, appEnv: Object.keys(process.env).filter(k => k.startsWith('EMILY_')) }) + '\\n');
 if (args.includes('--list-voices')) {
-  process.stdout.write('Name Gender\\nzh-CN-XiaoxiaoNeural Female\\nzh-CN-XiaoyiNeural Female\\nen-US-EmmaMultilingualNeural Female\\nen-GB-SoniaNeural Female\\nen-US-GuyNeural Male\\n');
+  process.stdout.write('Name Gender\\nzh-CN-XiaoxiaoNeural Female\\nzh-CN-XiaoyiNeural Female\\nzh-TW-HsiaoChenNeural Female\\nzh-TW-HsiaoYuNeural Female\\nen-US-EmmaMultilingualNeural Female\\nen-GB-SoniaNeural Female\\nen-US-GuyNeural Male\\n');
 } else if (args[args.indexOf('--text') + 1] === 'TIMEOUT') {
   setTimeout(() => process.exit(0), 5000);
 } else {
@@ -52,6 +52,9 @@ test("Edge CLI uses argument arrays, allowlisted female metadata, cache and no a
     assert.equal(await tts.available("zh-CN-XiaoxiaoNeural"),true);
     const chinese=await tts.segment("下一首是测试歌手的《测试歌名》。", "zh-CN-XiaoxiaoNeural");
     assert.equal(chinese.language,"zh");assert.equal(chinese.status,"tts_ready");
+    const chineseCalls=(await readFile(join(directory,"calls.jsonl"),"utf8")).trim().split("\n").map(line=>JSON.parse(line));
+    assert.deepEqual(chineseCalls.at(-1).args.slice(0,5),["--voice","zh-CN-XiaoxiaoNeural","--rate=-2%","--volume=-12%","--pitch=-2Hz"]);
+    assert.equal(await tts.available("zh-TW-HsiaoChenNeural"),true);
     await assert.rejects(tts.segment("English only", "zh-CN-XiaoxiaoNeural"));
     await assert.rejects(tts.segment("<speak>你好</speak>", "zh-CN-XiaoxiaoNeural"));
   } finally { await rm(directory, { recursive: true, force: true }); }

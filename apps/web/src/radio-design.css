@@ -1,6 +1,6 @@
 /* Listening is a space, not a stack of cards. Shared reading pages stay in styles.css.
    Mobile: spectrum fills flexible middle; track/transport settle near the thumb.
-   Actual frequency energy drives light; real amplitude windows drive bars.
+   Actual frequency energy drives light; spatial/time-smoothed RMS drives calm bars.
    Hosting scroll is reading assistance only; lyrics use real provider timestamps. */
 .listen-column { position:relative; isolation:isolate; --signal-energy:0; --signal-bass:0; }
 .listen-column::before,.listen-column::after { content:""; position:absolute; z-index:-1; pointer-events:none; inset:0; opacity:0; transition:opacity 1s; animation:room-drift 18s ease-in-out infinite alternate paused; background:radial-gradient(ellipse at 24% 24%,#85ddbc28,transparent 58%); }
@@ -26,7 +26,7 @@
 .on-air > span:first-child::after { content:""; position:absolute; inset:-4px; border:1px solid var(--mint); border-radius:50%; opacity:0; }
 .radio-device[data-motion=live] .on-air > span:first-child::after { opacity:calc(.2 + var(--signal-energy) * .5); transform:scale(calc(1 + var(--signal-energy) * 1.5)); transition:transform .2s,opacity .2s; }
 .host-icon-button { position:absolute; right:0; top:0; }
-.radio-signal { position:absolute; bottom:0; left:0; width:100%; height:clamp(80px,18dvh,180px); pointer-events:none; opacity:.85; mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 8px),transparent 100%); }
+.radio-signal { position:absolute; bottom:0; left:0; width:100%; height:clamp(80px,18dvh,180px); pointer-events:none; opacity:.6; mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 8px),transparent 100%); }
 .host-preview { position:relative; z-index:1; min-height:96px; display:flex; align-items:center; justify-content:center; padding:12px var(--surface-padding); }
 .transcript-preview { color:#c3d2ca; width:100%; min-height:44px; background:none; text-align:center; padding:0; }
 .hosting-scroll { display:block; height:52.8px; overflow:hidden; mask-image:linear-gradient(transparent,#000 7%,#000 90%,transparent); }

@@ -1,6 +1,6 @@
 import type { NowPlayingState } from "@emily/shared";
 
-export type AudioPhase = "idle" | "dj" | "song";
+export type AudioPhase = "idle" | "dj" | "song" | "preview";
 export type AudioStatus = "idle" | "loading" | "playing" | "paused" | "blocked" | "error" | "ended";
 export type PlaybackSnapshot = {
   phase: AudioPhase;
@@ -41,6 +41,9 @@ export class RadioAudio {
   private switching = false;
   private destroyed = false;
   private listeners: Array<[string, EventListener]> = [];
+  private previewRestore: { url: string; time: number; snapshot: PlaybackSnapshot } | undefined;
+  private positionRestore: EventListener | undefined;
+  private clearPositionRestore() { if (this.positionRestore) this.audio.removeEventListener("loadedmetadata", this.positionRestore); this.positionRestore = undefined; }
 
   constructor(audio: AudioPort, options: PlayerOptions) {
     this.audio = audio;
@@ -117,8 +120,53 @@ export class RadioAudio {
     }
   }
 
+  /** Queue/refill metadata is not transport: never load, play, pause or seek. */
+  mergeMetadata(now: NowPlayingState): boolean {
+    if (!this.now || this.resolving || now.programmeId !== this.now.programmeId || now.track?.id !== this.now.track?.id || now.updatedAt < this.now.updatedAt) return false;
+    this.now = { ...this.now, queue: now.queue, updatedAt: now.updatedAt, ...(now.roaming ? { roaming: now.roaming } : {}) };
+    return true;
+  }
+  /** Use the SAME audio element for a deliberate audition. Ending/stopping
+   * restores the previous source/position PAUSED, never resumes music itself. */
+  async preview(url: string) {
+    if (this.resolving) throw new Error("请等待当前歌曲准备完成再试听。");
+    const safe = this.options.sourceUrl(url);
+    if (!safe) throw new Error("没有可用的试听音源。");
+    this.endPreview();
+    this.pause();
+    this.previewRestore = { url: this.audio.src, time: this.positionRestore ? this.state.time : this.audio.currentTime, snapshot: this.snapshot };
+    this.emit({ wantsPlayback: true });
+    this.source(safe, "preview");
+  }
+  endPreview() {
+    const restore = this.previewRestore;
+    if (!restore) return;
+    this.previewRestore = undefined;
+    this.pause();
+    const volume = this.state.volume;
+    if (restore.snapshot.phase === "dj" && !this.djEnabled && this.now?.track) {
+      restore.url = this.options.sourceUrl(this.now.track.audioUrl) || ""; restore.time = 0;
+      restore.snapshot = { ...restore.snapshot, phase: "song", time: 0, duration: 0 };
+    }
+    this.sourceRevision++; this.switching = true;
+    this.clearPositionRestore();
+    if (restore.url) this.audio.src = restore.url;
+    else this.audio.removeAttribute("src");
+    this.audio.load();
+    this.audio.volume = volume * (restore.snapshot.phase === "dj" ? .9 : 1);
+    const restoreTime = () => {
+      this.clearPositionRestore();
+      if (this.audio.src !== restore.url || this.previewRestore || this.destroyed) return;
+      try { this.audio.currentTime = restore.time; this.readPosition(); } catch { /* Restore stays paused. */ }
+    };
+    this.positionRestore = restoreTime;
+    if (restore.url) this.audio.addEventListener("loadedmetadata", restoreTime, { once: true });
+    this.switching = false;
+    this.emit({ ...restore.snapshot, volume, wantsPlayback: false, status: restore.snapshot.phase === "idle" ? "idle" : "paused" });
+  }
   /** Restore metadata without autoplay, regardless of the server's playing flag. */
   restore(now: NowPlayingState) {
+    this.endPreview();
     this.generation++;
     this.resolving = false;
     this.emit({ wantsPlayback: false });
@@ -127,6 +175,7 @@ export class RadioAudio {
 
   /** Resolve a queue operation; a pause while it is in-flight remains authoritative. */
   async perform(resolve: () => Promise<NowPlayingState>, autoplay = true) {
+    this.endPreview();
     const generation = ++this.generation;
     this.playAttempt++;
     this.resolving = true;
@@ -162,6 +211,7 @@ export class RadioAudio {
   }
 
   private clearSource() {
+    this.clearPositionRestore();
     this.sourceRevision++;
     this.switching = true;
     this.audio.pause();
@@ -171,6 +221,7 @@ export class RadioAudio {
   }
 
   private source(url: string | undefined, phase: AudioPhase) {
+    this.clearPositionRestore();
     const safe = this.options.sourceUrl(url);
     if (!safe) {
       this.clearSource();
@@ -235,6 +286,7 @@ export class RadioAudio {
   }
 
   private ended() {
+    if (this.state.phase === "preview") { this.endPreview(); return; }
     if (!this.state.wantsPlayback || this.resolving) return;
     if (this.state.phase === "dj") {
       this.source(this.now?.track?.audioUrl, "song");
@@ -245,6 +297,7 @@ export class RadioAudio {
   }
 
   private mediaError() {
+    if (this.state.phase === "preview") { this.endPreview(); this.emit({ warning: "声线试听播放失败，音乐已保持暂停。" }); return; }
     if (this.switching && !this.audio.error) return;
     if (this.state.phase === "dj" && this.now?.track) {
       this.emit({ warning: "主持语音播放失败，已转到歌曲。" });
@@ -256,6 +309,7 @@ export class RadioAudio {
   }
 
   stop() {
+    this.previewRestore = undefined;
     this.generation++;
     this.resolving = false;
     this.now = null;

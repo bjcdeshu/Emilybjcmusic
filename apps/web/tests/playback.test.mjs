@@ -126,6 +126,19 @@ test("empty restore is ready, and stop clears all previous errors and warnings",
   player.stop(); assert.equal(player.snapshot.status, "idle"); assert.equal(player.snapshot.message, undefined); assert.equal(player.snapshot.warning, undefined);
 });
 
+test("enqueue metadata keeps the exact source/time/paused intent; stale programme/track cannot replace current", async()=>{
+  const {player,audio}=setup();const now={...fixture('song',false),programmeId:'TEST-programme'};await player.perform(async()=>now);audio.currentTime=18;audio.duration=60;audio.dispatchEvent(new Event('timeupdate'));
+  const source=audio.src,loads=audio.loads,played=audio.played.length;
+  const update={...now,queue:[{id:'added',track:fixture('added',false).track}],updatedAt:'2026-01-02T00:00:00Z'};
+  assert.equal(player.mergeMetadata(update),true);assert.equal(audio.src,source);assert.equal(audio.loads,loads);assert.equal(audio.currentTime,18);assert.equal(audio.played.length,played);assert.equal(player.snapshot.wantsPlayback,true);
+  player.pause();assert.equal(player.mergeMetadata({...update,status:'playing'}),true);assert.equal(audio.paused,true);assert.equal(audio.currentTime,18);assert.equal(player.snapshot.wantsPlayback,false);
+  assert.equal(player.mergeMetadata({...update,programmeId:'another'}),false);assert.equal(player.mergeMetadata({...update,track:fixture('different',false).track}),false);assert.equal(player.current.track.id,'song');
+});
+test("same-element voice audition restores source and position PAUSED; ended never advances, stop cancels restore",async()=>{
+  let advance=0;const {player,audio}=setup(async()=>{advance++;return fixture('next');});await player.perform(async()=>fixture('song',false));audio.duration=60;audio.currentTime=22;audio.dispatchEvent(new Event('timeupdate'));
+  await player.preview('/test-only/audition.wav');assert.equal(audio.src,'/test-only/audition.wav');assert.equal(player.snapshot.phase,'preview');audio.finish();assert.equal(advance,0);assert.equal(audio.src,'/test-only/song.wav');assert.equal(audio.paused,true);assert.equal(player.snapshot.wantsPlayback,false);audio.duration=60;audio.dispatchEvent(new Event('loadedmetadata'));assert.equal(audio.currentTime,22);
+  await player.preview('/test-only/audition.wav');player.stop();audio.dispatchEvent(new Event('loadedmetadata'));assert.equal(audio.src,'');assert.equal(player.current,null);
+});
 test("destroy detaches listeners and formatting handles live/invalid durations", () => {
   const { player, audio, changes } = setup(); player.destroy(); const count = changes.length;
   audio.dispatchEvent(new Event("playing")); assert.equal(changes.length, count);

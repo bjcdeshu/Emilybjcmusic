@@ -36,6 +36,10 @@ export class HttpFixture {
   readonly requests: CapturedRequest[] = [];
   readonly preview = new Set<number>();
   playlistSongs = FIXTURE_SONGS;
+  searchSongs = FIXTURE_SONGS;
+  detailSongs = FIXTURE_SONGS;
+  dialogueTarget: { title: string; artist?: string } | undefined;
+  dialogueLimit: number | undefined;
   qrCode = 801;
   statusCode = 200;
   failPath: string | undefined;
@@ -75,8 +79,8 @@ export class HttpFixture {
     if (path === "/login/status") value = { data: { code: this.statusCode, profile: this.statusCode === 200 ? { userId: 900, nickname: "Fixture owner", avatarUrl: "https://p1.music.126.net/test-avatar" } : null }, cookie: COOKIE_SENTINEL };
     else if (path === "/user/playlist") value = { code: 200, playlist: [{ id: 700, name: "Fixture owner playlist", trackCount: this.playlistSongs.length, coverImgUrl: "https://p1.music.126.net/test-cover" }] };
     else if (path === "/playlist/track/all") value = { code: 200, songs: this.playlistSongs.slice(Number(body.offset)||0,(Number(body.offset)||0)+100) };
-    else if (path === "/song/detail") value = { code: 200, songs: FIXTURE_SONGS.filter(song => String(body.ids).split(",").includes(String(song.id))) };
-    else if (path === "/cloudsearch") value = { code: 200, result: { songs: FIXTURE_SONGS } };
+    else if (path === "/song/detail") value = { code: 200, songs: this.detailSongs.filter(song => String(body.ids).split(",").includes(String(song.id))) };
+    else if (path === "/cloudsearch") value = { code: 200, result: { songs: this.searchSongs } };
     else if (path === "/song/url/v1") value = {
       code: 200, data: String(body.id).split(",").map(id => ({ id: Number(id), code: 200, url: this.unsafeAudio ? "http://127.0.0.1/private" : `http://m701.music.126.net/test-fixture-${id}.mp3`, freeTrialInfo: this.preview.has(Number(id)) ? { start: 0, end: 30 } : null, expi: 120 }))
     };
@@ -87,7 +91,7 @@ export class HttpFixture {
     else if (path === "/v1/chat/completions") {
       const system = String((body.messages as {content:string}[] | undefined)?.[0]?.content || '');
       if(this.dialogueMode && system.includes('ONE private radio owner')) {
-        const plan={reply:this.dialogueFormatting?'我理解了。\n换轻松一点的音乐。':'想听什么样的音乐？',action:this.dialogueMode==='clarify'?'clarify':'find',prompt:'柔和，但不要太伤感',queries:['Fixture artist'],...(this.dialogueFormatting?{playlistId:null}:{})};
+        const plan={...(this.dialogueTarget?{target:this.dialogueTarget}:{}),...(this.dialogueLimit?{limit:this.dialogueLimit}:{}),reply:this.dialogueFormatting?'我理解了。\n换轻松一点的音乐。':'想听什么样的音乐？',action:this.dialogueMode==='clarify'?'clarify':'find',prompt:'柔和，但不要太伤感',queries:['Fixture artist'],...(this.dialogueFormatting?{playlistId:null}:{})};
         value={choices:[{message:{content:this.dialogueFormatting?'```json\n'+JSON.stringify(plan)+'\n```':JSON.stringify(plan)}}]};
         response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify(value));return;
       }

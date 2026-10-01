@@ -7,3 +7,19 @@ export function waveformLevels(samples: Uint8Array, count: number): number[] {
     return Math.min(1,Math.sqrt(sum/Math.max(1,end-start)));
   });
 }
+/** Spatial averaging then a frame-rate independent envelope. Every output is
+ * a weighted history of measured RMS, no oscillators/random/fake beat peaks.
+ * Exact silence and all visibility/transport gates reset immediately. */
+export function calmWaveform(levels: number[], previous: number[], elapsedMs: number): number[] {
+  if (!levels.some(x => x > 0)) return levels.map(() => 0);
+  const dt = Math.max(0, Math.min(100, elapsedMs));
+  return levels.map((_, i) => {
+    let sum = 0, weight = 0;
+    for (let n = Math.max(0, i - 3); n <= Math.min(levels.length - 1, i + 3); n++) {
+      const w = 4 - Math.abs(n - i); sum += levels[n]! * w; weight += w;
+    }
+    const measured = sum / weight, last = previous.length === levels.length ? previous[i]! : 0;
+    const alpha = 1 - Math.exp(-dt / (measured > last ? 280 : 650));
+    return Math.max(0, Math.min(1, last + (measured - last) * alpha));
+  });
+}

@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import fastify, { type FastifyInstance } from "fastify";
 import { MAX_PROGRAMME_TRACKS } from "@emily/shared";
-import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
+import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, QueueAddRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
 import { loadConfig, FEMALE_VOICES, type AppConfig } from "./config.js";
 import { Store } from "./store.js";
@@ -71,6 +71,8 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     if (route === "/api/conversation" && !store.takeRate("conversation", 12, 300_000, clock())) {
       throw new AppError(429, "CONVERSATION_RATE_LIMITED", "请稍等再继续对话选曲。");
     }
+    if (route === "/api/queue/add" && !store.takeRate("queue-add", 24, 300_000, clock())) throw new AppError(429, "QUEUE_RATE_LIMITED", "请稍等再加入歌曲。");
+    if (route === "/api/tts/preview" && !store.takeRate("voice-preview", 8, 300_000, clock())) throw new AppError(429, "TTS_PREVIEW_RATE_LIMITED", "请稍等再试听声线。");
     if (route === "/api/programme" && !store.takeRate("programme", 8, 300_000, clock())) {
       throw new AppError(429, "PROGRAMME_RATE_LIMITED", "Please wait before creating another programme.");
     }
@@ -91,6 +93,13 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
       djEnabled: { type: "boolean" }, discovery: { type: "boolean" }, mood: textSchema(160), volume: { type: "number", minimum: 0, maximum: 1 }
     }), minProperties: 1 }, querystring: emptyQuery }
   }, async request => success(radio.updateSettings(request.body)));
+  app.post<{ Body: { voice: string } }>("/api/tts/preview", { schema: { body: objectSchema({ voice: { type: "string", enum: [...FEMALE_VOICES] } }, ["voice"]), querystring: emptyQuery } }, async request => {
+    // Fixed neutral sample only: not an unrestricted synthesis/public proxy.
+    const text = request.body.voice.startsWith("zh-") ? "好，那就听这一首。听完以后，我们再接着选。" : "Here is the next song. Take your time; the music can wait.";
+    const segment = await tts.segment(text, request.body.voice);
+    if (segment.status !== "tts_ready") throw new AppError(503, "TTS_UNAVAILABLE", "声线试听暂不可用，当前列表未改变。");
+    return success({ segment });
+  });
   app.post("/api/music/login/qr", { schema: { body: emptyBody, querystring: emptyQuery } }, async request => success(await music.createQr(auth.require(request))));
   app.get<{ Params: { key: string } }>("/api/music/login/qr/:key", { schema: { params: objectSchema({ key: qrSchema }, ["key"]), querystring: emptyQuery } }, async request => success(await music.pollQr(request.params.key, auth.require(request))));
   app.post("/api/music/disconnect", { schema: { body: emptyBody, querystring: emptyQuery } }, async () => radio.exclusive(async () => { music.disconnect(); radio.clear(); return success(await setup()); }));
@@ -112,10 +121,11 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     return success(await radio.programme(body));
   });
   app.post<{ Body: ListeningRequest }>("/api/conversation", {
-    schema: { body: objectSchema({ messages: { type: "array", minItems: 1, maxItems: 12, items: objectSchema({ role: { type: "string", enum: ["user", "assistant"] }, text: textSchema(800) }, ["role", "text"]) }, context: objectSchema({ prompt: textSchema(600), trackIds: { type: "array", maxItems: MAX_PROGRAMME_TRACKS, uniqueItems: true, items: idSchema } }, ["prompt", "trackIds"]) }, ["messages"]), querystring: emptyQuery }
+    schema: { body: objectSchema({ mode: { type: "string", enum: ["enqueue", "replace"] }, messages: { type: "array", minItems: 1, maxItems: 12, items: objectSchema({ role: { type: "string", enum: ["user", "assistant"] }, text: textSchema(800) }, ["role", "text"]) }, context: objectSchema({ prompt: textSchema(600), trackIds: { type: "array", maxItems: MAX_PROGRAMME_TRACKS, uniqueItems: true, items: idSchema } }, ["prompt", "trackIds"]) }, ["messages"]), querystring: emptyQuery }
   }, async request => success(await conversation.respond(request.body, radio.settings())));
   app.get("/api/now", { schema: { querystring: emptyQuery } }, async () => success(radio.now()));
   app.get("/api/queue", { schema: { querystring: emptyQuery } }, async () => success({ items: radio.now().queue }));
+  app.post<{ Body: QueueAddRequest }>("/api/queue/add", { schema: { body: objectSchema({ trackId: idSchema, programmeId: { type: "string", pattern: "^[a-f0-9-]{36}$" } }, ["trackId", "programmeId"]), querystring: emptyQuery } }, async request => success(await radio.enqueue(request.body)));
   app.post<{ Body: { trackId?: string } }>("/api/player/play", { schema: { body: objectSchema({ trackId: idSchema }), querystring: emptyQuery } }, async request => success(await radio.play(request.body?.trackId)));
   app.post<{ Body: { enabled: boolean } }>("/api/player/roaming", { schema: { body: objectSchema({ enabled: { type: "boolean" } }, ["enabled"]), querystring: emptyQuery } }, async request => success(radio.setRoaming(request.body.enabled)));
   app.post("/api/player/pause", { schema: { body: emptyBody, querystring: emptyQuery } }, async () => success(await radio.pause()));

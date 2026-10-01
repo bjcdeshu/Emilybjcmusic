@@ -70,7 +70,8 @@ export class EdgeTts implements TtsPort {
     if (!isHosting(text, voiceLanguage(voice)) || text.length > 600 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text) || !(FEMALE_VOICES as readonly string[]).includes(voice)) {
       throw new AppError(400, "INVALID_TTS_INPUT", "DJ text or female voice is not supported.");
     }
-    const id = createHash("sha256").update(JSON.stringify({ v: 1, text, voice, rate: "-4%", volume: "-10%" })).digest("hex");
+    const profile = voiceLanguage(voice) === "zh" ? { v: 2, rate: "-2%", volume: "-12%", pitch: "-2Hz" } : { v: 1, rate: "-4%", volume: "-10%" };
+    const id = createHash("sha256").update(JSON.stringify({ v: profile.v, text, voice, rate: profile.rate, volume: profile.volume, ...("pitch" in profile ? { pitch: profile.pitch } : {}) })).digest("hex");
     const segment: DjSegment = { id, text, voice, language: voiceLanguage(voice), status: "text_only", createdAt: new Date(this.clock()).toISOString() };
     if (!this.config.ttsEnabled) return segment;
     const cached = await this.cached(id);
@@ -109,7 +110,8 @@ export class EdgeTts implements TtsPort {
     try {
       if (!(await this.available(segment.voice!))) throw new Error();
       await this.prune();
-      await this.run(["--voice", segment.voice!, "--rate=-4%", "--volume=-10%", "--text", segment.text, "--write-media", temporary]);
+      const delivery = segment.language === "zh" ? ["--rate=-2%", "--volume=-12%", "--pitch=-2Hz"] : ["--rate=-4%", "--volume=-10%"];
+      await this.run(["--voice", segment.voice!, ...delivery, "--text", segment.text, "--write-media", temporary]);
       const stat = await lstat(temporary);
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 128 || stat.size > 10_000_000) throw new Error();
       await chmod(temporary, 0o600);

@@ -71,8 +71,30 @@ test("real browser: Mandarin hosting reading scroll, pause/reduce/modal gates an
     await refreshLyrics({code:200,uncollected:true});await page.getByText('暂无歌词',{exact:true}).waitFor();
     provider.failPath='/lyric';await page.reload();await page.getByText('歌词暂不可用',{exact:true}).waitFor();await page.getByRole('button',{name:'播放',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('audio')!.paused);
     assert.deepEqual(errors,[]);assert.equal(app.services.radio.settings().hostLanguage,'zh');
-    if(process.env.EMILY_BROWSER_EVIDENCE_DIR)await writeFile(join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'listening-text-fixture-result.json'),JSON.stringify({fixture:true,chineseVoice:true,hostingScroll:true,pauseAndReducedMotion:true,manualAndModalStop:true,lyricsSeekAndPause:true,shortScreens:true,plainInstrumentalMissingAndFailure:true,lyricsFailureStillPlays:true,pageErrors:errors},null,2));
+    if(process.env.EMILY_BROWSER_EVIDENCE_DIR){await mkdir(process.env.EMILY_BROWSER_EVIDENCE_DIR,{recursive:true});await writeFile(join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'listening-text-fixture-result.json'),JSON.stringify({fixture:true,chineseVoice:true,hostingScroll:true,pauseAndReducedMotion:true,manualAndModalStop:true,lyricsSeekAndPause:true,shortScreens:true,plainInstrumentalMissingAndFailure:true,lyricsFailureStillPlays:true,pageErrors:errors},null,2));}
   } finally {if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
+});
+
+test('real browser: exact ONE-song enqueue, continuing chat, no audio/time/pause/roaming replacement; same-element voice preview', {timeout:90_000},async()=>{
+ const directory=await mkdtemp(join(process.env.TMPDIR||tmpdir(),'emily-enqueue-browser-')),provider=new HttpFixture();await provider.start();
+ const song={id:303,name:'匆匆',ar:[{name:'李建清'}],al:{name:'TEST exact song album',picUrl:'http://p1.music.126.net/test'},dt:120000};
+ provider.detailSongs=[song];provider.searchSongs=[song];provider.dialogueMode='valid';provider.playlistSongs=Array.from({length:16},(_,i)=>({id:1001+i,name:`TEST original roam ${i}`,ar:[{name:'Test artist'}],al:{name:'Test album',picUrl:'http://p1.music.126.net/test'},dt:120000}));
+ const file=join(directory,'TEST_TONE.mp3');execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=25','-codec:a','libmp3lame',file],{timeout:15000});const bytes=await readFile(file);
+ const config=loadConfig({EMILY_DATA_DIR:directory,EMILY_OWNER_PASSWORD:OWNER_PASSWORD,EMILY_CREDENTIAL_KEY:'0f'.repeat(32),EMILY_NETEASE_API_BASE:provider.base,EMILY_NETEASE_COOKIE:COOKIE_SENTINEL,EMILY_MODEL_BASE_URL:provider.base+'v1/',EMILY_MODEL_API_KEY:'TEST',EMILY_MODEL_NAME:'TEST',EMILY_WEB_DIST_DIR:join(root,'apps/web/dist')});
+ const app=buildApp({config,tts:new BrowserTts(directory,bytes),mediaOpener:async(_url,range)=>{const bounds=range?.slice(6).split('-')||[],start=bounds[0]?Number(bounds[0]):0,end=bounds[1]?Number(bounds[1]):bytes.length-1,chunk=bytes.subarray(start,end+1);return{status:range?206:200,headers:{'content-type':'audio/mpeg','content-length':String(chunk.length),'accept-ranges':'bytes',...(range?{'content-range':`bytes ${start}-${end}/${bytes.length}`}:{})},stream:Readable.from(chunk)};}});
+ let browser;
+ try{
+  const origin=await app.listen({host:'127.0.0.1',port:0});config.publicOrigin=origin;await app.services.radio.programme({playlistId:'700',roaming:true,limit:8});app.services.radio.updateSettings({djEnabled:false});
+  browser=await chromium.launch({headless:true,...(process.env.EMILY_BROWSER_EXECUTABLE?{executablePath:process.env.EMILY_BROWSER_EXECUTABLE}:{channel:'chrome'})});const page=await browser.newPage({viewport:{width:393,height:740}}),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);await page.getByLabel('个人登录口令').fill(OWNER_PASSWORD);await page.getByRole('button',{name:'进入电台'}).click();await page.locator('.main-play').waitFor();await page.getByRole('button',{name:'播放',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('audio')!.paused&&document.querySelector('audio')!.currentTime>1);await page.getByRole('button',{name:'暂停',exact:true}).click();
+  const before=app.services.radio.now(),source=await page.evaluate(()=>document.querySelector('audio')!.currentSrc),time=await page.evaluate(()=>document.querySelector('audio')!.currentTime);await page.getByRole('button',{name:'聊聊想听什么'}).click();await page.getByLabel('告诉 Emily 想听什么').fill('想听李建清的《匆匆》');await page.getByLabel('告诉 Emily 想听什么').press('Enter');await page.getByRole('button',{name:'加入待播：匆匆 · 李建清',exact:true}).waitFor();assert.equal(await page.locator('.listening-proposal li').count(),1);assert.equal(await page.locator('.listening-accept').count(),0);
+  await page.getByRole('button',{name:'加入待播：匆匆 · 李建清',exact:true}).click();await page.locator('.listening-result').filter({hasText:'已加入待播队尾，当前播放和原列表不变。'}).waitFor();assert(await page.locator('dialog.listening-dialog[open]').isVisible());
+  const after=app.services.radio.now();assert.equal(after.programmeId,before.programmeId);assert.equal(after.status,'paused');assert.equal(after.roaming?.enabled,true);assert.deepEqual(after.queue.slice(0,-1),before.queue);assert.equal(after.queue.at(-1)?.track.id,'303');assert.equal(after.queue.length,before.queue.length+1);assert.equal(app.services.store.history().length,1);assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),source);assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentTime),time);assert(await page.evaluate(()=>document.querySelector('audio')!.paused));
+  for(const[width,height]of[[360,560],[393,640],[393,740],[768,1000],[1360,1000]]as const){await page.setViewportSize({width,height});assert(await page.evaluate(()=>{const r=document.querySelector('.listening-compose')!.getBoundingClientRect();return r.bottom<=innerHeight&&r.top>=0&&document.documentElement.scrollWidth<=innerWidth;}));}await page.setViewportSize({width:393,height:740});
+  if(process.env.EMILY_BROWSER_EVIDENCE_DIR){await mkdir(process.env.EMILY_BROWSER_EVIDENCE_DIR,{recursive:true});await page.screenshot({path:join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'mobile-enqueue-dialog.png')});}
+  await page.getByLabel('告诉 Emily 想听什么').fill('想听李建清的《匆匆》');await page.getByLabel('告诉 Emily 想听什么').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.listening-proposal li').length===2);await page.getByRole('button',{name:'加入待播：匆匆 · 李建清',exact:true}).last().click();await page.locator('.listening-result').filter({hasText:'这首歌正在播放或已在待播列表中，没有重复加入。'}).waitFor();assert.equal(app.services.radio.now().queue.length,after.queue.length);
+  await page.keyboard.press('Escape');await page.getByRole('button',{name:'队列',exact:false}).first().click();await page.locator('.queue-row').filter({hasText:'匆匆'}).waitFor();await page.keyboard.press('Escape');await page.locator('.radio-entry').getByRole('button',{name:'节目',exact:true}).click();await page.locator('.mobile-nav').getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('主持女声').selectOption('zh-TW-HsiaoChenNeural');
+  await page.getByRole('button',{name:'试听这条声线'}).click();await page.waitForFunction(()=>document.querySelector('audio')!.currentSrc.includes('/api/audio/')&&!document.querySelector('audio')!.paused);assert.equal(await page.locator('audio').count(),1);assert.equal(app.services.radio.settings().voice,'zh-CN-XiaoxiaoNeural','preview must not save choice');await page.getByRole('button',{name:'停止试听'}).click();await page.waitForFunction(s=>document.querySelector('audio')!.currentSrc===s&&document.querySelector('audio')!.paused,source);await page.waitForFunction(t=>Math.abs(document.querySelector('audio')!.currentTime-t)<.1,time);assert.equal(app.services.radio.now().programmeId,before.programmeId);assert.deepEqual(errors,[]);
+ }finally{if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
 });
 
 test("real browser: programme audio, pause/quiet/seek, history, logout and static-only offline PWA", { timeout: 120_000 }, async () => {
@@ -405,30 +427,32 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.getByRole('button',{name:'重新检查服务配置'}).click();
     await nav().getByRole('button',{name:'收听',exact:true}).click();
     await page.getByRole('button',{name:'聊聊想听什么'}).click();
+    await page.getByRole('button',{name:'另选一组',exact:true}).click();
     let dialogueCalls=0;
     await page.route('**/api/conversation',async route=>{
       const body=route.request().postDataJSON();dialogueCalls++;
       if(dialogueCalls===2){assert.equal(body.messages.length,3);assert.equal(body.messages[2].text,'不要太伤感');}
-      await route.fulfill({json:{ok:true,data:{reply:dialogueCalls===1?'想听中文歌还是英文歌？':'找到了这些真实候选，由你确认后播放。',tracks:dialogueCalls===1?[]:[{id:'101',title:'Fixture track 101',artist:'Fixture artist',source:'netease'}],warnings:[],direction:'中文、温柔、不伤感',context:{prompt:'中文、温柔、不伤感',trackIds:dialogueCalls===1?[]:['101']},...(dialogueCalls===1?{}:{programme:{trackIds:['101'],prompt:'温柔但不伤感',limit:1,ordered:true}})}}});
+      await route.fulfill({json:{ok:true,data:{reply:dialogueCalls===1?'想听中文歌还是英文歌？':'找到了这些真实候选，由你确认后播放。',tracks:dialogueCalls===1?[]:[{id:'101',title:'Fixture track 101',artist:'Fixture artist',source:'netease'}],warnings:[],direction:'中文、温柔、不伤感',context:{prompt:'中文、温柔、不伤感',trackIds:dialogueCalls===1?[]:['101']},mode:'replace',...(dialogueCalls===1?{}:{programme:{trackIds:['101'],prompt:'温柔但不伤感',limit:1,ordered:true}})}}});
     });
     await page.getByLabel('告诉 Emily 想听什么').fill('想听温柔一点的中文歌');
     await page.getByRole('button',{name:'发送听歌想法'}).click();
     await page.getByText('想听中文歌还是英文歌？',{exact:true}).waitFor();
     await page.getByLabel('告诉 Emily 想听什么').fill('不要太伤感');
     await page.getByRole('button',{name:'发送听歌想法'}).click();
-    await page.getByRole('button',{name:'播放这档节目',exact:true}).waitFor();
+    await page.getByRole('button',{name:'确认换成这 1 首',exact:true}).waitFor();
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),true,'consultation does not interrupt playback');
     await reviewScreen('listening-dialog');
     await page.getByRole('button',{name:'关闭对话'}).click();
     await nav().getByRole('button',{name:'历史',exact:true}).click();
     await nav().getByRole('button',{name:'收听',exact:true}).click();
     await page.getByRole('button',{name:'聊聊想听什么'}).click();
-    await page.getByRole('button',{name:'播放这档节目',exact:true}).click();
+    await page.getByRole('button',{name:'另选一组',exact:true}).click();
+    await page.getByRole('button',{name:'确认换成这 1 首',exact:true}).click();
     await wait(page,()=>!document.querySelector('audio')!.paused);
     await page.getByRole('button',{name:'暂停',exact:true}).click();
     await page.getByRole('button',{name:'聊聊想听什么'}).click();
     await page.getByRole('button',{name:'清空对话'}).click();
-    assert.equal(await page.getByRole('button',{name:'播放这档节目',exact:true}).count(),0);
+    assert.equal(await page.getByRole('button',{name:'确认换成这 1 首',exact:true}).count(),0);
     await page.getByRole('button',{name:'关闭对话'}).click();
     await nav().getByRole('button',{name:'设置',exact:true}).click();
     // New playlist roaming actually extends the backend queue from real ended

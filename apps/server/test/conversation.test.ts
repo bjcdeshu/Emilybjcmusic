@@ -18,12 +18,13 @@ test('listening dialogue: auth/input boundaries, clarification, real rights-filt
   assert.equal(result.statusCode,200,result.body);assert.deepEqual(result.json().data.tracks,[]);assert.equal(result.json().data.programme,undefined);
   provider.dialogueMode='valid';provider.dialogueFormatting=true;const messages=[{role:'user',text:'想听柔和一点的音乐'},{role:'assistant',text:'想从什么方向开始？'},{role:'user',text:'中文，别太伤感'}];
   result=await ask(messages);assert.equal(result.statusCode,200,result.body);const data=result.json().data;
-  assert.deepEqual(data.tracks.map((t:{id:string})=>t.id),['101','202']);assert.deepEqual(data.programme.trackIds,['101','202']);assert(data.warnings.length);
-  assert.equal(data.programme.ordered,true);assert.equal(data.context.prompt,'柔和，但不要太伤感');
+  assert.deepEqual(data.tracks.map((t:{id:string})=>t.id),['101','202']);assert.equal(data.programme,undefined);assert.equal(data.mode,'enqueue');assert(data.warnings.length);
+  assert.deepEqual(data.context.trackIds,['101','202']);assert.equal(data.context.prompt,'柔和，但不要太伤感');
   assert.equal(result.headers['cache-control'],'private, no-store');assert(!result.body.includes(COOKIE_SENTINEL));assert(!result.body.includes('m701.music'));
   assert.deepEqual(app.services.radio.now(),before);assert.equal(app.services.store.history().length,0);
   const calls=provider.requests.filter(r=>r.path==='/v1/chat/completions');const second=calls.at(-1)!;const modelData=JSON.parse((second.body.messages as {content:string}[])[1]!.content);
   assert.deepEqual(modelData.messages,messages);assert(!modelData.catalogue.some((t:{id:string})=>t.id==='303'));
+  const replacement=await app.inject({method:'POST',url:'/api/conversation',headers:headers(cookie),payload:{mode:'replace',messages}});assert.equal(replacement.statusCode,200);assert.deepEqual(replacement.json().data.programme.trackIds,['101','202']);assert.equal(replacement.json().data.programme.ordered,true);
   const refined=[...messages,{role:'assistant',text:data.reply},{role:'user',text:'这些里面留下第一首'}];
   result=await app.inject({method:'POST',url:'/api/conversation',headers:headers(cookie),payload:{messages:refined,context:data.context}});assert.equal(result.statusCode,200);
   const intentCall=provider.requests.filter(r=>r.path==='/v1/chat/completions').at(-2)!;

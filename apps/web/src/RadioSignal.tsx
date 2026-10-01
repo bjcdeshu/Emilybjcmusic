@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import type { AudioAnalysis } from "./audio-analysis";
-import { waveformLevels } from "./signal-waveform";
+import { calmWaveform, waveformLevels } from "./signal-waveform";
 import { signalEnergy } from "./signal-energy";
 
 /** Reference-style bars from real time-domain RMS windows; light retains actual frequency energy.
@@ -17,35 +17,41 @@ export function RadioSignal({ active, analysis }: { active: boolean; analysis: R
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const samples = new Uint8Array(128), waveform = new Uint8Array(256);
     let frame = 0, visible = true, width = 1, height = 1;
-    function draw() {
+    let envelope: number[] = [], lastAt = 0;
+    function draw(at = performance.now()) {
       frame = 0;
+      const elapsed = lastAt ? at - lastAt : 16; lastAt = at;
       samples.fill(0); waveform.fill(128);
       if (playing.current && visible && !document.hidden && !reduced.matches) {
         analysis.current?.analyser.getByteFrequencyData(samples);
         analysis.current?.analyser.getByteTimeDomainData(waveform);
       }
       const { energy, bass } = signalEnergy(samples);
+      const responding = energy > 0 || waveform.some(value => value !== 128);
+      for (const surface of surfaces) if (surface) surface.dataset.motion = responding ? "live" : "still";
       // Same RAF/sample buffer drives the surrounding light. Never React-render per frame.
       for (const surface of surfaces) {
         surface?.style.setProperty("--signal-energy", energy.toFixed(3));
         surface?.style.setProperty("--signal-bass", bass.toFixed(3));
       }
       context!.clearRect(0, 0, width, height);
-      const bars = Math.min(100, Math.floor(width / 5));
+      const bars = Math.max(1, Math.min(40, Math.floor(width / 10)));
       const step = width / Math.max(bars, 1);
-      context!.fillStyle = playing.current ? "#dbdde1" : "#5e6168";
-      const levels = waveformLevels(waveform,bars);
+      context!.fillStyle = playing.current ? "#a2b5ad" : "#4c5955";
+      const measured = waveformLevels(waveform,bars);
+      envelope = calmWaveform(measured,envelope,elapsed);
+      const levels = envelope;
       for (let i = 0; i < bars; i++) {
         const level = levels[i]!;
         // Fixed perceptual scale reveals quiet real amplitude, still exactly flat at silence.
-        const barHeight = 2 + Math.sqrt(level) * (height - 10);
-        context!.fillRect(i * step + 1, height - barHeight, Math.max(1, step * .46), barHeight);
+        const barHeight = 2 + Math.sqrt(level) * (height - 10) * .62;
+        context!.fillRect(i * step + step * .32, height - barHeight, Math.max(1, step * .36), barHeight);
       }
       if (playing.current && visible && !document.hidden && !reduced.matches) frame = requestAnimationFrame(draw);
     }
     function update() {
-      cancelAnimationFrame(frame); frame = 0;
-      for (const surface of surfaces) if (surface) surface.dataset.motion = playing.current && visible && !document.hidden && !reduced.matches ? "live" : "still";
+      cancelAnimationFrame(frame); frame = 0; lastAt = 0;
+      if (!playing.current || !visible || document.hidden || reduced.matches) envelope = [];
       draw();
     }
     const size = new ResizeObserver(() => {
