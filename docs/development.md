@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：下方融合与对话选曲已发布cc9ac16（2026-10-01）
+## 当前阶段：对话意图/确认顺序与原歌单自动漫游已发布07e8897（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -130,9 +130,21 @@ David随后提出原参考对话框很有用，想与模型沟通音乐风格或
 - 首次公开真实两轮：第一轮200/两首候选，第二轮502校验失败，诚实停止/退出；cc9ac16窄修兼容单JSON围栏、文字换行、optional null playlist，不修复/编造ID。新增fixture覆盖，并将intent/selection错误分开。再次公开两轮均200/两首proposal，咨询前后queue/status不变，点确认programme200/model、安全英文主持、实际audio播放成功；393/1360dialog fits、pageErrors[]，最终暂停/退出清音源。产生一条节目历史，不写永久反馈/改网易歌单；不冒称全目录、长时自然播放或人工听感。实际查看公开及fixture对话/播放器截图，私有截图不入Git。
 - RN每个release npm ci/build，8536171/cc9ac16上server testtypecheck/33通过；仅停启Emily，停后一致性配对SQLite+env复制/cmp至root-only pre-8536171/pre-cc9ac16；旧a4b19a4/8536171保留。adapter/其他业务/Node/DNS/反代未动。公开新asset index-2CgEJQsm.css/index-C0_Cd1kt.js。
 
+## 对话逻辑与自动漫游（2026-10-01）
+
+David指出对话选歌逻辑需优化，询问一次几首并要求自动漫游。Pi功能发布 **e5df56f**，后续窄修 **07e8897**；RN current=`/opt/emily/releases/07e8897`。
+
+- 歌单每批最多12首，候选/权益/模型可减。新建歌单UI默认『原歌单自动漫游』，可在节目页取消或播放器切换；原有节目不自动开启，明确点歌/搜索不启用。近末3首单去重后台准备同歌单下一批，原audio engine仍只由真实ended推进；等待时pause优先。未引入跨源发现/解灰或假进度。
+- 同一轮去重，歌单100分页，≤1000已选ID，队列保留2首之前+有界待播。每次分页检索≤10页/60秒stage检查，故大量不可用歌可能触及准备预算，诚实停漫游，不外推全目录。耗尽/失败提示后关闭，不循环重复或切歌单。关闭/替换/清空/shutdown使迟到结果失效，close排空refill/intros；不改schema。
+- 对话传前次direction/候选IDs，由Store回读元数据，UI显示当前方向；模型明确用户最新纠正优先、不重复问已答问题，点歌优先精确原唱，风格请求用具体检索而非心情整句。默认约6首或用户数量≤12。返回ordered proposal，确认后按已确认顺序/数量，不再第二次模型洗牌；主持用安全英文fallback且真实权益重核验，不谎称节目二次AI编排。
+- Windows typecheck/server testtypecheck/build、server35/web28/browser1通过。新增漫游不重复/暂停/耗尽/重启/关闭与替换迟到、确认顺序、conversation prior context；浏览器显式16曲fixture用UI seek曲尾+真实ended自动跨12→13，非网易/自然长时证据。原播放/分析/PWA与四宽dialog回归保留，实际查看截图。
+- 07e8897补修：关闭/替换后旧refill不会冒称仍在准备，失效工作排空后允许新scope续批；10页扫描预算耗尽明确按失败停，不谎称全歌单听完。前端轮询/开关只更新漫游元数据、不覆盖transport，并用actionId/track/title/updatedAt挡迟到旧队列。新增关闭label/暂停音源断言，typecheck/testtypecheck/server35/browser1/built复跑通过。RN同样npm ci/build/testtypecheck/server35、配对备份pre-07e8897/Emily-only原子发布；公开UI切开→关无残留准备label、保持pause/newasset/pageErrors[]。此前真实完整跨批次证据属于e5df56f未篡改。最新JS index-DVIK-w0D.js，CSS不变。
+- RN身份核验/npm ci/build/testtypecheck/server35；停Emily后一致性SQLite+env配对/cmp root-only pre-e5df56f，仅Emily restart，旧cc9ac16保留。adapter/其他业务/Node/DNS/反代未动；资产index-BuJIO4F5.css/index-BXQ0VB0O.js。
+- 公开真实Gemini/网易：现曲精确原唱请求两首→『这些里面只留第一首』返回1首/context/ordered；咨询queue不变，programme确认顺序相同。本人真实歌单limit1验证一批1首→refill2首/playlist范围/无重复/paused→play/pause/next跨批次且pause保持。无pageerror/溢出，实际查看相关截图。公开漫游是API有界跨批次，不是自然播完12首/人工听感/长期后台；最后漫游关闭、paused、原djEnabled恢复、logout。生成两条节目历史，未写永久反馈或网易歌单。页面效果及模型具体推荐质量仍需实际反馈，不将测试当美学或语义完美保证。
+
 ## 下一步
 
-1. 当前cc9ac16含下方融合与对话选曲已发布；保留David肯定的音波/氛围，按实际反馈改善下部及聊天体验，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
+1. 当前07e8897含对话优化与原歌单漫游及竞态/状态修复已发布；保留David肯定的音波/氛围，按实际反馈改善下部及聊天体验，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
 2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
 3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 

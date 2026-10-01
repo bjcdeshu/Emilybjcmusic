@@ -21,6 +21,10 @@ The 27 automated tests are **explicitly test-only fixtures**, not real provider 
 
 Player's “聊聊想听什么” and Programme's “和 Emily 聊聊” open the shared station dialog. Written dialogue supports Chinese/preferences/named tracks and refinement, then displays only the server's actual rights-checked candidates. Explicit “播放这档节目” uses the existing programme/audio flow; consultation itself never interrupts playback. Dialogue lives only in page memory (bounded30 turns/latest11 sent), survives dialog close/navigation, clears on logout/disconnect/reload, and is never cached/persisted. Context/catalogue metadata are sent to the existing configured model; English hosting remains separate. Failure stays visible and does not silently switch tracks. Browser covers two-turn refinement, reopen, explicit acceptance and clear; server contracts cover IDs/rights/auth/limits/failure.
 
+## Playlist roaming (Pi / 2026-10-01)
+
+New owner-playlist programmes default to the opt-out original-playlist roaming checkbox; explicit picked tracks do not enable it. Player toggles only this scope, without changing audio. Near the last3 items server refills up to12 per batch; the existing real ended flow advances. Authenticated polling every10 seconds merges roaming/queue only and rejects stale action/scope/timestamp results, never overwrites transport. Disabling immediately hides the preparing label even while invalidated work drains. Same-run ID deduplication, bounded queue and honest source exhaustion/failure are server-owned; it is not cross-source discovery or unlimited background assurance. Conversation sends previous direction/IDs (server rehydrates trusted metadata), displays direction and confirms ordered tracks without a second model reorder. Browser fixture crosses12→13 using seek+actual ended and verifies toggle does not resume paused audio; real provider evidence/boundaries live in docs/development.md.
+
 ## Implementation boundaries
 
 - A single mounted `<audio>` plays a prepared `tts_ready` DJ segment, then the song. Only media events/properties determine the local transport state and progress. Server `playing` flags never cause restore/autoplay.
