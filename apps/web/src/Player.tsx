@@ -27,6 +27,7 @@ export function Player(props: Props) {
   const quiet = props.settings ? !props.settings.djEnabled : false;
   return <section data-playing={active} data-phase={isDj ? "voice" : "music"} data-busy={busy || playback.status === "loading"} className={`radio-device ${props.immersive ? "immersive-device" : ""}`} aria-label="Emily 个人电台播放器">
     <section className={`host-panel ${active && isDj ? "host-speaking" : ""}`} aria-labelledby="host-name">
+      <div className="host-light" aria-hidden="true" />
       <div className="host-topline"><div className="host-identity"><span className="host-avatar" aria-hidden="true">e</span><div><h2 id="host-name"><span className="sr-only">Emily / FM</span><HostWordmark /></h2><span className={`on-air ${active ? "active" : ""}`}><span />{quiet ? "MUSIC ONLY" : active && isDj ? "SPEAKING" : statuses[playback.status]}</span></div></div><button className="host-icon-button" aria-label={props.immersive ? "退出沉浸模式" : "进入沉浸模式"} aria-pressed={props.immersive} onClick={props.toggleImmersive}>{props.immersive ? <Minimize2 size={19} /> : <Maximize2 size={19} />}</button></div>
       <p className="host-subtitle">{quiet ? "Just you and the music." : "A voice between the songs."}</p>
       <RadioSignal active={active} analysis={props.analysis} />

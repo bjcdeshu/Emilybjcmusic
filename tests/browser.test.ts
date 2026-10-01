@@ -140,6 +140,14 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     }), "real audio samples produce bars taller than the silent baseline");
     assert(signalFrame.startsWith("data:image/png"));
     assert.equal(await page.locator(".transcript-card").getAttribute("data-speaking"), "true");
+    await page.waitForFunction(()=>Number((document.querySelector('.radio-device') as HTMLElement)!.style.getPropertyValue('--signal-energy'))>0);
+    assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'live');
+    assert(await page.locator('.host-light').evaluate(el=>Number(getComputedStyle(el).opacity)>0),'surround light follows actual audio energy');
+    assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'running');
+    await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),false,'immersion never interrupts audio');
+    if(env.EMILY_BROWSER_EVIDENCE_DIR) await page.screenshot({path:join(env.EMILY_BROWSER_EVIDENCE_DIR,'mobile-immersive-playing.png'),fullPage:true});
+    await page.getByRole('button',{name:'退出沉浸模式',exact:true}).click();
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-speaking.png"), fullPage: true });
@@ -152,6 +160,23 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.waitForTimeout(250);
     assert(Math.abs(await page.evaluate(() => document.querySelector("audio")!.currentTime) - stopped) < 0.1);
     assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), pausedSignal);
+    assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'still');
+    assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'paused');
+    assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-energy')),'0.000');
+    await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
+    for(const width of [393,1360,360,768]) {
+      await page.setViewportSize({width,height:width>740?1000:851});
+      assert.equal(await page.locator('.app-header').isVisible(),false);
+      assert.equal(await page.locator('.mobile-nav').isVisible(),false);
+      assert.equal(await page.getByRole('button',{name:'退出沉浸模式',exact:true}).isVisible(),true);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),true);
+      if(env.EMILY_BROWSER_EVIDENCE_DIR && [393,1360].includes(width)) await page.screenshot({path:join(env.EMILY_BROWSER_EVIDENCE_DIR,`${width>740?'desktop':'mobile'}-immersive.png`),fullPage:true});
+    }
+    await page.setViewportSize({width:393,height:851});
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.mobile-nav').isVisible(),true);
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc.includes('/api/audio/')),true);
     await page.getByRole("button", { name: "播放", exact: true }).click();
     await wait(page, () => !document.querySelector("audio")!.paused);
     await page.getByRole("button", { name: "安静模式", exact: true }).click();
@@ -162,6 +187,8 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     phases.push("song-after-quiet");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.waitForTimeout(80); // Allow the media-query change event to redraw its static baseline.
+    assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'still');
+    assert.equal(await page.locator('.host-light').evaluate(el=>getComputedStyle(el).opacity),'0');
     const stillFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
     await page.waitForTimeout(100);
     assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), stillFrame);
@@ -306,7 +333,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));

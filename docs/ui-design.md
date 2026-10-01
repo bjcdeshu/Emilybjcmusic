@@ -11,7 +11,7 @@ A private radio desk, extending mmguo's dark dot-matrix stage and overlapping wh
 - Palette: night `#090c13`, stage `#121417`, paper `#f5f7f5`, inset `#ecf0ed`, ink `#202525`, secondary `#68716f`, mint `#85ddbc`; red only for destructive/error actions.
 - Typography: one system sans stack across ALL screens, including player/login/dialog; original SVG dot lettering for station identity; monospace ONLY for labels/time. No italic e or per-page font overrides.
 - Scale: body14/line1.65, captions12, section18, page/programme32 desktop/28 mobile. 4px spacing rhythm, 24px desktop/20px mobile surface padding; outer28/inset16/control12 radii.
-- Motion: 240ms shared ease for controls, 400ms surface entry; no decorative looping except actual audio analysis. Reduced motion/static, stable widths, no animated text reflow.
+- Motion: 240ms shared ease for controls, 400ms surface/content entry; David's later 2026-10-01 request adds one coherent sound-spreading ambient treatment, not a new visual theme. Slow surrounding/stage light drifts only while real local audio plays and the signal is visible. Actual analyser energy/bass modulate stage light, paper seam, on-air halo, play-button rim and speaking-dot radius; not beat/BPM detection. Pause/hidden/offscreen/reduced-motion reset energy and stop ambient loops. Reduced motion/static, stable widths, no animated text reflow.
 
 ## Shared shell
 
@@ -40,6 +40,12 @@ All authenticated screens share the same 680px desktop surface/grid edge; mobile
 ## Listening dialogue (David request / 2026-10-01)
 
 The original reference's conversation intent returns as an owner-only listening consultation. Entry inside programme heading and collection page; same graphite identity and cool-white paper modal, calm written turns, verified-track proposal and one explicit play action. Do not turn this into a general agent console or a floating third-party widget. Chinese conversation is distinct from English spoken hosting. Suggestions do not interrupt audio; close/reopen preserves volatile context, logout clears it.
+
+## Immersive listening (David request / 2026-10-01)
+
+Retain the positively reviewed bars, original dot identity and uninterrupted reading paper. Add low-contrast mint/blue light around the desk and beneath the signal, spreading the same real audio energy into small indicators/edges. Reuse the signal's existing RAF/analyser buffer to set CSS variables, without React state per frame, another audio graph or synthetic waveform. Decorative slow drift is a playing-state atmosphere, not an audio metric; actual intensity remains actual samples, zero when silent/unavailable. Text remains stationary while reading; existing programme/track/transcript content enters only when content changes.
+
+The existing immersion button now hides shell navigation/footer, widens the listening desk to820px desktop, enlarges the signal stage responsively, and retains pause/seek/next/previous/chat/exit. Enter/exit never remounts audio or changes transport. Exit button and Escape (unless a dialog owns it) restore ordinary navigation. This is a page layout, NOT an OS/browser fullscreen promise; no permanent setting/cache and no new service. Small widths must not overflow from moving background layers. Mobile remains scrollable for long real transcripts/warnings, rather than clipping to a fixed-height fake full-screen mockup.
 
 ## Review and boundaries
 
