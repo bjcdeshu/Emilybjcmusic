@@ -1,5 +1,16 @@
 {
   "date": "2026-09-30",
+  "lowerIntegrationAndConversation": {
+    "date":"2026-10-01", "lowerRelease":"a4b19a4", "conversationRelease":"8536171", "currentRelease":"cc9ac16",
+    "userFeedback":"Likes audio bars and improved atmosphere; lower region needs integration. Then requests model dialogue about styles/named music. Partial positive feedback, not whole UI approval.",
+    "local":{"typecheck":true,"serverTestTypecheck":true,"build":true,"serverTests":33,"webTests":28,"browserFixtureTests":1,"builtEntrypoint":true,"lowerAlignmentAndNaturalDomOrder":true,"dialogueRefinementReopenExplicitPlayClear":true,"widths":[360,393,768,1360],"pageErrors":[]},
+    "initialLive":{"release":"8536171","turnStatuses":[200,502],"failure":"Second model response validation failed; stopped honestly, no fake reply."},
+    "live":{"release":"cc9ac16","fixture":false,"loginHttp":200,"turnStatuses":[200,200],"candidateCounts":[2,2],"proposals":true,"consultationQueueAndStatusUnchanged":true,"dialogFits393And1360":true,"explicitProgrammeHttp":200,"programmeSource":"model","safeEnglishHosting":true,"actualAudioStarted":true,"finalPauseLogoutAudioCleared":true,"pageErrors":[]},
+    "compatibilityFix":"One enclosing JSON fence, newlines in written prose, optional null playlist; exact catalogue IDs remain unchanged and verified.",
+    "deployment":{"current":"/opt/emily/releases/cc9ac16","identityVerified":true,"server33PassedOnRN":true,"pairedBackupsCompared":true,"onlyEmilyApplicationRestarted":true,"noSchemaRuntimeAdapterDnsProxyChanges":true},
+    "evidenceDirectories":["../.tmp/emily-browser-tools/design-integration","../.tmp/emily-browser-tools/design-integration-live","../.tmp/emily-browser-tools/design-dialogue","../.tmp/emily-browser-tools/design-dialogue-live"],
+    "boundaries":["dialogue stored only in bounded page memory, no logs/db/cache","only configured model and actual owner NetEase rights","one new programme history entry, no permanent feedback or NetEase playlist edits","no long natural track/device/human listening validation in this round","screenshots reviewed, not David whole-design acceptance"]
+  },
   "wholeProductDesign": {
     "date": "2026-10-01", "release": "e4e1b01", "reason": "David rejected whole-UI inconsistency; prior technical verification was not aesthetic approval.",
     "local": {"typecheck": true, "build": true, "webTests": 28, "browserFixtureTests": 1, "reviewedWidths": [360,393,768,1360], "screens": ["login","listen","library","history","empty-history","settings","qr-dialog-error"], "sharedControlFont": true, "primaryTargetsAtLeast44px": true, "horizontalOverflow": false, "existingPlaybackAndOfflineAssertionsPreserved": true},

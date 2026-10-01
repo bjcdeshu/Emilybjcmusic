@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：整站设计系统e4e1b01已发布，待David实际评价（2026-10-01）
+## 当前阶段：下方融合与对话选曲已发布cc9ac16（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -117,9 +117,22 @@ David直接纠正『整体的ui你为什么不去设计，一致性太差』。4
 - 实际打开fixture手机/桌面逐页截图及contact sheet；发布后公开真实Chrome登录200、四页共享字体与680px、393px无溢出、新asset、mini、折叠帮助、退出清音源/pageErrors[]通过，查看公开截图。公开检查只读取现有数据，未新建programme、调用模型或重做曲目长时播放；截图/功能不冒充David美学认可。
 - RN严格hostname/stripped machine-id核验，npm ci/build通过；仅停启emily，停后一致性配对复制/cmp SQLite+env至root-only `/var/backups/emily-20260930/pre-e4e1b01`，保留4c70e9f。adapter/其他业务/系统Node/DNS/反代未改。资产index-TwDhxOjg.css/index-DssYHLj0.js。
 
+## 下方融合细化与对话选曲（2026-10-01）
+
+David评价e4e1b01『音波表现形式不错，整体氛围感好了很多』，但下方没有融合。首次部分正面评价，不是整站认可。Pi发布a4b19a4：上部/分析不改，paper底色降为冷白#f5f7f5，文案移除嵌套灰卡、与标题左边缘对齐，减少固定空白，transport→文案→轻辅助工具→queue按DOM自然顺序，无CSS order。共享底色/mini保持整站一致。typecheck/build/web28/Chrome fixture1通过，四宽下方对齐/透明/DOM/44px断言、原音频及队列展开回归保留；真实公开五页/登录/mini/退出检查通过并查看截图。配对备份pre-a4b19a4，仅重启Emily。
+
+David随后提出原参考对话框很有用，想与模型沟通音乐风格或具体听什么。Pi已实现并发布8536171，再修兼容性到**cc9ac16**；RN current=`/opt/emily/releases/cc9ac16`。
+
+- 收听页『聊聊想听什么』、节目页『和 Emily 聊聊』打开同设计系统原生dialog。文字对话可用中文，独立于英文TTS；持续补充偏好/具体歌名，明确『播放这档节目』才切换，关闭/跨页可保留当前对话，清空/退出/断开/刷新清除。页面volatile≤30轮、发送最新≤11，未存SQLite/localStorage或日志；说明上下文与选曲元数据会发给已配置模型。
+- 新owner/no-store `POST /api/conversation`：≤12消息/每条800chars/16KB、末条非空user；模型最多2搜索+1本人精确歌单，实际检索/完整权益筛选后第二模型请求只能选≤12个唯一候选ID，返回reply/tracks/warnings/ProgrammeRequest。咨询不改变radio/历史/TTS，接受时现有programme重新核验权益。缺模型/错误不假装聊天或播放成功。
+- 单inflight、durable12请求/5min、外部timeout保留、95秒stage检查/frontend135秒；shutdown排空咨询再关Store，未升级schema/runtime/桥接或新服务。聊天是听歌咨询，不是公共聊天室。
+- Windows typecheck/server testtypecheck/build、server33/web28/browser1、built入口通过；新auth/input/clarification/rights/catalogue IDs/duplicates/mismatch/failure/concurrency/rate及浏览器两轮细化/重开/明确播放/清空/四宽dialog检查。测试先遇origin缺失403预期401、fixture误用env名导致503，修正测试设置后完整通过，不删断言。
+- 首次公开真实两轮：第一轮200/两首候选，第二轮502校验失败，诚实停止/退出；cc9ac16窄修兼容单JSON围栏、文字换行、optional null playlist，不修复/编造ID。新增fixture覆盖，并将intent/selection错误分开。再次公开两轮均200/两首proposal，咨询前后queue/status不变，点确认programme200/model、安全英文主持、实际audio播放成功；393/1360dialog fits、pageErrors[]，最终暂停/退出清音源。产生一条节目历史，不写永久反馈/改网易歌单；不冒称全目录、长时自然播放或人工听感。实际查看公开及fixture对话/播放器截图，私有截图不入Git。
+- RN每个release npm ci/build，8536171/cc9ac16上server testtypecheck/33通过；仅停启Emily，停后一致性配对SQLite+env复制/cmp至root-only pre-8536171/pre-cc9ac16；旧a4b19a4/8536171保留。adapter/其他业务/Node/DNS/反代未动。公开新asset index-2CgEJQsm.css/index-C0_Cd1kt.js。
+
 ## 下一步
 
-1. 当前e4e1b01整站设计已发布；按David实际评价继续改善参考还原和全站日常交互，不将发布或测试当作设计认可。本人授权保留，不要求重新扫码。
+1. 当前cc9ac16含下方融合与对话选曲已发布；保留David肯定的音波/氛围，按实际反馈改善下部及聊天体验，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
 2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
 3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 
