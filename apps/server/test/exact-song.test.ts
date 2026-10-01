@@ -13,7 +13,7 @@ test('named song is exact ONE, never expands default six or silently corrects ar
   result=await ask('确认，是李剑青的《匆匆》，只找这一首');assert.equal(result.statusCode,200,result.body);assert.deepEqual(result.json().data.tracks.map((t:{id:string})=>t.id),['101']);
   p.searchSongs.push({...p.searchSongs[0]!,id:202,al:{...p.searchSongs[0]!.al,name:'TEST other edition'}});result=await ask('听李剑青的《匆匆》');assert.equal(result.json().data.match,'choose_version');assert.equal(result.json().data.tracks.length,2);assert.equal(result.json().data.programme,undefined);
   p.preview.add(101);p.preview.add(202);result=await ask('听李剑青的《匆匆》');assert.deepEqual(result.json().data.tracks,[]);assert.match(result.json().data.reply,/权益/);
-  p.preview.clear();p.dialogueTarget={title:'编出来的歌名',artist:'李剑青'};result=await ask('想听李剑青的一首歌');assert.equal(result.statusCode,502,'model target must come from user text, not hallucinated metadata');
+  p.preview.clear();result=await ask('只查询李剑青的《匆匆》，先核对权益');assert.equal(result.json().data.tracks.length,2,'query verb is not part of the artist');p.dialogueTarget={title:'编出来的歌名',artist:'李剑青'};result=await ask('想听李剑青的一首歌');assert.equal(result.statusCode,502,'model target must come from user text, not hallucinated metadata');
   assert.deepEqual(app.services.radio.now(),before);assert.equal(app.services.store.history().length,0);
  }finally{await cleanup(app,dir);await p.close();}
 });

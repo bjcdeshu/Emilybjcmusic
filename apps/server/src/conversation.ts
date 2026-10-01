@@ -20,7 +20,7 @@ function quotedSong(message: string): NamedSong | undefined {
   const hit = titles[0]!;
   const before = message.slice(0, hit.index).trim();
   const rawArtist = before.match(/([\p{L}\p{N}· .-]{1,70})的\s*$/u)?.[1];
-  const artist = rawArtist?.replace(/^.*(?:想听|要听|听听|听|播放|搜索|找找|找|点播|点|把|来一首|加一首)/u, '').replace(/^(?:确认[，,]?\s*)?(?:就是|是)\s*/u,'').trim();
+  const artist = rawArtist?.replace(/^.*(?:想听|要听|听听|听|播放|查询|核对|搜索|找找|找|点播|点|把|来一首|加一首|加入|加|给我|放)/u, '').replace(/^(?:确认[，,]?\s*)?(?:就是|是)\s*/u,'').trim();
   return { title: (hit[1] || hit[2])!, ...(artist ? { artist } : {}) };
 }
 function matchesSong(track: Track, target: NamedSong): boolean {
