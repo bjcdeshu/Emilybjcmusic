@@ -1,9 +1,9 @@
 import { resolve, dirname, basename, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ENGLISH_FEMALE_VOICES } from "@emily/shared";
-export { ENGLISH_FEMALE_VOICES } from "@emily/shared";
-export const DEFAULT_VOICE = ENGLISH_FEMALE_VOICES[0];
+import { FEMALE_VOICES, CHINESE_FEMALE_VOICES } from "@emily/shared";
+export { ENGLISH_FEMALE_VOICES, FEMALE_VOICES } from "@emily/shared";
+export const DEFAULT_VOICE = CHINESE_FEMALE_VOICES[0];
 export type AppConfig = {
   dataDir: string;
   ownerPassword: string | undefined;
@@ -62,7 +62,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     credentialKey = Buffer.from(env.EMILY_CREDENTIAL_KEY, "hex");
   }
   const voice = env.EMILY_TTS_VOICE || DEFAULT_VOICE;
-  if (!(ENGLISH_FEMALE_VOICES as readonly string[]).includes(voice)) throw new Error("EMILY_TTS_VOICE is not an allowlisted English female voice.");
+  if (!(FEMALE_VOICES as readonly string[]).includes(voice)) throw new Error("EMILY_TTS_VOICE is not an allowlisted female voice.");
   const ttsCommand = env.EMILY_TTS_COMMAND || "uvx";
   const executableName = basename(ttsCommand).toLowerCase();
   const absoluteExecutable = isAbsolute(ttsCommand) && !/[\0\r\n]/.test(ttsCommand) &&

@@ -44,7 +44,7 @@ export function SetupIndicators({ setup, openQr, showSettings }: { setup: SetupS
   return <div className="provider-strip" aria-label="服务状态">
     <button onClick={setup?.music.connected ? showSettings : openQr} disabled={!setup?.music.configured}><span className={`status-dot ${setup?.music.connected ? "good" : ""}`} /><span><b>网易云</b><small>{music}</small></span></button>
     <button onClick={showSettings}><span className={`status-dot ${setup?.model.configured ? "good" : ""}`} /><span><b>节目编排</b><small>{setup ? setup.model.configured ? "模型已配置" : "歌单模式" : "等待连接"}</small></span></button>
-    <button onClick={showSettings}><span className={`status-dot ${setup?.tts.available ? "good" : ""}`} /><span><b>English host</b><small>{setup ? setup.tts.available ? "语音可用" : "语音未就绪" : "等待连接"}</small></span></button>
+    <button onClick={showSettings}><span className={`status-dot ${setup?.tts.available ? "good" : ""}`} /><span><b>Emily · 主持</b><small>{setup ? setup.tts.available ? "语音可用" : "语音未就绪" : "等待连接"}</small></span></button>
   </div>;
 }
 

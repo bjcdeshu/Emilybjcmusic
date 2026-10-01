@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
 import type { MusicIdentity, MusicQrPollResponse, MusicQrSession, PlaylistSummary, SetupStatus, Track } from "@emily/shared";
 import type { AppConfig } from "./config.js";
+import { parseLyrics } from "./lyrics.js";
+import type { LyricsResponse } from "@emily/shared";
 import { AppError, asArray, asRecord, musicId, safeText } from "./errors.js";
 import { postJson } from "./http.js";
 import { providerMediaUrl } from "./media.js";
@@ -197,6 +199,14 @@ export class NeteaseAdapter {
       results.set(id, item); this.media.set(id, item);
     }
     return results;
+  }
+  async lyrics(id: string): Promise<LyricsResponse> {
+    await this.connected();
+    if (!this.store.track(id)) throw new AppError(404,"TRACK_NOT_FOUND","Track is not in your current catalogue.");
+    const body = await this.call("lyric", { id });
+    if (Number(body.code) !== 200) throw new AppError(502,"LYRICS_UNAVAILABLE","歌词暂不可用，音乐仍可播放。");
+    try { return parseLyrics(id,body); }
+    catch { throw new AppError(502,"LYRICS_UNAVAILABLE","歌词返回格式不受支持，音乐仍可播放。"); }
   }
   async audio(id: string): Promise<string> {
     await this.connected();

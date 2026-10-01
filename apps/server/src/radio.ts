@@ -4,7 +4,8 @@ import type { AppConfig } from "./config.js";
 import { AppError } from "./errors.js";
 import { NeteaseAdapter } from "./netease.js";
 import { hostingLine, ProgrammeSelector } from "./model.js";
-import { isEnglishHosting } from "./hosting-language.js";
+import { voiceLanguage, CHINESE_FEMALE_VOICES } from "@emily/shared";
+import { isHosting } from "./hosting-language.js";
 import { metadataTrack, Store } from "./store.js";
 import type { TtsPort } from "./tts.js";
 
@@ -27,13 +28,23 @@ export class Radio {
   private readonly intros = new Map<string, Promise<void>>();
   readonly defaults: RadioSettings;
   constructor(private readonly config: AppConfig, private readonly store: Store, readonly music: NeteaseAdapter, readonly selector: ProgrammeSelector, readonly tts: TtsPort, private readonly clock: () => number) {
-    this.defaults = { hostLanguage: "en", voice: config.voice, djEnabled: true, discovery: false, mood: "Easy and unhurried", volume: 0.65 };
+    this.defaults = { hostLanguage: voiceLanguage(config.voice), voice: config.voice, djEnabled: true, discovery: false, mood: "Easy and unhurried", volume: 0.65 };
     this.state = store.get<RadioState>("radio") || { status: "idle", items: [], index: 0, updatedAt: this.iso() };
+    const storedSettings = this.store.settings(this.defaults);
+    // David's approved Chinese default supersedes the old English-only version once.
+    const migrate = !this.store.get<boolean>("chinese_hosting_v1");
+    if (migrate) {
+      this.store.transaction(() => {
+        if (this.store.get<RadioSettings>("settings")) this.store.set("settings", { ...storedSettings, hostLanguage:"zh", voice:CHINESE_FEMALE_VOICES[0] });
+        this.store.set("chinese_hosting_v1", true);
+      });
+    }
+    const language = this.settings().hostLanguage;
     // Repair stored mixed-language scripts and cached speech on upgrade.
     let repaired = false;
     for (const item of this.state.items) {
-      if (!isEnglishHosting(item.hosting) || (item.dj && (!isEnglishHosting(item.dj.text) || item.dj.text !== item.hosting))) {
-        if (!isEnglishHosting(item.hosting)) item.hosting = hostingLine(item.track);
+      if (migrate || !isHosting(item.hosting, language) || (item.dj && (!isHosting(item.dj.text, language) || item.dj.text !== item.hosting || item.dj.language !== language))) {
+        if (migrate || !isHosting(item.hosting, language) || (item.dj && item.dj.language !== language)) item.hosting = hostingLine(item.track, undefined, language);
         delete item.dj; repaired = true;
       }
     }
@@ -48,8 +59,10 @@ export class Radio {
   private iso(): string { return new Date(this.clock()).toISOString(); }
   settings(): RadioSettings { return this.store.settings(this.defaults); }
   updateSettings(patch: Partial<RadioSettings>): RadioSettings {
-    const settings = { ...this.settings(), ...patch, hostLanguage: "en" as const };
     const previous = this.settings();
+    const voice = patch.voice || (patch.hostLanguage && patch.hostLanguage !== previous.hostLanguage ? patch.hostLanguage === "zh" ? CHINESE_FEMALE_VOICES[0] : "en-US-EmmaMultilingualNeural" : previous.voice);
+    if (patch.hostLanguage && patch.hostLanguage !== voiceLanguage(voice)) throw new AppError(400,"INVALID_INPUT","Hosting language must match the selected voice.");
+    const settings = { ...previous, ...patch, voice, hostLanguage: voiceLanguage(voice) };
     this.store.set("settings", settings);
     if (settings.voice !== previous.voice || settings.djEnabled !== previous.djEnabled) {
       this.audioRevision++;
@@ -111,8 +124,8 @@ export class Radio {
   private async intro(item: PreparedItem, revision = this.audioRevision): Promise<void> {
     const settings = this.settings();
     if (this.closed || revision !== this.audioRevision || !settings.djEnabled) return;
-    if (!isEnglishHosting(item.hosting)) { item.hosting = hostingLine(item.track); delete item.dj; }
-    if (item.dj?.voice === settings.voice && item.dj.text === item.hosting && isEnglishHosting(item.dj.text) && item.dj.status !== "tts_failed") return;
+    if (!isHosting(item.hosting, settings.hostLanguage)) { item.hosting = hostingLine(item.track, undefined, settings.hostLanguage); delete item.dj; }
+    if (item.dj?.voice === settings.voice && item.dj.text === item.hosting && isHosting(item.dj.text, settings.hostLanguage) && item.dj.status !== "tts_failed") return;
     const key = `${revision}:${item.id}:${settings.voice}`;
     const existing = this.intros.get(key);
     if (existing) return existing;
@@ -240,7 +253,7 @@ export class Radio {
     this.audioRevision++;
     if (settings.djEnabled && items[0]) {
       await this.intro(items[0]);
-      if (items[0].dj?.status === "tts_failed" || items[0].dj?.status === "text_only") warnings.push("English DJ audio is unavailable. Hosting text is provided and music remains playable.");
+      if (items[0].dj?.status === "tts_failed" || items[0].dj?.status === "text_only") warnings.push("主持语音暂不可用，文案仍可阅读，音乐可以继续播放。");
     }
     this.restartNotice = false;
     this.state = {
@@ -262,7 +275,7 @@ export class Radio {
       await this.intro(current);
     }
     if (this.restartNotice) { delete this.state.warning; this.restartNotice = false; }
-    if (this.settings().djEnabled && current.dj?.status !== "tts_ready") this.state.warning = "English DJ audio is unavailable; the actual music track can still play.";
+    if (this.settings().djEnabled && current.dj?.status !== "tts_ready") this.state.warning = "主持语音暂不可用，实际歌曲仍可播放。";
     current.status = "resolved";
   }
   async play(trackId?: string): Promise<PlayerActionResponse> {

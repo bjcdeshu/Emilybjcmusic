@@ -64,7 +64,7 @@ export function useMediaSession(
     if (typeof MediaMetadata !== "undefined") {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: playback.phase === "dj" ? `${now.programmeTitle || "Emily Radio"} · Emily says` : now.track.title,
-        artist: playback.phase === "dj" ? "Emily · English host" : now.track.artist,
+        artist: playback.phase === "dj" ? "Emily" : now.track.artist,
         album: now.programmeTitle || now.track.album || "Emily Personal Radio",
         artwork: artwork ? [{ src: artwork }] : []
       });

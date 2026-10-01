@@ -5,7 +5,7 @@ import { once } from "node:events";
 import type { Track, RadioSettings } from "@emily/shared";
 import { loadConfig } from "../src/config.js";
 import { hostingLine, ProgrammeSelector } from "../src/model.js";
-import { isEnglishHosting } from "../src/hosting-language.js";
+import { isEnglishHosting, isHosting } from "../src/hosting-language.js";
 
 // Synthetic catalogue and model replies are explicitly TEST FIXTURES, never production data.
 const catalogue: Track[] = [
@@ -58,6 +58,16 @@ test("English hosting omits non-Latin names without inventing translations; cata
   }
   const plan = naturalPlan(); plan.selections[0]!.hosting = "Let's make room for the next song. There is no need to rush this evening.";
   await withSelector(plan, async selector => { assert.equal((await selector.select(tracks, { limit: 2 }, settings, new Map())).source, "model"); });
+});
+
+test("Mandarin model hosting is contextual, catalogue-grounded and preserves original names; failure is Chinese too", async () => {
+  const tracks:Track[]=[{id:"101",title:"测试歌名",artist:"测试歌手",source:"netease"},{id:"202",title:"Fixture Second",artist:"Fixture Artist",source:"netease"}];
+  const chinese:RadioSettings={...settings,hostLanguage:"zh",voice:"zh-CN-XiaoxiaoNeural"};
+  const plan={title:"给今晚一点留白",selections:[{id:"101",reason:"顺着当前听感继续",hosting:"先把忙碌放一放，让音乐接着陪你。下一首是测试歌手的《测试歌名》。"}]};
+  await withSelector(plan,async selector=>{const result=await selector.select(tracks,{limit:2},chinese,new Map());assert.equal(result.source,"model");assert.equal(result.items[0]!.hosting,plan.selections[0]!.hosting);assert(isHosting(result.items[0]!.hosting,"zh"));});
+  for(const text of ["English only hosting", "<speak>你好</speak>", "这位歌手出生于1974年。", "访问https://example.com继续播放"]){
+    await withSelector({...plan,selections:[{...plan.selections[0],hosting:text}]},async selector=>{const result=await selector.select(tracks,{limit:2},chinese,new Map());assert.equal(result.source,"playlist");assert(result.items.every(item=>isHosting(item.hosting,"zh")));assert.equal(result.items[0]!.track.title,"测试歌名");});
+  }
 });
 
 test("natural hosting keeps exact catalogue ID and uniqueness boundaries", async () => {

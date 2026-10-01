@@ -5,6 +5,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
+import { voiceLanguage } from "@emily/shared";
 import type { DjSegment } from "@emily/shared";
 import { buildApp, type EmilyApp, type AppOptions } from "../src/app.js";
 import type { TtsPort } from "../src/tts.js";
@@ -27,7 +28,7 @@ export class FixtureTts implements TtsPort {
       await mkdir(this.audioDir, { recursive: true });
       await writeFile(join(this.audioDir, `${id}.mp3`), Buffer.from("TEST AUDIO FIXTURE BYTES ".repeat(40)), { mode: 0o600 });
     }
-    return { id, text, voice, language: "en", status: this.ready ? "tts_ready" : "text_only", createdAt: "2026-09-30T00:00:00.000Z", ...(this.ready ? { audioUrl: `/api/audio/${id}` } : {}) };
+    return { id, text, voice, language: voiceLanguage(voice), status: this.ready ? "tts_ready" : "text_only", createdAt: "2026-09-30T00:00:00.000Z", ...(this.ready ? { audioUrl: `/api/audio/${id}` } : {}) };
   }
 }
 export type CapturedRequest = { path: string; body: Record<string, unknown>; authorization: string | undefined };
@@ -43,6 +44,8 @@ export class HttpFixture {
   malformedPath: string | undefined;
   dialogueFormatting = false;
   dialogueMode: "clarify" | "valid" | "invented" | "duplicate" | "mismatch" | undefined;
+  hostingText: string | undefined;
+  lyricBody: Record<string,unknown> | undefined;
   modelMode: "valid" | "invented" | "duplicate" | "biography" | "unavailable" = "valid";
   readonly server = createServer((request, response) => { void this.respond(request, response); });
   base = "";
@@ -77,6 +80,7 @@ export class HttpFixture {
     else if (path === "/song/url/v1") value = {
       code: 200, data: String(body.id).split(",").map(id => ({ id: Number(id), code: 200, url: this.unsafeAudio ? "http://127.0.0.1/private" : `http://m701.music.126.net/test-fixture-${id}.mp3`, freeTrialInfo: this.preview.has(Number(id)) ? { start: 0, end: 30 } : null, expi: 120 }))
     };
+    else if (path === "/lyric") value = this.lyricBody || {code:200,lrc:{lyric:"[00:00.00]TEST LYRIC first\n[00:01.00]TEST LYRIC second\n[00:02.00]TEST LYRIC third"}};
     else if (path === "/login/qr/key") value = { code: 200, data: { unikey: "TEST_FIXTURE_QR_KEY_123456" } };
     else if (path === "/login/qr/create") value = { code: 200, data: { qrurl: `https://music.163.com/login?codekey=${body.key}`, qrimg: "data:image/png;base64,iVBORw0KGgo=" } };
     else if (path === "/login/qr/check") value = { code: this.qrCode, ...(this.qrCode === 803 ? { cookie: COOKIE_SENTINEL } : {}) };
@@ -93,6 +97,7 @@ export class HttpFixture {
         response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify(value));return;
       }
       if (this.modelMode === "unavailable") { response.writeHead(503).end(COOKIE_SENTINEL); return; }
+      if(this.hostingText) {response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({choices:[{message:{content:JSON.stringify({title:'测试中文节目',selections:[{id:'101',reason:'测试选择',hosting:this.hostingText}]})}}]}));return;}
       const selections = [{ id: "202", transition: "settle_in", reason: "flow" }, { id: "101", transition: "keep_flow", reason: "variety" }];
       if (this.modelMode === "invented") selections[0]!.id = "999999";
       if (this.modelMode === "duplicate") selections[1]!.id = "202";

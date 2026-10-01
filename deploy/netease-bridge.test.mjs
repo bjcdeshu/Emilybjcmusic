@@ -16,7 +16,7 @@ test('private bridge enforces token, POST allowlist, no cache/logs/cookies and o
   await writeFile(join(root,'node_modules/axios/index.js'),'exports.default={defaults:{}};');
   await writeFile(join(root,'util/index.js'),'exports.cookieToJson=()=>({MUSIC_U:"fixture-only"});exports.generateRandomChineseIP=()=>"fixture-unused";');
   await writeFile(join(root,'util/request.js'),'module.exports=async(uri,data,options)=>({status:200,body:{code:200,crypto:options.crypto,unblock:data.unblock,level:data.level,proxy:options.proxy},cookie:["SECRET_FIXTURE_COOKIE"]});');
-  const names=['login_status','login_qr_key','login_qr_create','login_qr_check','user_playlist','playlist_track_all','cloudsearch','song_detail','song_url_v1'];
+  const names=['login_status','login_qr_key','login_qr_create','login_qr_check','user_playlist','playlist_track_all','cloudsearch','song_detail','song_url_v1','lyric'];
   for(const name of names)await writeFile(join(root,'module',name+'.js'),'module.exports=async(q,r)=>{console.error("SECRET_FIXTURE_RAW_PROVIDER_BODY");return r("/api/fixture",q,{crypto:"xeapi"})};');
   const token='fixture-private-token-not-a-real-secret';
   child=spawn(process.execPath,[fileURLToPath(new URL('./netease-bridge.cjs',import.meta.url))],{env:{PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,EMILY_ADAPTER_UPSTREAM:root,EMILY_ADAPTER_TOKEN:token,ENABLE_GENERAL_UNBLOCK:'false',ENABLE_PROXY:'false',TMPDIR:join(root,'private'),TEMP:join(root,'private'),TMP:join(root,'private')},stdio:['ignore','pipe','pipe']});
@@ -30,6 +30,9 @@ test('private bridge enforces token, POST allowlist, no cache/logs/cookies and o
   assert.equal((await fetch(base+'/song/url/v1',{headers})).status,404);
   for(const input of [{proxy:'https://invalid.example'},{crypto:'linuxapi'},{domain:'https://invalid.example'},null,[],{cookie:{MUSIC_U:'fixture'}}])assert.equal((await fetch(base+'/song/url/v1',{method:'POST',headers,body:JSON.stringify(input)})).status,400);
   const response=await fetch(base+'/song/url/v1',{method:'POST',headers,body:JSON.stringify({id:'101',cookie:'fixture',unblock:'true',level:'lossless'})});
+  const lyric=await fetch(base+'/lyric',{method:'POST',headers,body:JSON.stringify({id:'101',cookie:'fixture'})});
+  assert.equal(lyric.status,200);assert.equal(lyric.headers.get('cache-control'),'private, no-store');assert.equal(lyric.headers.get('set-cookie'),null);
+  for(const input of [{id:'bad'},{id:'101',level:'lossless'},{id:'101',proxy:'https://invalid.example'}])assert.equal((await fetch(base+'/lyric',{method:'POST',headers,body:JSON.stringify(input)})).status,400);
   assert.equal(response.status,200);
   assert.equal(response.headers.get('set-cookie'),null);
   assert.equal(response.headers.get('cache-control'),'private, no-store');

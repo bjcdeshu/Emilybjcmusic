@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：方案一整屏电台与底部面板已发布e3328e8（2026-10-01）
+## 当前阶段：中文女声、台词阅读滚动、真实歌词与波形调整本机通过，待RN发布（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -9,8 +9,8 @@
 - 本机接续目录：`C:/workspace/codex/work/Emily`；分支 `pi/emily-continue-20260930`，基于 Iris 交接提交 `c7af2c2ce8a01e023647e2047befa525aa68c6b4`。
 - 接续前已确认 `C:/workspace/codex/音乐开发` 为干净旧 main，使用独立 worktree 保留原目录和分支；来源分支 `iris/emily-v1-english-20260930`，不覆盖 main。
 - Iris 已停止功能开发，不再并发修改 Pi 后续责任源码。原两个 Hermes 子代理均已结束，无仍在后台执行的开发子代理。
-- 范围继续有效：独立个人 Web/PWA 电台、个人登录、网易云本人权益、英文女声、精致移动优先视觉；主要设备为小米12S安卓Chrome。不做公众房间、共享VIP池或主站联动。
-- 当前代码：React/Vite 前端、Fastify 后端、SQLite、NetEase HTTP 适配、OpenAI-compatible 编排、Edge英文TTS、实际音频状态机、PWA和测试。接口见 [api-contract.md](api-contract.md) 及 `packages/shared/src/index.ts`。
+- 范围继续有效：独立个人 Web/PWA 电台、个人登录、网易云本人权益、中文女声（最新请求取代初始英文默认，英文可选）、精致移动优先视觉；主要设备为小米12S安卓Chrome。不做公众房间、共享VIP池或主站联动。
+- 当前代码：React/Vite 前端、Fastify 后端、SQLite、NetEase HTTP 适配、OpenAI-compatible 编排、Edge中/英文TTS、实际音频状态机、PWA和测试。接口见 [api-contract.md](api-contract.md) 及 `packages/shared/src/index.ts`。
 - Iris 历史验证：`npm ci`、类型检查、构建和编译启动检查通过；前端26/26、后端21/23，共47通过、2失败。真实英文Edge合成、解码、缓存复用通过。锁文件修正后的当时审计报告0项漏洞。Pi 本机结果见下节，不能将历史 Linux 结果当作 Windows 实测。
 - Pi 已修复原两项失败：有界、去重的单首主持预准备；pause 不走网络动作互斥，使用暂停版本阻止迟到 play/next 恢复播放。其他准备动作仍互斥。原断言保留并新增 play、清空、声线变化与关闭竞态测试。
 - Iris 的英文主持自由文本修正已保留；`model-hosting.test.ts`三项回归通过。常见无依据事实筛选不等于完整事实认证。
@@ -185,11 +185,23 @@ David认为f49c838实现不够优雅；Pi比较三种方案后，David明确『�
 - 公开真实Chrome现有英文DJ→网易歌：restored/playing/paused各四手机viewport共12首屏fullbleed/navHidden/controlsFit/noOverflow；真实energy、主持全文/音量可达/focus返回、展开不断源、队列panel pause/resume保持同song、reduce静态/pause归零停止drift、返回节目后mini/nav、logout清audio/pageErrors[]全部通过。无新programme/model/permanentfeedback/网易写入，原漫游选择保留，最终paused/logout；非长时自然播放/真机/人工听感证据。
 - David随后希望串场台词自然滚动、歌曲显示歌词。当前仅核对固定上游存在lyric/lyric_new模块（LRC/新版逐字接口），Emily私有bridge九路尚无歌词路由，项目无歌词API/解析/显示；未进行真实歌词请求，不能宣称歌词已可用。建议原文字区phase切换：台词慢速阅读辅助非伪时间对齐；歌词实际时间戳随真实audio.time/seek，无歌词或无时间轴诚实降级。新功能尚未实施，不把当前正面反馈当作已完成歌词。
 
+## 中文主持、台词阅读滚动、歌词与波形（2026-10-01，本机通过，待RN发布）
+
+David最新要求去掉『Emily正在串场』label，用效果提示；改中文女声并请Pi推荐；接续台词自然滚动/真实歌词；询问频谱左高右变。保留已『很舒服』的整屏与底部transport，不重做布局。中文批准替代初始英文默认，不再把旧English-only当当前禁令。
+
+- 推荐晓晓，晓伊可选，原七款英文保留。默认/设置/模型/中文fallback/TTS及UI统一语言；一次性旧settings迁移保留quiet/volume/mood/discovery/授权/queue/history，失效旧DJ，后续主动英文选择可重启保存。Chinese guard要求Han、plain/no-controls/no-URL；英语保留非Latin脚本边界；二者非完整语言/事实识别。模型使用已有Gemini/OAPI，不新增付费服务。
+- 实际Edge两款女声metadata/MP3解码/缓存通过：晓晓50,256bytes/8.376秒，晓伊50,400bytes/8.4秒；非人工试听，不能宣称主观听感已验收。
+- DJ文字区慢速纵向8px/sec、开头hold2秒、长文到尾停止；short不滚，pause/手动hover-focus-touch-wheel/全文/modal/hidden/offscreen/reduce停，仅阅读辅助不平均配时。无可见串场/playing label，实际voice dot与连续柔光表明说话；暂停/媒体故障继续可见。
+- 私有桥新增唯一固定POST `/lyric`（10路）且lyrics专用参数限id/cookie/timestamp/noCookie；其他allowlist/鉴权/4MB/16KB/限额/无cache/log/Set-Cookie保持。owner/no-store `GET /api/music/lyrics/:id` 要已知真实catalogue/本人连接，共享90/min provider-read；parser≤100k chars/2000rows/offset/multi-tags/fractions/blank，缺词/纯乐/无时间轴/错误诚实。歌曲actual media时间/seek定位current，上下淡，short只current；全文原native sheet不换源。volatile≤12cache/abort stale/清私有状态，不存歌词/发模型/SW。
+- 左侧高的代码原因：旧pow1.8低→高bin映射在fft256下重复粗低频bin，音乐本身也常低频强。保留竖条，改真正time-domain RMS非重叠窗，固定sqrt显示尺度，静音/缺分析flat。频率energy/bass仍复用原graph/RAF/light，暂停/hidden/offscreen/reduce gate保留；不随机补右边/伪节拍/音源EQ。
+- Windows typecheck/server testtypecheck/build/server40/web31/deployment7/browser2/built通过，0跳过。原联合回归audio/conversation/roaming12→13/PWA/four-width/short/sheets/focus保留；新增25秒tone与中文/lyrics explicitfixture覆盖scroll/pause/reduce/manual/modal、actual keyboard seek/paused、plain/instrumental/missing/error still plays。首次新增seek fixture失败是未等歌曲metadata且media fixture缺Range，补真实Range/metadata wait、保留断言后完整browser2通过；未把失败删掉。实际看fixture截图并移除主持链接默认button白底。
+- 当前生产仍e3328e8；歌词真实请求/新Gemini中文/线上播放尚未验证，不冒称完成。此次要更新私有bridge并重启Emily+adapter（与前轮只Emily不同），不动Node/DNS/proxy/主站/其他业务。
+
 ## 下一步
 
-1. 当前e3328e8含获选方案一整屏电台/底部面板及既有连续声音响应/对话/原歌单漫游已发布；保留David肯定的音波/氛围，已得到David『很舒服』的当前方案反馈，保留此布局，下一项讨论为台词自然滚动/真实歌词；不将局部认可外推为全面完美。本人授权保留，不要求重新扫码。
-2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
-3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
+1. 在原RN窄范围构建发布并保留旧e3328e8与一致性SQLite+env/key+adapter配置/bridge回滚；真实验证固定歌词接口、中文Gemini/TTS→实际歌曲/seek/pause/面板/reduce与短屏，最终paused/logout。
+2. 本人授权保留，无需重新扫码。缺歌词不解灰/换源，不要求真机锁屏/PWA专项；保留舒服布局与连续声音响应，不将技术测试当新效果认可。
+3. 维护当前入口与相关契约/共享记忆，开发分支可同步，不覆盖main或秘密。
 
 ## 历史基线：Phase 2 mock（保留原有贡献）
 

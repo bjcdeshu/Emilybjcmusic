@@ -83,7 +83,7 @@ test("strict input validation rejects unsafe voices, ids, controls, coercions an
     const cookie = await login(app);
     const cases = [
       ["PATCH", "/api/settings", { voice: "--write-media=/private" }],
-      ["PATCH", "/api/settings", { hostLanguage: "zh" }],
+      ["PATCH", "/api/settings", { hostLanguage: "fr" }],
       ["PATCH", "/api/settings", { volume: "0.5" }],
       ["PATCH", "/api/settings", { volume: 1.1 }],
       ["PATCH", "/api/settings", { mood: "bad\ninput" }],

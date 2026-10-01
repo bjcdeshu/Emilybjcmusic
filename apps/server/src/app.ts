@@ -3,7 +3,7 @@ import fastify, { type FastifyInstance } from "fastify";
 import { MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
-import { loadConfig, ENGLISH_FEMALE_VOICES, type AppConfig } from "./config.js";
+import { loadConfig, FEMALE_VOICES, type AppConfig } from "./config.js";
 import { Store } from "./store.js";
 import { OwnerAuth } from "./auth.js";
 import { NeteaseAdapter } from "./netease.js";
@@ -65,7 +65,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     const publicRoutes = ["/api/health", "/api/session", "/api/login", "/api/logout"];
     if (!publicRoutes.includes(request.routeOptions.url || "")) auth.require(request);
     const route = request.routeOptions.url || "";
-    if (["/api/setup", "/api/music/playlists", "/api/music/search"].includes(route) && !store.takeRate("provider-read", 90, 60_000, clock())) {
+    if (["/api/setup", "/api/music/playlists", "/api/music/search", "/api/music/lyrics/:id"].includes(route) && !store.takeRate("provider-read", 90, 60_000, clock())) {
       throw new AppError(429, "PROVIDER_RATE_LIMITED", "Please wait before making another provider request.");
     }
     if (route === "/api/conversation" && !store.takeRate("conversation", 12, 300_000, clock())) {
@@ -77,7 +77,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   });
   const setup = async (): Promise<SetupStatus> => {
     const [musicStatus, available] = await Promise.all([music.status(), tts.available(radio.settings().voice)]);
-    return { music: musicStatus, model: { configured: selector.configured }, tts: { available, voice: radio.settings().voice, language: "en" } };
+    return { music: musicStatus, model: { configured: selector.configured }, tts: { available, voice: radio.settings().voice, language: radio.settings().hostLanguage } };
   };
   app.get("/api/health", { schema: { querystring: emptyQuery } }, async () => success({ status: "ok" as const, version: EMILY_VERSION }));
   app.get("/api/session", { schema: { querystring: emptyQuery } }, async request => success(auth.session(request)));
@@ -87,7 +87,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   app.get("/api/settings", { schema: { querystring: emptyQuery } }, async () => success(radio.settings()));
   app.patch<{ Body: Partial<RadioSettings> }>("/api/settings", {
     schema: { body: { ...objectSchema({
-      hostLanguage: { const: "en", type: "string" }, voice: { type: "string", enum: [...ENGLISH_FEMALE_VOICES] },
+      hostLanguage: { enum: ["en", "zh"], type: "string" }, voice: { type: "string", enum: [...FEMALE_VOICES] },
       djEnabled: { type: "boolean" }, discovery: { type: "boolean" }, mood: textSchema(160), volume: { type: "number", minimum: 0, maximum: 1 }
     }), minProperties: 1 }, querystring: emptyQuery }
   }, async request => success(radio.updateSettings(request.body)));
@@ -99,6 +99,10 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     const query = request.query.q.trim();
     if (!query) throw new AppError(400, "INVALID_INPUT", "Search text must not be empty.");
     return success({ items: await music.search(query) });
+  });
+  app.get<{ Params: { id: string } }>("/api/music/lyrics/:id", { schema: { params: objectSchema({ id: idSchema }, ["id"]), querystring: emptyQuery } }, async request => {
+    if (!store.track(request.params.id)) throw new AppError(404, "TRACK_NOT_FOUND", "Lyrics are available only for the owner's real catalogue.");
+    return success(await music.lyrics(request.params.id));
   });
   app.post<{ Body: ProgrammeRequest }>("/api/programme", {
     schema: { body: objectSchema({ playlistId: idSchema, trackIds: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: idSchema }, prompt: textSchema(600), limit: { type: "integer", minimum: 1, maximum: MAX_PROGRAMME_TRACKS }, roaming: { type: "boolean" }, ordered: { type: "boolean" } }), querystring: emptyQuery }

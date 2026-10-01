@@ -25,6 +25,56 @@ class BrowserTts extends FixtureTts {
 }
 const wait = async (page: Page, fn: () => boolean) => { await page.waitForFunction(fn); };
 
+test("real browser: Mandarin hosting reading scroll, pause/reduce/modal gates and timestamped lyrics with honest fallbacks", {timeout:90_000}, async () => {
+  const directory=await mkdtemp(join(process.env.TMPDIR||tmpdir(),"emily-text-browser-")), provider=new HttpFixture(); await provider.start();
+  const file=join(directory,"TEST_ONLY_LONG_TONE.mp3");
+  execFileSync("ffmpeg",["-v","error","-f","lavfi","-i","sine=frequency=440:duration=25","-codec:a","libmp3lame",file],{timeout:15000});
+  const bytes=await readFile(file);
+  provider.hostingText="先把那些忙碌的事放一放。让音乐接着陪你，留一点时间给自己。".repeat(5);
+  const config=loadConfig({EMILY_DATA_DIR:directory,EMILY_OWNER_PASSWORD:OWNER_PASSWORD,EMILY_CREDENTIAL_KEY:"0f".repeat(32),EMILY_NETEASE_API_BASE:provider.base,EMILY_NETEASE_COOKIE:COOKIE_SENTINEL,EMILY_MODEL_BASE_URL:`${provider.base}v1`,EMILY_MODEL_API_KEY:"TEST_ONLY_MODEL",EMILY_MODEL_NAME:"TEST_ONLY_MODEL",EMILY_WEB_DIST_DIR:join(root,"apps/web/dist")});
+  const app=buildApp({config,tts:new BrowserTts(directory,bytes),mediaOpener:async(_url,range)=>{validateRange(range);const match=range?range.slice(6).split('-'):[];const start=match[0]?Number(match[0]):0,end=match[1]?Math.min(Number(match[1]),bytes.length-1):bytes.length-1,chunk=bytes.subarray(start,end+1);return {status:range?206:200,headers:{"content-type":"audio/mpeg","content-length":String(chunk.length),"accept-ranges":"bytes",...(range?{"content-range":`bytes ${start}-${end}/${bytes.length}`}:{})},stream:Readable.from(chunk)};}});
+  let browser;
+  try {
+    const origin=await app.listen({host:"127.0.0.1",port:0});config.publicOrigin=origin;
+    browser=await chromium.launch({headless:true,...(process.env.EMILY_BROWSER_EXECUTABLE?{executablePath:process.env.EMILY_BROWSER_EXECUTABLE}:{channel:"chrome"})});
+    const page=await browser.newPage({viewport:{width:393,height:740}}),errors:string[]=[];
+    page.on('pageerror',e=>errors.push(e.message));await page.goto(origin);
+    await page.getByLabel('个人登录口令').fill(OWNER_PASSWORD);await page.getByRole('button',{name:'进入电台'}).click();await page.locator('.main-play').waitFor();
+    await page.locator('.radio-entry').getByRole('button',{name:'节目',exact:true}).click();
+    await page.getByRole('button',{name:/Fixture owner playlist/}).click();await page.getByLabel('原歌单自动漫游').uncheck();
+    await page.getByRole('button',{name:'开始这档节目'}).click();
+    await page.waitForFunction(()=>!document.querySelector('audio')!.paused&&document.querySelector('audio')!.currentSrc.includes('/api/audio/'));
+    assert.equal(app.services.radio.now().dj?.language,'zh');assert.equal(app.services.radio.now().dj?.voice,'zh-CN-XiaoxiaoNeural');
+    assert.equal(await page.locator('.transcript-text').getAttribute('lang'),'zh');assert.equal(await page.getByText('Emily 正在串场',{exact:true}).count(),0);
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.transcript-text')!).transform!=='none'&&new DOMMatrix(getComputedStyle(document.querySelector('.transcript-text')!).transform).m42< -2);
+    const offset=()=>page.locator('.transcript-text').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).m42);
+    await page.getByRole('button',{name:'暂停',exact:true}).click();const paused=await offset();await page.waitForTimeout(350);assert.equal(await offset(),paused,'pause stops reading aid');
+    await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'播放',exact:true}).click();await page.waitForTimeout(350);assert.equal(await offset(),paused,'reduce never auto-scrolls');
+    await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>new DOMMatrix(getComputedStyle(document.querySelector('.transcript-text')!).transform).m42< -4);
+    const source=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+    await page.getByRole('button',{name:'阅读主持全文'}).click();const modalOffset=await offset();await page.waitForTimeout(350);assert.equal(await offset(),modalOffset,'manual full reading stops preview');
+    assert.equal(await page.locator('.transcript-full').textContent(),provider.hostingText);await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),source,'reading does not remount audio');
+    await page.locator('.hosting-scroll').dispatchEvent('wheel');const manual=await offset();await page.waitForTimeout(350);assert.equal(await offset(),manual,'manual reading suppresses auto scrolling');
+    await page.getByRole('button',{name:'听感与节目',exact:true}).click();await page.getByRole('button',{name:'安静模式',exact:true}).click();await page.getByRole('button',{name:'关闭播放面板'}).click();
+    await page.waitForFunction(()=>document.querySelector('audio')!.currentSrc.includes('/api/media/track/'));
+    await page.locator('.lyrics-preview').waitFor();await page.waitForFunction(()=>document.querySelector('audio')!.duration>0&&!document.querySelector('audio')!.paused);await page.getByRole('button',{name:'暂停',exact:true}).click();
+    async function seek(time:number,index:string){const slider=page.getByLabel('歌曲播放进度');await slider.focus();await page.keyboard.press('Home');for(let step=0;step<Math.round(time*10);step++)await page.keyboard.press('ArrowRight');const actual=await page.evaluate(()=>({time:document.querySelector('audio')!.currentTime,duration:document.querySelector('audio')!.duration,value:(document.querySelector('.seek-range')as HTMLInputElement).value,disabled:(document.querySelector('.seek-range')as HTMLInputElement).disabled}));assert(Math.abs(actual.time-time)<.15,`keyboard seek changes actual media position: ${JSON.stringify(actual)}`);await page.waitForFunction(i=>document.querySelector('.lyrics-preview')!.getAttribute('data-line')===i,index);}
+    await seek(2.2,'2');assert.equal(await page.locator('.lyric-current').textContent(),'TEST LYRIC third');
+    await seek(.2,'0');assert.equal(await page.locator('.lyric-current').textContent(),'TEST LYRIC first');const lyricPaused=await page.locator('.lyric-current').textContent();await page.waitForTimeout(350);assert.equal(await page.locator('.lyric-current').textContent(),lyricPaused);
+    for(const[width,height]of[[360,560],[393,640],[393,740],[393,851]]as const){await page.setViewportSize({width,height});assert(await page.evaluate(()=>document.querySelector('.listening-tools')!.getBoundingClientRect().bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));}
+    await page.setViewportSize({width:393,height:740});await page.getByRole('button',{name:'阅读完整歌词'}).click();assert(await page.locator('.lyrics-full').isVisible());await page.keyboard.press('Escape');
+    async function refreshLyrics(body:Record<string,unknown>){provider.lyricBody=body;await page.reload();await page.locator('.main-play').waitFor();await page.waitForTimeout(150);}
+    await refreshLyrics({code:200,lrc:{lyric:'TEST untimed lyric\nTEST second untimed lyric'}});await page.getByRole('button',{name:'阅读歌词 · 无同步时间'}).waitFor();assert.equal(await page.locator('.lyrics-preview').count(),0);
+    await page.getByRole('button',{name:'阅读歌词 · 无同步时间'}).click();assert.equal(await page.locator('.lyrics-plain').textContent(),'TEST untimed lyric\nTEST second untimed lyric');await page.keyboard.press('Escape');
+    await refreshLyrics({code:200,nolyric:true});await page.getByText('纯音乐',{exact:true}).waitFor();assert.equal(await page.locator('.lyrics-preview').count(),0);
+    await refreshLyrics({code:200,uncollected:true});await page.getByText('暂无歌词',{exact:true}).waitFor();
+    provider.failPath='/lyric';await page.reload();await page.getByText('歌词暂不可用',{exact:true}).waitFor();await page.getByRole('button',{name:'播放',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('audio')!.paused);
+    assert.deepEqual(errors,[]);assert.equal(app.services.radio.settings().hostLanguage,'zh');
+    if(process.env.EMILY_BROWSER_EVIDENCE_DIR)await writeFile(join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'listening-text-fixture-result.json'),JSON.stringify({fixture:true,chineseVoice:true,hostingScroll:true,pauseAndReducedMotion:true,manualAndModalStop:true,lyricsSeekAndPause:true,shortScreens:true,plainInstrumentalMissingAndFailure:true,lyricsFailureStillPlays:true,pageErrors:errors},null,2));
+  } finally {if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
+});
+
 test("real browser: programme audio, pause/quiet/seek, history, logout and static-only offline PWA", { timeout: 120_000 }, async () => {
   const directory = await mkdtemp(join(process.env.TMPDIR || tmpdir(), "emily-browser-test-"));
   const provider = new HttpFixture();
@@ -261,6 +311,13 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       const a = document.querySelector("audio")!;
       return !a.paused && a.currentSrc.includes("/api/media/track/101") && a.currentTime > 0;
     });
+    await page.locator('.lyrics-preview').waitFor();
+    assert.equal(await page.getByText('Emily 正在串场',{exact:true}).count(),0);
+    const lyricsSource=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+    await page.getByRole('button',{name:'阅读完整歌词'}).click();
+    assert(await page.locator('.lyrics-full').isVisible());
+    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),lyricsSource);
     phases.push("song-after-quiet");
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.waitForTimeout(80); // Allow the media-query change event to redraw its static baseline.
@@ -321,9 +378,9 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       await reviewScreen('library');
     }
     await nav().getByRole("button", { name: "设置", exact: true }).click();
-    await page.getByLabel("英文女声", { exact: true }).waitFor();
+    await page.getByLabel("主持女声", { exact: true }).waitFor();
     await reviewScreen('settings');
-    await page.getByLabel("英文女声", { exact: true }).selectOption("en-GB-SoniaNeural");
+    await page.getByLabel("主持女声", { exact: true }).selectOption("en-GB-SoniaNeural");
     await page.getByRole("button", { name: "保存偏好" }).click();
     await page.getByText("已保存", { exact: true }).waitFor();
     assert.equal(app.services.radio.settings().voice, "en-GB-SoniaNeural");
@@ -416,6 +473,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(await page.evaluate(() => document.querySelector("audio")!.getAttribute("src")), null);
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await wait(page, () => !!navigator.serviceWorker.controller);
+    assert.equal(await page.locator('.lyrics-preview,.lyrics-full').count(),0,'logout removes private lyrics');
     const cached = await page.evaluate(async () => {
       const paths = [];
       for (const name of await caches.keys()) for (const request of await (await caches.open(name)).keys()) paths.push(new URL(request.url).pathname);

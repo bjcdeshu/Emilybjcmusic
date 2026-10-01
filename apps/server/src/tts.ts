@@ -4,10 +4,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { chmod, lstat, readdir, rename, unlink } from "node:fs/promises";
 import type { DjSegment } from "@emily/shared";
 import type { AppConfig } from "./config.js";
-import { ENGLISH_FEMALE_VOICES } from "./config.js";
+import { FEMALE_VOICES } from "./config.js";
 import { privateDirectory } from "./store.js";
 import { AppError } from "./errors.js";
-import { isEnglishHosting } from "./hosting-language.js";
+import { voiceLanguage } from "@emily/shared";
+import { isHosting } from "./hosting-language.js";
 
 export type TtsPort = {
   readonly audioDir: string;
@@ -41,7 +42,7 @@ export class EdgeTts implements TtsPort {
       this.execute(this.config.ttsCommand, [...prefix, ...args], {
         timeout: this.config.ttsTimeoutMs, killSignal: "SIGKILL", maxBuffer: 512_000, windowsHide: true, env
       }, (error, stdout) => {
-        if (error) reject(new AppError(503, "TTS_UNAVAILABLE", "English DJ synthesis is currently unavailable."));
+        if (error) reject(new AppError(503, "TTS_UNAVAILABLE", "DJ synthesis is currently unavailable."));
         else resolve(stdout);
       });
     });
@@ -53,7 +54,7 @@ export class EdgeTts implements TtsPort {
       const voices = new Set<string>();
       for (const line of text.split(/\r?\n/)) {
         const [name, gender] = line.trim().split(/\s+/);
-        if (name && gender === "Female" && (ENGLISH_FEMALE_VOICES as readonly string[]).includes(name)) voices.add(name);
+        if (name && gender === "Female" && (FEMALE_VOICES as readonly string[]).includes(name)) voices.add(name);
       }
       this.metadata = voices;
       this.metadataAt = this.clock();
@@ -62,15 +63,15 @@ export class EdgeTts implements TtsPort {
     return this.probe;
   }
   async available(voice: string): Promise<boolean> {
-    if (!this.config.ttsEnabled || !(ENGLISH_FEMALE_VOICES as readonly string[]).includes(voice)) return false;
+    if (!this.config.ttsEnabled || !(FEMALE_VOICES as readonly string[]).includes(voice)) return false;
     try { return (await this.voices()).has(voice); } catch { return false; }
   }
   async segment(text: string, voice: string): Promise<DjSegment> {
-    if (!isEnglishHosting(text) || text.length > 600 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text) || !(ENGLISH_FEMALE_VOICES as readonly string[]).includes(voice)) {
-      throw new AppError(400, "INVALID_TTS_INPUT", "DJ text or English female voice is not supported.");
+    if (!isHosting(text, voiceLanguage(voice)) || text.length > 600 || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(text) || !(FEMALE_VOICES as readonly string[]).includes(voice)) {
+      throw new AppError(400, "INVALID_TTS_INPUT", "DJ text or female voice is not supported.");
     }
     const id = createHash("sha256").update(JSON.stringify({ v: 1, text, voice, rate: "-4%", volume: "-10%" })).digest("hex");
-    const segment: DjSegment = { id, text, voice, language: "en", status: "text_only", createdAt: new Date(this.clock()).toISOString() };
+    const segment: DjSegment = { id, text, voice, language: voiceLanguage(voice), status: "text_only", createdAt: new Date(this.clock()).toISOString() };
     if (!this.config.ttsEnabled) return segment;
     const cached = await this.cached(id);
     if (cached) return { ...segment, status: "tts_ready", audioUrl: `/api/audio/${id}` };

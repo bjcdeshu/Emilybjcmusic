@@ -26,7 +26,7 @@ export type DjSegment = {
   audioUrl?: string;
   status: "text_only" | "tts_pending" | "tts_ready" | "tts_failed";
   createdAt: string;
-  language?: "en";
+  language?: "en" | "zh";
   voice?: string;
 };
 export type NowPlayingState = {
@@ -50,14 +50,18 @@ export type MusicIdentity = { id: string; name: string; avatarUrl?: string };
 export type SetupStatus = {
   music: { configured: boolean; connected: boolean; user?: MusicIdentity; message?: string };
   model: { configured: boolean };
-  tts: { available: boolean; voice: string; language: "en" };
+  tts: { available: boolean; voice: string; language: "en" | "zh" };
 };
 export const ENGLISH_FEMALE_VOICES = [
   "en-US-EmmaMultilingualNeural", "en-US-EmmaNeural", "en-US-JennyNeural",
   "en-US-AriaNeural", "en-GB-SoniaNeural", "en-IE-EmilyNeural", "en-AU-NatashaNeural"
 ] as const;
+export const CHINESE_FEMALE_VOICES = ["zh-CN-XiaoxiaoNeural", "zh-CN-XiaoyiNeural"] as const;
+export const FEMALE_VOICES = [...CHINESE_FEMALE_VOICES, ...ENGLISH_FEMALE_VOICES] as const;
+export function voiceLanguage(voice: string): "zh" | "en" { return voice.startsWith("zh-") ? "zh" : "en"; }
+export type LyricsResponse = { trackId: string; status: "synced" | "plain" | "instrumental" | "missing"; lines: { timeMs: number; text: string }[]; text?: string };
 export type RadioSettings = {
-  hostLanguage: "en";
+  hostLanguage: "en" | "zh";
   voice: string;
   djEnabled: boolean;
   discovery: boolean;

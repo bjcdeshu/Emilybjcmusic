@@ -33,7 +33,7 @@ const routes = new Map([
   ['login/status', 'login_status'], ['login/qr/key', 'login_qr_key'],
   ['login/qr/create', 'login_qr_create'], ['login/qr/check', 'login_qr_check'],
   ['user/playlist', 'user_playlist'], ['playlist/track/all', 'playlist_track_all'],
-  ['cloudsearch', 'cloudsearch'], ['song/detail', 'song_detail'], ['song/url/v1', 'song_url_v1']
+  ['cloudsearch', 'cloudsearch'], ['song/detail', 'song_detail'], ['song/url/v1', 'song_url_v1'], ['lyric', 'lyric']
 ].map(([route, name]) => ['/' + route, require(path.join(upstream, 'module', name + '.js'))]));
 const allowed = new Set(['cookie','noCookie','timestamp','key','qrimg','uid','id','ids','limit','offset','keywords','type','level','unblock']);
 const expectedAuth = Buffer.from('Bearer ' + token);
@@ -52,6 +52,7 @@ const server = http.createServer(async (req, res) => {
     for await (const chunk of req) { size += chunk.length; if (size > 16384) { send(res, 413, { code:413 }); req.destroy(); return; } chunks.push(chunk); }
     const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key))) return send(res, 400, { code:400 });
+    if (req.url === '/lyric' && (typeof input.id !== 'string' || !/^[1-9][0-9]{0,17}$/.test(input.id) || Object.keys(input).some(key => !['id','cookie','timestamp','noCookie'].includes(key)))) return send(res, 400, { code:400 });
     if (input.cookie !== undefined && typeof input.cookie !== 'string') return send(res, 400, { code:400 });
     const result = await fn({ ...input, cookie:input.cookie ? cookieToJson(input.cookie) : {},
       unblock:'false', level:'standard', noCookie:true, timeout:20000, randomCNIP:false }, request);

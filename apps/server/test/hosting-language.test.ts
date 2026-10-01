@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { rm } from "node:fs/promises";
-import { isEnglishHosting, spokenMetadata } from "../src/hosting-language.js";
+import { isEnglishHosting, isHosting, spokenMetadata } from "../src/hosting-language.js";
 import { hostingLine } from "../src/model.js";
 import { Radio } from "../src/radio.js";
 import { fixtureApp, FixtureTts, temporaryDirectory } from "./helpers.js";
@@ -15,13 +15,35 @@ test("spoken script boundary allows Latin names but rejects mixed and hidden non
   assert.equal(spokenMetadata("莫文蔚 Karen Mok"), undefined);
 });
 
+test("approved upgrade migrates old English settings once, keeps quiet/volume/preferences and optional English after selection", async () => {
+  const directory=await temporaryDirectory(),app=fixtureApp(directory);
+  try {
+    const initial=app.services.radio.settings();assert.equal(initial.hostLanguage,"zh");assert.equal(initial.voice,"zh-CN-XiaoxiaoNeural");
+    app.services.store.delete("chinese_hosting_v1");
+    app.services.store.set("settings",{...initial,hostLanguage:"en",voice:"en-GB-SoniaNeural",djEnabled:false,volume:.21,mood:"Fixture mood",discovery:true});
+    const config=loadConfig({EMILY_DATA_DIR:directory,EMILY_TTS_ENABLED:"false"});
+    const radio=new Radio(config,app.services.store,app.services.music,new ProgrammeSelector(config),new FixtureTts(directory),Date.now);
+    assert.deepEqual(radio.settings(),{...initial,hostLanguage:"zh",voice:"zh-CN-XiaoxiaoNeural",djEnabled:false,volume:.21,mood:"Fixture mood",discovery:true});
+    radio.updateSettings({voice:"en-GB-SoniaNeural"});assert.equal(radio.settings().hostLanguage,"en");
+    assert.throws(()=>radio.updateSettings({hostLanguage:"zh",voice:"en-GB-SoniaNeural"}));
+    await radio.close();
+    const restart=new Radio(config,app.services.store,app.services.music,new ProgrammeSelector(config),new FixtureTts(directory),Date.now);
+    assert.equal(restart.settings().voice,"en-GB-SoniaNeural");assert.equal(restart.settings().hostLanguage,"en");
+    restart.updateSettings({hostLanguage:"zh"});assert.equal(restart.settings().voice,"zh-CN-XiaoxiaoNeural");
+    await restart.close();
+    assert(isHosting("下一首是Fixture Artist的《测试歌名》。","zh"));assert(!isHosting("English only","zh"));assert(!isHosting("<speak>你好</speak>","zh"));
+  }finally{await cleanupLocal();}
+  async function cleanupLocal(){await app.close();await rm(directory,{recursive:true,force:true});}
+});
+
 test("restart repairs stored mixed-language hosting and drops old DJ audio while retaining queue and catalogue", async () => {
   const directory = await temporaryDirectory(); const app = fixtureApp(directory);
   try {
+    app.services.radio.updateSettings({voice:"en-US-EmmaMultilingualNeural"});
     const track = { id: "101", title: "慢慢喜欢你", artist: "莫文蔚", source: "netease" as const };
     const old = { id: "a".repeat(64), text: "Here is 慢慢喜欢你 by 莫文蔚.", voice: app.services.radio.settings().voice, language: "en", status: "tts_ready", audioUrl: `/api/audio/${"a".repeat(64)}`, createdAt: new Date().toISOString() };
     app.services.store.set("radio", { status: "playing", items: [{ id: "stored", track, requestedBy: "model", status: "resolved", hosting: old.text, dj: old }], index: 0, title: "An evening", updatedAt: new Date().toISOString() });
-    const config = loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_ENABLED: "false" });
+    const config = loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_ENABLED: "false", EMILY_TTS_VOICE:"en-US-EmmaMultilingualNeural" });
     const radio = new Radio(config, app.services.store, app.services.music, new ProgrammeSelector(config), new FixtureTts(directory), Date.now);
     const now = radio.now();
     assert.equal(now.status, "paused"); assert.equal(now.dj, undefined);

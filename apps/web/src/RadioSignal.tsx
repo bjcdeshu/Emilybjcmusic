@@ -1,8 +1,9 @@
 import { useEffect, useRef, type RefObject } from "react";
 import type { AudioAnalysis } from "./audio-analysis";
+import { waveformLevels } from "./signal-waveform";
 import { signalEnergy } from "./signal-energy";
 
-/** Reference-style bars from real frequency samples, never a fabricated waveform.
+/** Reference-style bars from real time-domain RMS windows; light retains actual frequency energy.
  * One RAF; no work in hidden tabs/offscreen, static for reduced motion. */
 export function RadioSignal({ active, analysis }: { active: boolean; analysis: RefObject<AudioAnalysis | null> }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -14,12 +15,15 @@ export function RadioSignal({ active, analysis }: { active: boolean; analysis: R
     const surround = device?.parentElement;
     const surfaces = [device, surround];
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-    const samples = new Uint8Array(128);
+    const samples = new Uint8Array(128), waveform = new Uint8Array(256);
     let frame = 0, visible = true, width = 1, height = 1;
     function draw() {
       frame = 0;
-      samples.fill(0);
-      if (playing.current && visible && !document.hidden && !reduced.matches) analysis.current?.analyser.getByteFrequencyData(samples);
+      samples.fill(0); waveform.fill(128);
+      if (playing.current && visible && !document.hidden && !reduced.matches) {
+        analysis.current?.analyser.getByteFrequencyData(samples);
+        analysis.current?.analyser.getByteTimeDomainData(waveform);
+      }
       const { energy, bass } = signalEnergy(samples);
       // Same RAF/sample buffer drives the surrounding light. Never React-render per frame.
       for (const surface of surfaces) {
@@ -30,11 +34,11 @@ export function RadioSignal({ active, analysis }: { active: boolean; analysis: R
       const bars = Math.min(100, Math.floor(width / 5));
       const step = width / Math.max(bars, 1);
       context!.fillStyle = playing.current ? "#dbdde1" : "#5e6168";
+      const levels = waveformLevels(waveform,bars);
       for (let i = 0; i < bars; i++) {
-        // Logarithmic spacing exposes bass/mids rather than repeating made-up peaks.
-        const bin = Math.min(127, Math.floor(Math.pow(i / Math.max(bars - 1, 1), 1.8) * 110));
-        const level = samples[bin]! / 255;
-        const barHeight = 2 + level * (height - 10);
+        const level = levels[i]!;
+        // Fixed perceptual scale reveals quiet real amplitude, still exactly flat at silence.
+        const barHeight = 2 + Math.sqrt(level) * (height - 10);
         context!.fillRect(i * step + 1, height - barHeight, Math.max(1, step * .46), barHeight);
       }
       if (playing.current && visible && !document.hidden && !reduced.matches) frame = requestAnimationFrame(draw);
