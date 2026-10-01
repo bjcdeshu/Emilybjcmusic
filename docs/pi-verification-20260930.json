@@ -1,5 +1,13 @@
 {
   "date": "2026-09-30",
+  "wholeProductDesign": {
+    "date": "2026-10-01", "release": "e4e1b01", "reason": "David rejected whole-UI inconsistency; prior technical verification was not aesthetic approval.",
+    "local": {"typecheck": true, "build": true, "webTests": 28, "browserFixtureTests": 1, "reviewedWidths": [360,393,768,1360], "screens": ["login","listen","library","history","empty-history","settings","qr-dialog-error"], "sharedControlFont": true, "primaryTargetsAtLeast44px": true, "horizontalOverflow": false, "existingPlaybackAndOfflineAssertionsPreserved": true},
+    "live": {"fixture": false, "loginHttp": 200, "screens": ["login","listen","library","history","settings"], "widths": [393,1360], "authenticatedDesktopSurfaceWidth": 680, "sharedFont": true, "horizontalOverflow": false, "miniTransport": true, "helpCollapsed": true, "logoutAudioCleared": true, "pageErrors": [], "noNewProgrammeOrProviderRequest": true},
+    "deployment": {"current": "/opt/emily/releases/e4e1b01", "previousRetained": "4c70e9f", "pairedPrivateBackup": "/var/backups/emily-20260930/pre-e4e1b01", "backupCompared": true, "onlyApplicationRestarted": true, "runtimeSchemaDnsProxyUnchanged": true},
+    "evidence": {"fixture": "../.tmp/emily-browser-tools/design-system", "live": "../.tmp/emily-browser-tools/design-system-live", "screenshotsActuallyOpened": true, "privateScreenshotsNotInGit": true},
+    "boundaries": ["technical evidence and visual review are not David aesthetic approval", "no new server regression, long audio, paid model or physical-device test this UI-only round", "rich covers and QR failure are explicitly browser-only fixtures"]
+  },
   "executor": "Pi",
   "task": "01a0f204-d57a-75b4-93d4-c35f2fa8aeae",
   "baseCommit": "c7af2c2ce8a01e023647e2047befa525aa68c6b4",

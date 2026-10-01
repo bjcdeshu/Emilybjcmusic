@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：核心链路已验证，按David反馈重做UI/UX（2026-09-30）
+## 当前阶段：整站设计系统e4e1b01已发布，待David实际评价（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -107,9 +107,19 @@ David再次要求把既有mm参考做好，同时报告英文TTS夹带中文歌�
 - RN Node22构建/testtypecheck/server31通过；一致性私有备份 `/var/backups/emily-20260930/pre-4c70e9f`，SQLite+env配对、停服务后复制并cmp核验。仅重启Emily application，保留6493d9e，adapter/其他业务未动。
 - 公开真实Chrome：本人登录200/连接保持，当前旧混合DJ引用已失效，原名可见；实际Gemini新两首节目200/model/0warnings，全英文首段TTS ready；主持实际播放→真实歌曲，voice与music均有真实分析竖条、暂停静态；393px无overflow/pageerror、8歌单/mini/退出音源清空。产生新节目历史但不写永久反馈、不改网易歌单；最后paused/退出。此轮没有重新做自然完整曲目或设备专项验证。
 
+## 整站一致性重整（2026-10-01）
+
+David直接纠正『整体的ui你为什么不去设计，一致性太差』。4c70e9f技术通过不代表视觉认可；本轮从播放器局部调整改为整站设计，设计约定见 [ui-design.md](ui-design.md)。
+
+- 发布源码 `e4e1b01`，RN current=`/opt/emily/releases/e4e1b01`。共享styles.css控制字体、色彩、间距、圆角、44px主控件与动效，radio-design.css仅负责收听布局；StationIdentity/PageHeading统一登录、节目、历史、设置与QR。桌面认证后四页同680px，手机同16px外边距；黑点阵stage+重叠白paper扩展到全站，mint用于选中，红色限错误/退出。
+- 节目方向卡去不同粉彩，歌单仍真实封面优先；设置按实际DOM顺序排列听感→主持与选曲→音乐与服务→折叠帮助→退出，不用CSS视觉重排。导航、迷你播放器、表单、按钮、状态与弹窗统一；音频engine/后端/schema/TTS未改，4c70e9f英文边界保持。
+- Windows typecheck/build、web28、Chrome fixture1通过；七类页面/空历史/QR错误态在360/393/768/1360px无横溢出、共有控件字体、主控件≥44px。原真实音频分析、暂停、reduce motion、seek、quiet、mini、历史、声线/保存、退出、SW离线外壳断言保留通过；QR与丰富封面只在显式测试fixture内。
+- 实际打开fixture手机/桌面逐页截图及contact sheet；发布后公开真实Chrome登录200、四页共享字体与680px、393px无溢出、新asset、mini、折叠帮助、退出清音源/pageErrors[]通过，查看公开截图。公开检查只读取现有数据，未新建programme、调用模型或重做曲目长时播放；截图/功能不冒充David美学认可。
+- RN严格hostname/stripped machine-id核验，npm ci/build通过；仅停启emily，停后一致性配对复制/cmp SQLite+env至root-only `/var/backups/emily-20260930/pre-e4e1b01`，保留4c70e9f。adapter/其他业务/系统Node/DNS/反代未改。资产index-TwDhxOjg.css/index-DssYHLj0.js。
+
 ## 下一步
 
-1. 当前4c70e9f已发布；按David实际评价继续改善参考还原和日常交互，不将发布或测试当作设计认可。本人授权保留，不要求重新扫码。
+1. 当前e4e1b01整站设计已发布；按David实际评价继续改善参考还原和全站日常交互，不将发布或测试当作设计认可。本人授权保留，不要求重新扫码。
 2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
 3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 
