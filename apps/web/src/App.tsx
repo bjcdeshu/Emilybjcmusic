@@ -39,7 +39,9 @@ export function App() {
   const settingsWrites = useRef<Promise<unknown>>(Promise.resolve());
   const volumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionRef = useRef(session);
+  const nowRef = useRef(now);
   sessionRef.current = session;
+  nowRef.current = now;
   const { audioRef, playerRef, playback } = useRadioAudio({
     advance: async () => (await post<PlayerActionResponse>("/api/player/next")).now,
     onResolved: (value) => {
@@ -55,13 +57,21 @@ export function App() {
     if (!session?.authenticated || !now?.roaming?.enabled) return;
     const controller = new AbortController();
     const timer = setInterval(() => {
-      void api<NowPlayingState>('/api/now',{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setNow(current=>current&&value.roaming?{...current,roaming:value.roaming}:current);setQueue(value.queue);}}).catch(()=>{});
+      const id = actionId.current;
+      void api<NowPlayingState>('/api/now',{signal:controller.signal}).then(value=>{
+        const current = nowRef.current;
+        if (controller.signal.aborted || id !== actionId.current || !current || value.track?.id !== current.track?.id || value.programmeTitle !== current.programmeTitle || value.updatedAt < current.updatedAt) return;
+        setNow(previous=>previous&&value.roaming?{...previous,roaming:value.roaming}:previous);
+        setQueue(value.queue);
+      }).catch(()=>{});
     },10000);
     return()=>{clearInterval(timer);controller.abort();};
   },[session?.authenticated,now?.roaming?.enabled]);
   async function toggleRoaming() {
+    if (actionBusy) return;
     const revision=epoch.current;
-    try {const result=await post<PlayerActionResponse>('/api/player/roaming',{enabled:!now?.roaming?.enabled});if(revision===epoch.current){setNow(result.now);setQueue(result.now.queue);}}
+    const id=++actionId.current;
+    try {const result=await post<PlayerActionResponse>('/api/player/roaming',{enabled:!now?.roaming?.enabled});if(revision===epoch.current && id===actionId.current){setNow(current=>current&&result.now.roaming?{...current,roaming:result.now.roaming}:current);}}
     catch(e){if(revision===epoch.current)setNotice({kind:'error',text:errorMessage(e)});}
   }
 

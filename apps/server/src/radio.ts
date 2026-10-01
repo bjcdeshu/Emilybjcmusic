@@ -22,6 +22,7 @@ export class Radio {
   private closed = false;
   private roamRevision = 0;
   private refill: Promise<void> | undefined;
+  private refillRevision: number | undefined;
   private readonly intros = new Map<string, Promise<void>>();
   readonly defaults: RadioSettings;
   constructor(private readonly config: AppConfig, private readonly store: Store, readonly music: NeteaseAdapter, readonly selector: ProgrammeSelector, readonly tts: TtsPort, private readonly clock: () => number) {
@@ -69,7 +70,7 @@ export class Radio {
       ...(current?.dj && settings.djEnabled && current.dj.voice === settings.voice ? { dj: current.dj } : {}),
       queue: this.state.items.map(({ hosting: _hosting, dj: _dj, ...item }) => ({ ...item, track: { ...item.track, ...(item.status !== "failed" ? { audioUrl: `/api/media/track/${item.track.id}` } : {}) } })),
       updatedAt: this.state.updatedAt,
-      ...(this.state.roam ? { roaming: { enabled: this.state.roam.enabled, scope: "playlist" as const, preparing: !!this.refill, ...(this.state.roam.message ? { message: this.state.roam.message } : {}) } } : {}),
+      ...(this.state.roam ? { roaming: { enabled: this.state.roam.enabled, scope: "playlist" as const, preparing: this.state.roam.enabled && !!this.refill && this.refillRevision === this.roamRevision, ...(this.state.roam.message ? { message: this.state.roam.message } : {}) } } : {}),
       ...(this.state.startedAt ? { startedAt: this.state.startedAt } : {}),
       ...(this.state.title ? { programmeTitle: this.state.title } : {}),
       ...(this.state.warning ? { warning: this.state.warning } : {})
@@ -140,13 +141,18 @@ export class Radio {
     if (this.closed || !this.state.roam?.enabled || this.refill || this.state.items.length - this.state.index > 3) return;
     const revision = this.roamRevision;
     const source = { ...this.state.roam, seen: [...this.state.roam.seen] };
+    this.refillRevision = revision;
     this.refill = this.extend(source, revision).catch(() => {
       if (!this.closed && revision === this.roamRevision && this.state.roam) {
         this.state.roam.enabled = false;
         this.state.roam.message = "漫游准备失败，已保留当前歌曲与队列。可重新开启漫游重试。";
         this.persist();
       }
-    }).finally(() => { this.refill = undefined; });
+    }).finally(() => {
+      this.refill = undefined; this.refillRevision = undefined;
+      // A toggle/replacement can invalidate work while it drains. Retry only the new scope.
+      if (revision !== this.roamRevision) this.refillSoon();
+    });
   }
   private async extend(source: NonNullable<RadioState["roam"]>, revision: number): Promise<void> {
     const feedback = this.store.feedbackMap();
@@ -169,6 +175,7 @@ export class Radio {
       permitted = candidates.filter(t => playable.has(t.id));
       if (permitted.length || catalogue.length < 100) break;
       offset += 100;
+      if (page === 9) throw new Error("Roaming retrieval page budget");
     }
     if (this.closed || revision !== this.roamRevision || !this.state.roam?.enabled) return;
     if (!permitted.length) {

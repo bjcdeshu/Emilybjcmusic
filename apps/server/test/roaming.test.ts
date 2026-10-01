@@ -24,15 +24,17 @@ test('playlist roaming refills without repeats, respects pause, stops at source 
 });
 
 class Gate extends FixtureTts {
- started=false;release:()=>void=()=>{};
- override async segment(text:string,voice:string){if(text.includes('202')){this.started=true;await new Promise<void>(r=>{this.release=r;});}return super.segment(text,voice);}
+ started=false;completed=0;release:()=>void=()=>{};
+ override async segment(text:string,voice:string){if(text.includes('202')){this.started=true;await new Promise<void>(r=>{this.release=r;});}const result=await super.segment(text,voice);if(text.includes('202'))this.completed++;return result;}
 }
 test('late roaming refill cannot write after disabling/replacing; explicit point-song keeps confirmed order',async()=>{
  const dir=await temporaryDirectory(),p=new HttpFixture();await p.start();const tts=new Gate(dir);
  const app=fixtureApp(dir,{EMILY_NETEASE_API_BASE:p.base,EMILY_NETEASE_COOKIE:COOKIE_SENTINEL},{tts});
  try{
   await app.services.radio.programme({playlistId:'700',limit:1,roaming:true});await until(()=>tts.started);
-  await app.services.radio.pause();app.services.radio.setRoaming(false);tts.release();await until(()=>!app.services.radio.now().roaming?.preparing);
+  await app.services.radio.pause();app.services.radio.setRoaming(false);
+  assert.equal(app.services.radio.now().roaming?.preparing,false);
+  tts.release();await until(()=>tts.completed===1);await tick();
   assert.deepEqual(app.services.radio.now().queue.map(i=>i.track.id),['101']);assert.equal(app.services.radio.now().status,'paused');
   tts.started=false;app.services.radio.setRoaming(true);await until(()=>tts.started);
   await app.services.radio.programme({trackIds:['303'],ordered:true,limit:1});tts.release();await tick();

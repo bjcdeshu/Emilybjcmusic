@@ -271,6 +271,12 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.getByRole('button',{name:'暂停',exact:true}).click();
     assert(app.services.radio.now().queue.some(item=>item.track.id==='1013'),'batch13 is reached through actual ended/auto-refill');
     assert.equal(new Set(app.services.radio.now().queue.map(i=>i.track.id)).size,app.services.radio.now().queue.length);
+    const pausedSource = await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+    await page.getByRole('button',{name:'原歌单漫游 · 开启',exact:true}).click();
+    await page.getByRole('button',{name:'原歌单漫游 · 关闭',exact:true}).waitFor();
+    assert.equal(await page.getByText('正在准备下一批',{exact:true}).count(),0);
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),pausedSource);
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),true);
     await page.getByRole('button',{name:'安静模式',exact:true}).click();
     await nav().getByRole('button',{name:'设置',exact:true}).click();
     // Inspect QR failure state without reconnecting/changing the real fixture auth.
