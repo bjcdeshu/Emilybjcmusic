@@ -76,6 +76,25 @@ class ManualTts extends FixtureTts {
     });
   }
 }
+test("restart hint expires only after successful access resolution; other programme warnings survive play", async () => {
+  const directory = await temporaryDirectory(), provider = new HttpFixture(); await provider.start();
+  const env = { EMILY_NETEASE_API_BASE: provider.base, EMILY_NETEASE_COOKIE: COOKIE_SENTINEL };
+  let app = fixtureApp(directory, env, { tts: new FixtureTts(directory, true) });
+  try {
+    await app.services.radio.programme({ limit: 1 });
+    const programmeWarning=app.services.radio.now().warning;
+    assert(programmeWarning, "unconfigured model reports its real fallback");
+    await app.services.radio.play();
+    assert.equal(app.services.radio.now().warning,programmeWarning,"normal playback must not erase unrelated warnings");
+    await app.close();
+    app=fixtureApp(directory,env,{tts:new FixtureTts(directory,true)});
+    assert.match(app.services.radio.now().warning || "",/restart/);
+    await app.services.radio.pause();
+    assert.match(app.services.radio.now().warning || "",/restart/);
+    await app.services.radio.play();
+    assert.equal(app.services.radio.now().warning,undefined,"successfully resolving access removes obsolete restart hint");
+  } finally { await app.close(); await provider.close(); await rm(directory,{recursive:true,force:true}); }
+});
 const tick = () => new Promise(resolve => setTimeout(resolve, 5));
 const until = async (condition: () => boolean) => {
   for (let i = 0; i < 200 && !condition(); i++) await tick();

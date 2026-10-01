@@ -75,7 +75,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
           const lower = await page.evaluate(() => {
             const title=document.querySelector('.programme-title')!.getBoundingClientRect();
             const transcript=document.querySelector('.transcript-card')!;
-            const text=document.querySelector('.transcript-text')!.getBoundingClientRect();
+            const text=document.querySelector('.transcript-heading')!.getBoundingClientRect();
             const tools=document.querySelector('.listening-tools')!;
             const paper=document.querySelector('.player-paper')!;
             const stage=document.querySelector('.host-panel')!.getBoundingClientRect();
@@ -90,6 +90,52 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
         }
       }
       await page.setViewportSize({ width:393, height:851 });
+    }
+    async function mobileFirstScreen() {
+      const checks: unknown[] = [];
+      for (const [width,height] of [[360,560],[393,640],[393,740],[393,851]] as const) {
+        await page.setViewportSize({width,height});
+        await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+        await page.waitForTimeout(100);
+        const result=await page.evaluate(()=>{
+          const nav=document.querySelector('.mobile-nav')!.getBoundingClientRect();
+          const selectors=['.on-air','.current-track','.transport-controls','.transport-progress','.listening-tools','.queue-details summary','.listening-options summary'];
+          return {width:innerWidth,height:innerHeight,cutoff:nav.top,targets:selectors.map(selector=>({selector,top:document.querySelector(selector)!.getBoundingClientRect().top,bottom:document.querySelector(selector)!.getBoundingClientRect().bottom})),overflow:document.documentElement.scrollWidth>innerWidth,optionsClosed:!(document.querySelector('.listening-options') as HTMLDetailsElement).open,transcriptClosed:!(document.querySelector('.transcript-card') as HTMLDetailsElement).open,headerHidden:getComputedStyle(document.querySelector('.app-header')!).display==='none'};
+        });
+        assert(!result.overflow && result.optionsClosed && result.transcriptClosed && result.headerHidden);
+        assert(result.targets.every(target=>target.top>=0 && target.bottom<=result.cutoff),`key listening content above mobile navigation at ${width}x${height}: ${JSON.stringify(result)}`);
+        if(height===560) {
+          const stress=await page.evaluate(()=>{
+            const title=document.querySelector('.programme-title')!;
+            const artist=document.querySelector('.current-track > p')!;
+            const speech=document.querySelector('.transcript-text');
+            const originals=[title.textContent,artist.textContent,speech?.textContent];
+            title.textContent='A very long original track title / 一首名字很长很长的原始歌曲';
+            artist.textContent='Original artist with a very long name / 原始歌手姓名';
+            if(speech)speech.textContent='A long real hosting passage remains available in full through its clearly marked disclosure. '.repeat(20);
+            const nav=document.querySelector('.mobile-nav')!.getBoundingClientRect();
+            const bottom=document.querySelector('.listening-options summary')!.getBoundingClientRect().bottom;
+            title.textContent=originals[0]!;artist.textContent=originals[1]!;if(speech)speech.textContent=originals[2]!;
+            return {bottom,cutoff:nav.top,overflow:document.documentElement.scrollWidth>innerWidth};
+          });
+          assert(!stress.overflow && stress.bottom<=stress.cutoff,`long catalogue/hosting content still exposes actions: ${JSON.stringify(stress)}`);
+          checks.push({stress});
+        }
+        checks.push(result);
+      }
+      await page.setViewportSize({width:393,height:851});
+      const source=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+      const paused=await page.evaluate(()=>document.querySelector('audio')!.paused);
+      await page.locator('.transcript-card summary').click();
+      assert(await page.locator('.transcript-full').isVisible(),'full hosting remains accessible');
+      await page.locator('.transcript-card summary').click();
+      await page.locator('.listening-options summary').click();
+      assert(await page.getByLabel('音量',{exact:true}).isVisible());
+      await page.locator('.listening-options summary').click();
+      assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),source,'disclosure never changes audio');
+      assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),paused);
+      await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+      designScreens.mobileFirstScreen=checks;
     }
     // Richer collection is explicit browser-only data, never stored or published.
     await page.route('https://*.music.126.net/**', async route => {
@@ -142,6 +188,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     }), "real audio samples produce bars taller than the silent baseline");
     assert(signalFrame.startsWith("data:image/png"));
     assert.equal(await page.locator(".transcript-card").getAttribute("data-speaking"), "true");
+    await mobileFirstScreen();
     await page.waitForFunction(()=>Number((document.querySelector('.radio-device') as HTMLElement)!.style.getPropertyValue('--signal-energy'))>0);
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'live');
     assert(await page.locator('.host-light').evaluate(el=>Number(getComputedStyle(el).opacity)>0),'surround light follows actual audio energy');
@@ -305,11 +352,13 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert(app.services.radio.now().queue.some(item=>item.track.id==='1013'),'batch13 is reached through actual ended/auto-refill');
     assert.equal(new Set(app.services.radio.now().queue.map(i=>i.track.id)).size,app.services.radio.now().queue.length);
     const pausedSource = await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+    await page.locator('.listening-options summary').click();
     await page.getByRole('button',{name:'原歌单漫游 · 开启',exact:true}).click();
     await page.getByRole('button',{name:'原歌单漫游 · 关闭',exact:true}).waitFor();
     assert.equal(await page.getByText('正在准备下一批',{exact:true}).count(),0);
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),pausedSource);
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),true);
+    await page.locator('.listening-options summary').click();
     await page.getByRole('button',{name:'安静模式',exact:true}).click();
     await nav().getByRole('button',{name:'设置',exact:true}).click();
     // Inspect QR failure state without reconnecting/changing the real fixture auth.
@@ -339,7 +388,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, continuousDarkListeningSurfaceVerified:true, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, mobileFirstScreenAndDisclosuresVerified:true, continuousDarkListeningSurfaceVerified:true, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));

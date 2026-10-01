@@ -136,6 +136,7 @@ export function App() {
   async function perform(resolve: () => Promise<NowPlayingState>) {
     const id = ++actionId.current;
     setActionBusy(true); setView("listen");
+    window.scrollTo({ top: 0, behavior: "instant" });
     await playerRef.current?.perform(resolve, true);
     if (id === actionId.current) setActionBusy(false);
   }
@@ -166,16 +167,9 @@ export function App() {
   function createProgramme(request: ProgrammeRequest) {
     if (actionBusy) return;
     setNotice(null);
-    const currentEpoch = epoch.current;
-    void perform(async () => {
-      const response = await post<ProgrammeResponse>("/api/programme", request);
-      if (currentEpoch === epoch.current) {
-        const messages = [...response.warnings];
-        if (response.selectionSource === "playlist" && !request.ordered) messages.unshift("本次为真实歌单编排，不是模型选曲。");
-        if (messages.length) setNotice({ kind: "info", text: [...new Set(messages)].join(" ") });
-      }
-      return response.now;
-    });
+    // Selection source and programme warnings already live in the returned now
+    // state and its listening disclosure; do not duplicate them above transport.
+    void perform(async () => (await post<ProgrammeResponse>("/api/programme", request)).now);
   }
   useMediaSession(now, playback, { play: transportPlay, pause: transportPause, next, previous, seek: (time) => playerRef.current?.seek(time) });
 

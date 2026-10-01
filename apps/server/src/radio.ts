@@ -20,6 +20,7 @@ export class Radio {
   private pauseRevision = 0;
   private audioRevision = 0;
   private closed = false;
+  private restartNotice = false;
   private roamRevision = 0;
   private refill: Promise<void> | undefined;
   private refillRevision: number | undefined;
@@ -38,6 +39,7 @@ export class Radio {
     }
     if (this.state.items.length) {
       this.state.status = "paused";
+      this.restartNotice = true;
       this.state.warning = "Playback is paused after a restart. Press play to recheck account access and the track URL.";
     } else this.state.status = "idle";
     delete this.state.startedAt;
@@ -94,6 +96,7 @@ export class Radio {
     this.roamRevision++;
     this.audioRevision++;
     this.pauseRevision++;
+    this.restartNotice = false;
     this.state = { status: "idle", items: [], index: 0, updatedAt: this.iso() };
     this.persist();
   }
@@ -239,6 +242,7 @@ export class Radio {
       await this.intro(items[0]);
       if (items[0].dj?.status === "tts_failed" || items[0].dj?.status === "text_only") warnings.push("English DJ audio is unavailable. Hosting text is provided and music remains playable.");
     }
+    this.restartNotice = false;
     this.state = {
       status: "paused", items, index: 0, title: selection.title, updatedAt: this.iso(),
       ...(request.playlistId ? { roam: { enabled: request.roaming ?? false, playlistId: request.playlistId, limit: request.limit || 6, seen: items.map(i => i.track.id), ...(request.prompt ? { prompt: request.prompt } : {}) } } : {}),
@@ -257,6 +261,7 @@ export class Radio {
     while (!this.closed && this.settings().djEnabled && current.dj?.voice !== this.settings().voice) {
       await this.intro(current);
     }
+    if (this.restartNotice) { delete this.state.warning; this.restartNotice = false; }
     if (this.settings().djEnabled && current.dj?.status !== "tts_ready") this.state.warning = "English DJ audio is unavailable; the actual music track can still play.";
     current.status = "resolved";
   }
