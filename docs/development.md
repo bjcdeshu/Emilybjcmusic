@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：播放页沉浸与真实声音响应动效已发布19ee849（2026-10-01）
+## 当前阶段：上下部连续沉浸播放界面已发布4e2f2fc（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -152,9 +152,18 @@ David在前轮回复ok后提出整体沉浸感、播放界面更多区域动起�
 - RN身份核验/npm ci/build/testtypecheck/server35，通过后仅停Emily，配对SQLite+env root-only pre-19ee849/cmp、原子current切换；原07e8897保留，adapter/其他业务/Node/DNS/反代/schema未动。资产index-BJ7mneCr.css/index-CndaO8Ah.js。
 - 公开真实Chrome登录200，现有真实节目英文DJ→歌曲能量非零、进入/退出沉浸保持audio、mobile/desktop截图/无overflow；reduce静态、pause能量归零/漂移停、Escape恢复导航、logout清audio、pageErrors[]。未新建节目/调用模型/写反馈/编辑网易歌单，本轮不重测长自然播放/人工听感/真机/全目录，保留现有漫游开关。最终paused/logout。视觉待David实际反馈；截图检查不是审美认可。
 
+## 上下部连续沉浸融合（2026-10-01）
+
+David肯定19ee849『上面动效感觉很好』，但下面播放卡片不够沉浸，希望与动效一体。Pi发布 **4e2f2fc**，RN current=`/opt/emily/releases/4e2f2fc`。
+
+- 不推翻上部真实音波/声音响应。去掉下部独立白底、上圆角、重叠margin、边缘shadow，改同一石墨空间；night token仅scope radio-device，其他节目/历史/设置/dialog仍shared paper。新增aria-hidden整机柔光，复用现有energy/bass/data-motion，stage透明延伸到标题/控制/文案；下部柔光真实能量响应，不新增RAF/graph/假wave。频谱底8px alpha feather避免静音baseline成为视觉割线，采样/高度逻辑未改。文字稳定、原DOM/按钮44px/所有接口不改。
+- Windows typecheck/build/web29/browser1通过；连续透明/无第二卡圆角/上下相接/文案对齐、全机与下部光响应、pause/reduce/沉浸四宽/Escape及原audio/conversation/roaming/PWA断言保留。实际看mobile/desktop/playing/paused截图。不把深色当全站换肤，不将Pi审阅当David认可。
+- RN身份核验/npm ci/build/testtypecheck/server35；仅停Emily后配对SQLite+env root-only pre-4e2f2fc/cmp、原子切current，保留19ee849，无backend/schema/runtime/adapter/DNS/proxy/其他业务变化。资产index-DSNE-9WV.css/index-Cep3MmGf.js。
+- 公开真实Chrome现有英文DJ→网易歌曲能量/下部光非零、continuous透明零圆角/全机light running；进入沉浸不断音、393/1360无overflow、reduce静态、pause零能量/漂移停、Escape/nav/logout清audio、pageErrors[]。无新节目/模型请求/feedback/网易写入，保持原漫游选择；最终paused/logout。未重测长自然播放/人工听感/真机。新下部融合仍待实际反馈。
+
 ## 下一步
 
-1. 当前19ee849含播放页沉浸/声音响应及既有对话/原歌单漫游已发布；保留David肯定的音波/氛围，按实际反馈改善下部及聊天体验，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
+1. 当前4e2f2fc含上下部连续融合及既有沉浸/声音响应/对话/原歌单漫游已发布；保留David肯定的音波/氛围，按实际反馈改善下部及聊天体验，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
 2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
 3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 

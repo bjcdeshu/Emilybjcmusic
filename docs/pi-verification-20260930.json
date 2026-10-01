@@ -1,5 +1,14 @@
 {
   "date": "2026-09-30",
+  "continuousListeningSurface": {
+    "date":"2026-10-01","release":"4e2f2fc",
+    "feedback":"David likes upper motion, requests lower playback card integrated into the same immersive space; not whole-product acceptance.",
+    "local":{"typecheck":true,"build":true,"webTests":29,"browserFixtureTests":1,"continuousTransparentLowerNoSecondCardRadius":true,"stageAndLowerJoin":true,"wholeDeviceAndLowerLightResponse":true,"widths":[360,393,768,1360],"originalAudioDialogueRoamingPwaAssertionsRetained":true,"pageErrors":[]},
+    "live":{"fixture":false,"loginHttp":200,"newAsset":true,"realDjAndSongEnergy":true,"continuous":true,"lowerLight":true,"wholeLightRunning":true,"immersionKeepsAudio":true,"noOverflow":true,"reduceStatic":true,"pauseZeroEnergy":true,"pauseStopsDrift":true,"escapeRestoresNav":true,"logoutAudioCleared":true,"pageErrors":[],"noNewProgrammeModelFeedbackOrNeteaseWrites":true},
+    "deployment":{"current":"/opt/emily/releases/4e2f2fc","previousRetained":"19ee849","identityVerified":true,"rnBuildTestTypecheckServer35":true,"pairedBackup":"pre-4e2f2fc","backupCompared":true,"onlyEmilyRestarted":true,"noBackendSchemaRuntimeAdapterDnsProxyChanges":true},
+    "boundaries":["night tokens scoped to player; other shared paper screens unchanged","real frequency heights retained, bottom alpha feather only","no new RAF/graph or moving reading text","no long natural playback/device/human-listening validation","screenshots outside Git and review not David acceptance"],
+    "evidenceDirectories":["../.tmp/emily-browser-tools/design-continuous","../.tmp/emily-browser-tools/design-continuous-live"]
+  },
   "immersiveAudioMotion": {
     "date":"2026-10-01", "release":"19ee849",
     "request":"More overall immersion and more moving playback-screen regions; preserve positively reviewed bars/atmosphere, not a new theme.",

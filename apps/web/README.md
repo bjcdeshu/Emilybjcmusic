@@ -29,6 +29,10 @@ New owner-playlist programmes default to the opt-out original-playlist roaming c
 
 19ee849 retains actual frequency bars and extends the same analyser samples into CSS energy/bass variables for stage light/paper seam/on-air halo/play rim/speaking dot. Reuses existing RAF, no per-frame React state/new audio graph/transport change. Slow surrounding light drift is decorative atmosphere gated by actual playing+visible, NOT beat detection; intensity is actual normalized bins (signal-energy test), pause/hidden/offscreen/reduce reset. Immersion now hides header/nav/footer, expands stage/desk responsively, keeps transport/chat/exit and Escape (not when dialog owns it). It is a page layout, not browser fullscreen. Existing content entry stays, no moving reading text/fabricated word timing. Browser checks live intensity/pause/reduce/playing entry and four-width/Escape; public real existing-DJ→song check also passed. No backend/model/schema/cache/dependency changes for this design.
 
+## Continuous listening surface (Pi / 2026-10-01)
+
+4e2f2fc follows David's upper-motion praise/lower-card integration correction. Ordinary and immersive listen share one graphite space: radio-only scoped night tokens, transparent lower content/no second-card radius/overlap/shadow, whole-device diffuse light using existing analyser energy/gate. Stable text/controls and DOM retained. Collection/archive/settings/dialog paper is unchanged. Small alpha feather at bottom of actual spectrum avoids a hard silent dividing rule without changing sample heights. Browser asserts continuity/light/pause/reduce + previous contracts, public existing-DJ→NetEase-song check passed; no new backend/transport dependency or provider write.
+
 ## Implementation boundaries
 
 - A single mounted `<audio>` plays a prepared `tts_ready` DJ segment, then the song. Only media events/properties determine the local transport state and progress. Server `playing` flags never cause restore/autoplay.
