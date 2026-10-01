@@ -38,6 +38,7 @@ export type NowPlayingState = {
   positionMs?: number;
   updatedAt: string;
   programmeTitle?: string;
+  roaming?: { enabled: boolean; scope: "playlist"; preparing: boolean; message?: string };
   warning?: string;
 };
 export type QueueResponse = { items: QueueItem[] };
@@ -73,11 +74,12 @@ export type MusicQrPollResponse = {
   user?: MusicIdentity;
 };
 export const MAX_PROGRAMME_TRACKS = 12;
-export type ProgrammeRequest = { playlistId?: string; trackIds?: string[]; prompt?: string; limit?: number };
+export type ProgrammeRequest = { playlistId?: string; trackIds?: string[]; prompt?: string; limit?: number; roaming?: boolean; ordered?: boolean };
 export type ListeningMessage = { role: "user" | "assistant"; text: string };
-export type ListeningRequest = { messages: ListeningMessage[] };
+export type ListeningRequest = { messages: ListeningMessage[]; context?: { prompt: string; trackIds: string[] } };
 export type ListeningResponse = {
   reply: string; tracks: Track[]; warnings: string[]; programme?: ProgrammeRequest;
+  direction?: string; context?: { prompt: string; trackIds: string[] };
 };
 export type ProgrammeResponse = PlayerActionResponse & {
   selectionSource: "model" | "playlist";

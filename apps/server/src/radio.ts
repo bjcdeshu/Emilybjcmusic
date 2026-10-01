@@ -12,6 +12,7 @@ type PreparedItem = QueueItem & { hosting: string; dj?: DjSegment };
 type RadioState = {
   status: NowPlayingState["status"]; items: PreparedItem[]; index: number; title?: string;
   warning?: string; startedAt?: string; updatedAt: string;
+  roam?: { enabled: boolean; playlistId: string; prompt?: string; limit: number; seen: string[]; offset?: number; message?: string };
 };
 export class Radio {
   private state: RadioState;
@@ -19,6 +20,8 @@ export class Radio {
   private pauseRevision = 0;
   private audioRevision = 0;
   private closed = false;
+  private roamRevision = 0;
+  private refill: Promise<void> | undefined;
   private readonly intros = new Map<string, Promise<void>>();
   readonly defaults: RadioSettings;
   constructor(private readonly config: AppConfig, private readonly store: Store, readonly music: NeteaseAdapter, readonly selector: ProgrammeSelector, readonly tts: TtsPort, private readonly clock: () => number) {
@@ -66,6 +69,7 @@ export class Radio {
       ...(current?.dj && settings.djEnabled && current.dj.voice === settings.voice ? { dj: current.dj } : {}),
       queue: this.state.items.map(({ hosting: _hosting, dj: _dj, ...item }) => ({ ...item, track: { ...item.track, ...(item.status !== "failed" ? { audioUrl: `/api/media/track/${item.track.id}` } : {}) } })),
       updatedAt: this.state.updatedAt,
+      ...(this.state.roam ? { roaming: { enabled: this.state.roam.enabled, scope: "playlist" as const, preparing: !!this.refill, ...(this.state.roam.message ? { message: this.state.roam.message } : {}) } } : {}),
       ...(this.state.startedAt ? { startedAt: this.state.startedAt } : {}),
       ...(this.state.title ? { programmeTitle: this.state.title } : {}),
       ...(this.state.warning ? { warning: this.state.warning } : {})
@@ -76,7 +80,17 @@ export class Radio {
     this.state.updatedAt = this.iso();
     this.store.set("radio", this.state);
   }
+  setRoaming(enabled: boolean): PlayerActionResponse {
+    if (!this.state.roam) throw new AppError(409, "ROAMING_SOURCE_REQUIRED", "请先从一个歌单开始节目，才能在原歌单内漫游。");
+    this.roamRevision++;
+    this.state.roam.enabled = enabled;
+    delete this.state.roam.message;
+    this.persist();
+    if (enabled) this.refillSoon();
+    return { now: this.now() };
+  }
   clear(): void {
+    this.roamRevision++;
     this.audioRevision++;
     this.pauseRevision++;
     this.state = { status: "idle", items: [], index: 0, updatedAt: this.iso() };
@@ -85,7 +99,9 @@ export class Radio {
   /** Drain bounded work before SQLite/private media is closed or removed. */
   async close(): Promise<void> {
     this.closed = true;
+    this.roamRevision++;
     this.audioRevision++;
+    await this.refill;
     await Promise.allSettled(this.intros.values());
   }
   private async intro(item: PreparedItem, revision = this.audioRevision): Promise<void> {
@@ -113,16 +129,71 @@ export class Radio {
     return work;
   }
   private prefetch(): void {
+    this.refillSoon();
     if (this.closed || !this.settings().djEnabled || this.intros.size >= 2) return;
     // One-track lookahead, not an unbounded whole-programme synthesis fan-out.
     const next = this.state.items[this.state.index + 1];
     if (!next || next.dj?.voice === this.settings().voice) return;
     void this.intro(next).catch(() => undefined);
   }
+  private refillSoon(): void {
+    if (this.closed || !this.state.roam?.enabled || this.refill || this.state.items.length - this.state.index > 3) return;
+    const revision = this.roamRevision;
+    const source = { ...this.state.roam, seen: [...this.state.roam.seen] };
+    this.refill = this.extend(source, revision).catch(() => {
+      if (!this.closed && revision === this.roamRevision && this.state.roam) {
+        this.state.roam.enabled = false;
+        this.state.roam.message = "漫游准备失败，已保留当前歌曲与队列。可重新开启漫游重试。";
+        this.persist();
+      }
+    }).finally(() => { this.refill = undefined; });
+  }
+  private async extend(source: NonNullable<RadioState["roam"]>, revision: number): Promise<void> {
+    const feedback = this.store.feedbackMap();
+    const seen = new Set(source.seen);
+    if (seen.size >= 1000) {
+      if (!this.closed && revision === this.roamRevision && this.state.roam) {
+        this.state.roam.enabled = false; this.state.roam.message = "本轮已选1000首，漫游已到安全上限；可重新开始一档节目。"; this.persist();
+      }
+      return;
+    }
+    let offset = source.offset || 0;
+    let permitted: Awaited<ReturnType<NeteaseAdapter["playlistTracks"]>> = [];
+    const started = Date.now();
+    for (let page = 0; page < 10 && !permitted.length; page++) {
+      if (this.closed || revision !== this.roamRevision) return;
+      if (Date.now() - started > 60_000) throw new Error("Roaming retrieval budget");
+      const catalogue = await this.music.playlistTracks(source.playlistId, offset);
+      const candidates = catalogue.filter(t => !seen.has(t.id) && feedback.get(t.id) !== "less_like_this");
+      const playable = candidates.length ? await this.music.playable(candidates.map(t => t.id)) : new Map();
+      permitted = candidates.filter(t => playable.has(t.id));
+      if (permitted.length || catalogue.length < 100) break;
+      offset += 100;
+    }
+    if (this.closed || revision !== this.roamRevision || !this.state.roam?.enabled) return;
+    if (!permitted.length) {
+      this.state.roam.enabled = false;
+      this.state.roam.message = "原歌单本轮可播放歌曲已听完；不会自动重复或切换其他音源。";
+      this.persist(); return;
+    }
+    const selection = await this.selector.select(permitted, { ...(source.prompt ? { prompt: source.prompt } : {}), limit: Math.min(source.limit, 1000 - seen.size) }, this.settings(), feedback, this.state.title);
+    const items: PreparedItem[] = selection.items.map(item => ({ id: randomUUID(), track: metadataTrack(item.track), reason: item.reason, requestedBy: selection.source === "model" ? "model" : "fallback", status: "resolved", hosting: item.hosting }));
+    if (items[0]) await this.intro(items[0]);
+    if (this.closed || revision !== this.roamRevision || !this.state.roam?.enabled) return;
+    // Keep two prior tracks for Back, bounded current/upcoming items, no endless queue.
+    const remove = this.busy ? 0 : Math.max(0, this.state.index - 2);
+    this.state.items.splice(0, remove); this.state.index -= remove;
+    this.state.items.push(...items);
+    this.state.roam.offset = offset;
+    this.state.roam.seen = [...new Set([...source.seen, ...items.map(i => i.track.id)])];
+    this.state.roam.message = selection.source === "model" ? "继续在原歌单内选曲；不会重放本轮已选歌曲。" : "模型暂不可用，按原歌单继续；不是模型选曲。";
+    this.persist();
+  }
   async programme(request: ProgrammeRequest): Promise<ProgrammeResponse> {
     return this.exclusive(() => this.assemble(request));
   }
   private async assemble(request: ProgrammeRequest): Promise<ProgrammeResponse> {
+    this.roamRevision++;
     await this.music.connected();
     const settings = this.settings(), feedback = this.store.feedbackMap();
     let candidates;
@@ -135,6 +206,7 @@ export class Radio {
     else {
       const playlist = (await this.music.playlists()).find(item => item.trackCount !== 0);
       if (!playlist) throw new AppError(409, "EMPTY_LIBRARY", "Your NetEase account has no available playlists. Choose tracks from search or add a playlist.");
+      request = { ...request, playlistId: playlist.id };
       candidates = await this.music.playlistTracks(playlist.id);
       playlistTitle = playlist.name;
     }
@@ -154,6 +226,7 @@ export class Radio {
       requestedBy: selection.source === "model" ? "model" : request.trackIds?.length ? "user" : "fallback",
       status: "resolved", hosting: item.hosting
     }));
+    this.roamRevision++;
     this.audioRevision++;
     if (settings.djEnabled && items[0]) {
       await this.intro(items[0]);
@@ -161,6 +234,7 @@ export class Radio {
     }
     this.state = {
       status: "paused", items, index: 0, title: selection.title, updatedAt: this.iso(),
+      ...(request.playlistId ? { roam: { enabled: request.roaming ?? false, playlistId: request.playlistId, limit: request.limit || 6, seen: items.map(i => i.track.id), ...(request.prompt ? { prompt: request.prompt } : {}) } } : {}),
       ...(warnings.length ? { warning: warnings.join(" ") } : {})
     };
     this.store.saveProgramme({ id: randomUUID(), title: selection.title, createdAt: this.iso(), tracks: items.map(item => item.track) }, this.state);
@@ -209,10 +283,15 @@ export class Radio {
   async move(direction: 1 | -1): Promise<PlayerActionResponse> {
     return this.exclusive(async () => {
       if (!this.state.items.length) throw new AppError(409, "QUEUE_EMPTY", "Create a programme before advancing the queue.");
-      const priorIndex = this.state.index;
       const playing = this.state.status === "playing";
       const pauseRevision = this.pauseRevision;
-      let index = direction === 1 ? priorIndex + 1 : Math.max(0, priorIndex - 1);
+      const priorIndex = this.state.index;
+      if (direction === 1 && priorIndex + 1 >= this.state.items.length) {
+        this.refillSoon();
+        await this.refill;
+      }
+      const currentIndex = this.state.index;
+      let index = direction === 1 ? currentIndex + 1 : Math.max(0, currentIndex - 1);
       const skipped: string[] = [];
       while (index >= 0 && index < this.state.items.length) {
         try { await this.prepare(index); break; }
@@ -223,13 +302,17 @@ export class Radio {
           index += direction;
         }
       }
-      if (priorIndex < this.state.items.length && direction === 1) this.state.items[priorIndex]!.status = "played";
+      if (currentIndex < this.state.items.length && direction === 1) this.state.items[currentIndex]!.status = "played";
       this.state.index = index;
       this.state.status = index >= 0 && index < this.state.items.length ? playing && pauseRevision === this.pauseRevision ? "playing" : "paused" : "idle";
       delete this.state.startedAt;
       if (this.state.status === "playing") this.state.startedAt = this.iso();
       if (skipped.length) this.state.warning = `${skipped.length} track(s) were skipped because full account playback is no longer available.`;
       else if (this.state.status === "idle") this.state.warning = "End of programme. Choose a new programme or replay a track.";
+      if (this.state.roam && this.state.index > 2) {
+        const remove = this.state.index - 2;
+        this.state.items.splice(0, remove); this.state.index -= remove;
+      }
       // Navigation does not write feedback. A skip is never a permanent dislike.
       this.persist();
       this.prefetch();

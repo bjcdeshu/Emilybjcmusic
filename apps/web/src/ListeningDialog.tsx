@@ -14,7 +14,7 @@ export function ListeningDialog({close,setup,busy,turns,setTurns,createProgramme
     const next:ListeningTurn[]=[...turns.slice(-29),{role:'user',text:draft.trim()}];setTurns(next);setDraft('');setError('');setSending(true);
     const abort=new AbortController();controller.current=abort;
     try {
-      const response=await post<ListeningResponse>('/api/conversation',{messages:next.slice(-11).map(t=>({role:t.role,text:t.text}))},abort.signal);
+      const response=await post<ListeningResponse>('/api/conversation',{messages:next.slice(-11).map(t=>({role:t.role,text:t.text})),context:[...turns].reverse().find(t=>t.suggestion?.context)?.suggestion?.context},abort.signal);
       if(!abort.signal.aborted)setTurns([...next,{role:'assistant',text:response.reply,suggestion:response}]);
     } catch(e){if(!abort.signal.aborted)setError(errorMessage(e));}
     finally{if(!abort.signal.aborted)setSending(false);}
@@ -24,7 +24,7 @@ export function ListeningDialog({close,setup,busy,turns,setTurns,createProgramme
     <div className="modal-inner"><div className="section-heading"><div><StationIdentity label="对话选曲" /><h2 id="listening-dialog-title">和 Emily 聊聊想听什么</h2></div><button className="icon-button" aria-label="关闭对话" onClick={close}><X size={20}/></button></div>
       <div className="listening-log" ref={log} role="log" aria-label="听歌对话" aria-live="polite">
         {!turns.length && <div className="listening-welcome"><MessageCircle size={20}/><p>告诉我一个心情、一种音乐，或具体的歌名。你可以继续补充，我会先找真实音乐，再由你决定是否播放。</p></div>}
-        {turns.map((turn,index)=><article key={index} className={`listening-turn ${turn.role}`}><b>{turn.role==='user'?'你':'Emily'}</b><p>{turn.text}</p>{turn.suggestion?.tracks.length? <ul className="listening-proposal">{turn.suggestion.tracks.map(track=><li key={track.id}><span>{track.title}</span><small>{track.artist}</small></li>)}</ul>:null}{turn.suggestion?.warnings.map((warning,i)=><p className="muted tiny" key={i}>{warning}</p>)}</article>)}
+        {turns.map((turn,index)=><article key={index} className={`listening-turn ${turn.role}`}><b>{turn.role==='user'?'你':'Emily'}</b><p>{turn.text}</p>{turn.suggestion?.direction&&<p className="muted tiny">当前方向 · {turn.suggestion.direction}</p>}{turn.suggestion?.tracks.length? <ul className="listening-proposal">{turn.suggestion.tracks.map(track=><li key={track.id}><span>{track.title}</span><small>{track.artist}</small></li>)}</ul>:null}{turn.suggestion?.warnings.map((warning,i)=><p className="muted tiny" key={i}>{warning}</p>)}</article>)}
         {sending&&<Spinner label="正在理解你的想法、查找真实音乐"/>}{error&&<p className="inline-error" role="alert">{error}</p>}
       </div>
       {latestProposal && <button className="primary-button listening-accept" disabled={busy||sending} onClick={()=>{createProgramme(latestProposal);close();}}>播放这档节目<ArrowRight size={17}/></button>}

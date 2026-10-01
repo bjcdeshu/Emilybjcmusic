@@ -20,6 +20,7 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr, conve
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [selectedProgramme, setSelectedProgramme] = useState(0);
+  const [roaming, setRoaming] = useState(true);
   const [prompt, setPrompt] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[] | null>(null);
@@ -54,7 +55,7 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr, conve
     }
   }
   function generate() {
-    createProgramme({ ...(selection.length ? { trackIds: selection } : { playlistId }), prompt: prompt.trim() || programmes[selectedProgramme]!.prompt, limit: MAX_PROGRAMME_TRACKS });
+    createProgramme({ ...(selection.length ? { trackIds: selection } : { playlistId }), prompt: prompt.trim() || programmes[selectedProgramme]!.prompt, limit: MAX_PROGRAMME_TRACKS, roaming: !selection.length && roaming });
   }
   return <section className="view-panel" aria-labelledby="library-title">
     <PageHeading id="library-title" section="节目" title="今天，想听些什么？">选一个歌单，让 Emily 串起这一段音乐。</PageHeading>
@@ -69,6 +70,7 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr, conve
         {loading && <Spinner label="正在读取真实歌单" />}{error && <p className="inline-error" role="alert">{error}</p>}
         {!loading && !error && !playlists.length && <p className="muted">当前账号没有返回歌单。可以重试，或在下方搜索音乐来编排。</p>}
         <div className="programme-launch"><div><b>{selection.length ? `已选 ${selection.length} 首搜索结果` : playlists.find((p) => p.id === playlistId)?.name || "选一个歌单，开启这档节目"}</b><p>{setup.model.configured ? "Emily 会为你选曲，并准备英文串场。" : "按歌单顺序编排，模型选曲暂不可用。"}</p></div><button className="primary-button" disabled={busy || (!playlistId && !selection.length)} onClick={generate}>{busy ? <Spinner label="准备节目" /> : <>开始这档节目<ArrowRight size={18} /></>}</button></div>
+        <label className="checkbox-field"><input type="checkbox" checked={roaming} disabled={!!selection.length} onChange={e=>setRoaming(e.target.checked)} /><span><b>原歌单自动漫游</b><small>每批最多12首，快到末尾自动续选；本轮不重复，不跳到其他歌单。歌曲耗尽后停止。</small></span></label>
         <div className="playlist-grid">{(showAllPlaylists ? playlists : playlists.slice(0, 8)).map((playlist) => <button key={playlist.id} className={`playlist-card ${playlistId === playlist.id && !selection.length ? "selected" : ""}`} aria-pressed={playlistId === playlist.id && !selection.length} onClick={() => { setPlaylistId(playlist.id); setSelection([]); }}><Cover url={playlist.coverUrl} title={playlist.name} /><span><b>{playlist.name}</b><small>{playlist.trackCount !== undefined ? `${playlist.trackCount} 首` : "网易云歌单"}</small></span>{playlistId === playlist.id && !selection.length ? <Check size={18} /> : <ChevronRight size={17} />}</button>)}</div>
         {playlists.length > 8 && <button className="text-button collection-more" aria-expanded={showAllPlaylists} onClick={() => setShowAllPlaylists(v => !v)}>{showAllPlaylists ? "收起歌单" : `查看全部 ${playlists.length} 个歌单`}<ChevronRight size={16} /></button>}
       </section>

@@ -122,6 +122,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.locator('.playlist-card').first().waitFor();
     await reviewScreen('library');
     await page.getByRole("button", { name: /Fixture owner playlist/ }).click();
+    await page.getByLabel('原歌单自动漫游').uncheck();
     await page.getByRole("button", { name: "开始这档节目" }).click();
     await wait(page, () => {
       const a = document.querySelector("audio")!;
@@ -232,7 +233,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.route('**/api/conversation',async route=>{
       const body=route.request().postDataJSON();dialogueCalls++;
       if(dialogueCalls===2){assert.equal(body.messages.length,3);assert.equal(body.messages[2].text,'不要太伤感');}
-      await route.fulfill({json:{ok:true,data:{reply:dialogueCalls===1?'想听中文歌还是英文歌？':'找到了这些真实候选，由你确认后播放。',tracks:dialogueCalls===1?[]:[{id:'101',title:'Fixture track 101',artist:'Fixture artist',source:'netease'}],warnings:[],...(dialogueCalls===1?{}:{programme:{trackIds:['101'],prompt:'温柔但不伤感',limit:1}})}}});
+      await route.fulfill({json:{ok:true,data:{reply:dialogueCalls===1?'想听中文歌还是英文歌？':'找到了这些真实候选，由你确认后播放。',tracks:dialogueCalls===1?[]:[{id:'101',title:'Fixture track 101',artist:'Fixture artist',source:'netease'}],warnings:[],direction:'中文、温柔、不伤感',context:{prompt:'中文、温柔、不伤感',trackIds:dialogueCalls===1?[]:['101']},...(dialogueCalls===1?{}:{programme:{trackIds:['101'],prompt:'温柔但不伤感',limit:1,ordered:true}})}}});
     });
     await page.getByLabel('告诉 Emily 想听什么').fill('想听温柔一点的中文歌');
     await page.getByRole('button',{name:'发送听歌想法'}).click();
@@ -253,6 +254,24 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.getByRole('button',{name:'清空对话'}).click();
     assert.equal(await page.getByRole('button',{name:'播放这档节目',exact:true}).count(),0);
     await page.getByRole('button',{name:'关闭对话'}).click();
+    await nav().getByRole('button',{name:'设置',exact:true}).click();
+    // New playlist roaming actually extends the backend queue from real ended
+    // events, with explicitly generated test-only catalogue/tone audio.
+    provider.playlistSongs=Array.from({length:16},(_,i)=>({id:1001+i,name:`Fixture roam ${i}`,ar:[{name:'Fixture artist'}],al:{name:'Fixture album',picUrl:'http://p1.music.126.net/test-fixture-cover'},dt:120000}));
+    await nav().getByRole('button',{name:'节目',exact:true}).click();
+    await page.getByRole('button',{name:/Fixture owner playlist/}).click();
+    await page.getByLabel('原歌单自动漫游').check();
+    await page.getByRole('button',{name:'开始这档节目'}).click();
+    await page.getByRole('button',{name:'安静模式',exact:true}).click();
+    for(let i=0;i<12;i++){
+      const old=await page.evaluate(()=>document.querySelector('audio')!.currentSrc);
+      await page.getByLabel('歌曲播放进度').fill('2.9');
+      await page.waitForFunction(old=>{const a=document.querySelector('audio')!;return a.currentSrc!==old&&!a.paused&&a.currentTime>0;},old);
+    }
+    await page.getByRole('button',{name:'暂停',exact:true}).click();
+    assert(app.services.radio.now().queue.some(item=>item.track.id==='1013'),'batch13 is reached through actual ended/auto-refill');
+    assert.equal(new Set(app.services.radio.now().queue.map(i=>i.track.id)).size,app.services.radio.now().queue.length);
+    await page.getByRole('button',{name:'安静模式',exact:true}).click();
     await nav().getByRole('button',{name:'设置',exact:true}).click();
     // Inspect QR failure state without reconnecting/changing the real fixture auth.
     await page.route('**/api/setup', async route => {
@@ -281,7 +300,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));

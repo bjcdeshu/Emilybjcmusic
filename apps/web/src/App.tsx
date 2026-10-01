@@ -51,6 +51,19 @@ export function App() {
   });
   const analysis = useAudioAnalysis(audioRef);
   const pwa = usePwa();
+  useEffect(() => {
+    if (!session?.authenticated || !now?.roaming?.enabled) return;
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      void api<NowPlayingState>('/api/now',{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setNow(current=>current&&value.roaming?{...current,roaming:value.roaming}:current);setQueue(value.queue);}}).catch(()=>{});
+    },10000);
+    return()=>{clearInterval(timer);controller.abort();};
+  },[session?.authenticated,now?.roaming?.enabled]);
+  async function toggleRoaming() {
+    const revision=epoch.current;
+    try {const result=await post<PlayerActionResponse>('/api/player/roaming',{enabled:!now?.roaming?.enabled});if(revision===epoch.current){setNow(result.now);setQueue(result.now.queue);}}
+    catch(e){if(revision===epoch.current)setNotice({kind:'error',text:errorMessage(e)});}
+  }
 
   function clearPrivateState() {
     epoch.current++; actionId.current++;
@@ -148,7 +161,7 @@ export function App() {
       const response = await post<ProgrammeResponse>("/api/programme", request);
       if (currentEpoch === epoch.current) {
         const messages = [...response.warnings];
-        if (response.selectionSource === "playlist") messages.unshift("本次为真实歌单编排，不是模型选曲。");
+        if (response.selectionSource === "playlist" && !request.ordered) messages.unshift("本次为真实歌单编排，不是模型选曲。");
         if (messages.length) setNotice({ kind: "info", text: [...new Set(messages)].join(" ") });
       }
       return response.now;
@@ -229,7 +242,7 @@ export function App() {
       {notice && <div className={`notice notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.kind === "success" ? <Check size={18} /> : <CircleAlert size={18} />}<p>{notice.text}</p><button className="icon-button" aria-label="关闭提示" onClick={() => setNotice(null)}><X size={17} /></button></div>}
       <main id="main-content" key={view} className={view === "listen" ? "listen-layout" : "single-view"}>
         {view === "listen" ? <>
-          <div className="listen-column"><Player analysis={analysis} now={now} queue={queue} playback={playback} settings={settings} setup={setup} loading={loading} busy={actionBusy} feedbackBusy={feedbackBusy} feedbackKind={now?.track ? feedbacks[now.track.id] : undefined} immersive={immersive} toggleImmersive={() => setImmersive((v) => !v)} play={transportPlay} pause={transportPause} next={next} previous={previous} seek={(time) => playerRef.current?.seek(time)} volume={setVolume} quiet={() => { if (settings && !settingsBusy) void saveSettings({ djEnabled: !settings.djEnabled }); }} library={() => navigate("library")} conversation={() => setConversationOpen(true)} feedback={(kind) => void sendFeedback(kind)} selectTrack={playTrack} retry={() => { if (now?.track) playTrack(now.track.id); }} />
+          <div className="listen-column"><Player analysis={analysis} now={now} queue={queue} playback={playback} settings={settings} setup={setup} loading={loading} busy={actionBusy} feedbackBusy={feedbackBusy} feedbackKind={now?.track ? feedbacks[now.track.id] : undefined} immersive={immersive} toggleImmersive={() => setImmersive((v) => !v)} play={transportPlay} pause={transportPause} next={next} previous={previous} seek={(time) => playerRef.current?.seek(time)} volume={setVolume} quiet={() => { if (settings && !settingsBusy) void saveSettings({ djEnabled: !settings.djEnabled }); }} library={() => navigate("library")} conversation={() => setConversationOpen(true)} roaming={() => void toggleRoaming()} feedback={(kind) => void sendFeedback(kind)} selectTrack={playTrack} retry={() => { if (now?.track) playTrack(now.track.id); }} />
             {!loading && !setup?.music.connected && <div className="setup-callout"><div><b>{setup?.music.configured ? "你的音乐，还差一次连接。" : "先把真实音乐接进来。"}</b><p>{setup?.music.configured ? "用自己的网易云账号扫码，然后选择一档节目。" : "音乐适配器未就绪；这里不会播放示例歌曲。"}</p></div><button className="icon-button" aria-label={setup?.music.configured ? "连接网易云" : "查看服务设置"} onClick={setup?.music.configured ? openQr : () => navigate("settings")}><ChevronRight size={22} /></button></div>}
             {notice?.kind === "error" && <button className="retry-data text-button" disabled={loading} onClick={() => void refreshPrivate()}><RefreshCw size={16} />重新读取电台数据</button>}
           </div>

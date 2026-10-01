@@ -34,6 +34,7 @@ export type CapturedRequest = { path: string; body: Record<string, unknown>; aut
 export class HttpFixture {
   readonly requests: CapturedRequest[] = [];
   readonly preview = new Set<number>();
+  playlistSongs = FIXTURE_SONGS;
   qrCode = 801;
   statusCode = 200;
   failPath: string | undefined;
@@ -69,8 +70,8 @@ export class HttpFixture {
     if (path === this.malformedPath) { response.writeHead(200).end(`not json ${COOKIE_SENTINEL}`); return; }
     let value: unknown;
     if (path === "/login/status") value = { data: { code: this.statusCode, profile: this.statusCode === 200 ? { userId: 900, nickname: "Fixture owner", avatarUrl: "https://p1.music.126.net/test-avatar" } : null }, cookie: COOKIE_SENTINEL };
-    else if (path === "/user/playlist") value = { code: 200, playlist: [{ id: 700, name: "Fixture owner playlist", trackCount: 3, coverImgUrl: "https://p1.music.126.net/test-cover" }] };
-    else if (path === "/playlist/track/all") value = { code: 200, songs: FIXTURE_SONGS };
+    else if (path === "/user/playlist") value = { code: 200, playlist: [{ id: 700, name: "Fixture owner playlist", trackCount: this.playlistSongs.length, coverImgUrl: "https://p1.music.126.net/test-cover" }] };
+    else if (path === "/playlist/track/all") value = { code: 200, songs: this.playlistSongs.slice(Number(body.offset)||0,(Number(body.offset)||0)+100) };
     else if (path === "/song/detail") value = { code: 200, songs: FIXTURE_SONGS.filter(song => String(body.ids).split(",").includes(String(song.id))) };
     else if (path === "/cloudsearch") value = { code: 200, result: { songs: FIXTURE_SONGS } };
     else if (path === "/song/url/v1") value = {

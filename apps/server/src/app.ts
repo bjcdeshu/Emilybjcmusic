@@ -101,18 +101,19 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     return success({ items: await music.search(query) });
   });
   app.post<{ Body: ProgrammeRequest }>("/api/programme", {
-    schema: { body: objectSchema({ playlistId: idSchema, trackIds: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: idSchema }, prompt: textSchema(600), limit: { type: "integer", minimum: 1, maximum: MAX_PROGRAMME_TRACKS } }), querystring: emptyQuery }
+    schema: { body: objectSchema({ playlistId: idSchema, trackIds: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: idSchema }, prompt: textSchema(600), limit: { type: "integer", minimum: 1, maximum: MAX_PROGRAMME_TRACKS }, roaming: { type: "boolean" }, ordered: { type: "boolean" } }), querystring: emptyQuery }
   }, async request => {
     const body = request.body || {};
     if (body.playlistId && body.trackIds) throw new AppError(400, "INVALID_INPUT", "Choose a playlist or explicit tracks, not both.");
     return success(await radio.programme(body));
   });
   app.post<{ Body: ListeningRequest }>("/api/conversation", {
-    schema: { body: objectSchema({ messages: { type: "array", minItems: 1, maxItems: 12, items: objectSchema({ role: { type: "string", enum: ["user", "assistant"] }, text: textSchema(800) }, ["role", "text"]) } }, ["messages"]), querystring: emptyQuery }
+    schema: { body: objectSchema({ messages: { type: "array", minItems: 1, maxItems: 12, items: objectSchema({ role: { type: "string", enum: ["user", "assistant"] }, text: textSchema(800) }, ["role", "text"]) }, context: objectSchema({ prompt: textSchema(600), trackIds: { type: "array", maxItems: MAX_PROGRAMME_TRACKS, uniqueItems: true, items: idSchema } }, ["prompt", "trackIds"]) }, ["messages"]), querystring: emptyQuery }
   }, async request => success(await conversation.respond(request.body, radio.settings())));
   app.get("/api/now", { schema: { querystring: emptyQuery } }, async () => success(radio.now()));
   app.get("/api/queue", { schema: { querystring: emptyQuery } }, async () => success({ items: radio.now().queue }));
   app.post<{ Body: { trackId?: string } }>("/api/player/play", { schema: { body: objectSchema({ trackId: idSchema }), querystring: emptyQuery } }, async request => success(await radio.play(request.body?.trackId)));
+  app.post<{ Body: { enabled: boolean } }>("/api/player/roaming", { schema: { body: objectSchema({ enabled: { type: "boolean" } }, ["enabled"]), querystring: emptyQuery } }, async request => success(radio.setRoaming(request.body.enabled)));
   app.post("/api/player/pause", { schema: { body: emptyBody, querystring: emptyQuery } }, async () => success(await radio.pause()));
   app.post("/api/player/next", { schema: { body: emptyBody, querystring: emptyQuery } }, async () => success(await radio.move(1)));
   app.post("/api/player/previous", { schema: { body: emptyBody, querystring: emptyQuery } }, async () => success(await radio.move(-1)));

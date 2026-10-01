@@ -171,11 +171,11 @@ export class NeteaseAdapter {
     const body = await this.call("cloudsearch", { keywords: query, type: 1, limit: 40, offset: 0 });
     return this.tracks(asRecord(body.result).songs);
   }
-  async playlistTracks(id: string): Promise<Track[]> {
+  async playlistTracks(id: string, offset = 0): Promise<Track[]> {
     await this.connected();
     // Only select from this account's own/subscribed playlist list.
     if (!(await this.playlists()).some(item => item.id === id)) throw new AppError(404, "PLAYLIST_NOT_FOUND", "That playlist is not in your NetEase library.");
-    return this.tracks((await this.call("playlist/track/all", { id, limit: 100, offset: 0 })).songs);
+    return this.tracks((await this.call("playlist/track/all", { id, limit: 100, offset })).songs);
   }
   async details(ids: string[]): Promise<Track[]> {
     await this.connected();
