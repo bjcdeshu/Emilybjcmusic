@@ -1,14 +1,14 @@
 # Emily whole-product visual system
 
-2026-10-01 / Pi. David rejected the inconsistency of 4c70e9f; this is the implementation brief, not user design approval.
+2026-10-01 / Pi. David rejected the inconsistency of 4c70e9f. On e4e1b01 he liked the audio bars and improved atmosphere, but requested better lower-region integration. This is partial positive feedback, not whole-product approval.
 
 ## Direction
 
 A private radio desk, extending mmguo's dark dot-matrix stage and overlapping white programme across the whole product. No vinyl metaphor, marketing landing page, unrelated pastel moods or admin-dashboard sections. Catalogue artwork is genuine content, not wallpaper. Dot-matrix station lettering is the signature; speech and tracks still use actual APIs/audio.
 
 - World: a personal programme, its collection, archive and listening preferences.
-- Surfaces: graphite signal stage, clean white reading paper, soft-grey inset fields/transcript, thin neutral rules.
-- Palette: night `#090c13`, stage `#121417`, paper `#ffffff`, inset `#f3f5f4`, ink `#202525`, secondary `#68716f`, mint `#85ddbc`; red only for destructive/error actions.
+- Surfaces: graphite signal stage, soft cool-white reading paper, soft-grey inset fields, transcript on the same uninterrupted paper, thin neutral rules.
+- Palette: night `#090c13`, stage `#121417`, paper `#f5f7f5`, inset `#ecf0ed`, ink `#202525`, secondary `#68716f`, mint `#85ddbc`; red only for destructive/error actions.
 - Typography: one system sans stack across ALL screens, including player/login/dialog; original SVG dot lettering for station identity; monospace ONLY for labels/time. No italic e or per-page font overrides.
 - Scale: body14/line1.65, captions12, section18, page/programme32 desktop/28 mobile. 4px spacing rhythm, 24px desktop/20px mobile surface padding; outer28/inset16/control12 radii.
 - Motion: 240ms shared ease for controls, 400ms surface entry; no decorative looping except actual audio analysis. Reduced motion/static, stable widths, no animated text reflow.
@@ -30,7 +30,7 @@ All authenticated screens share the same 680px desktop surface/grid edge; mobile
 
 ## Screens
 
-- Listen: retain reference stage, actual analysis, programme title and transcript. Transport/progress remain real. Reading layout should not change between empty/populated states; 44px minimum touch targets.
+- Listen: retain the positively reviewed reference stage and actual analysis. One continuous lower reading surface: programme/track, transport, transcript, quiet secondary controls, queue. Align transcript with programme text; no large nested transcript card or artificial speaking-state fill. Speaking is indicated by the real-state dot/label, not simulated word timing. Reduce excess fixed whitespace and preserve44px controls. DOM follows reading order, with no CSS order overrides.
 - Programme: clear three-step flow within one paper: listening direction, genuine playlist, optional search. Mood presets are neutral segmented cards; mint denotes selection, not unrelated categories. Primary launch reflects selected music. Real covers remain collection-first.
 - Archive: date/track count are small metadata; programme title and real tracks form consistent rows, no ornamental History badges. Revisit action is the same secondary button as elsewhere.
 - Preferences: listening/voice first, account & service status second, install/help collapsed by default; technical voice IDs replaced with human labels. Connection/disconnection/logout boundaries unchanged.

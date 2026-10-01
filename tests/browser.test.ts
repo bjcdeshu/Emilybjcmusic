@@ -71,6 +71,16 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
         assert.equal(checks.overflow, false, `${name} at ${width}px must fit`);
         if(checks.controlFont) assert.equal(checks.controlFont, checks.font, `${name} controls must use the shared font`);
         if (checks.buttonHeight !== null) assert(checks.buttonHeight >= 44, `${name} primary target at ${width}px`);
+        if (name === 'listen') {
+          const lower = await page.evaluate(() => {
+            const title=document.querySelector('.programme-title')!.getBoundingClientRect();
+            const transcript=document.querySelector('.transcript-card')!;
+            const text=document.querySelector('.transcript-text')!.getBoundingClientRect();
+            const tools=document.querySelector('.listening-tools')!;
+            return {aligned:Math.abs(title.left-text.left)<1,transparent:getComputedStyle(transcript).backgroundColor==='rgba(0, 0, 0, 0)',naturalOrder:!!(transcript.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING)&&getComputedStyle(tools).order==='0',quietTarget:document.querySelector('.quiet-button')!.getBoundingClientRect().height>=44};
+          });
+          assert(lower.aligned && lower.transparent && lower.naturalOrder && lower.quietTarget, `integrated listening surface at ${width}px`);
+        }
         designScreens[`${name}-${width}`] = checks;
         if (env.EMILY_BROWSER_EVIDENCE_DIR && [393,1360].includes(width)) {
           await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
@@ -173,6 +183,10 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       await page.getByRole("button", { name: "关闭提示" }).click();
       await reviewScreen('listen');
     }
+    await page.locator('.queue-details summary').click();
+    await page.locator('.queue-row').first().waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.locator('.queue-details summary').click();
     await nav().getByRole("button", { name: "历史", exact: true }).click();
     await page.getByRole("button", { name: "重新编排" }).waitFor();
     await reviewScreen('history');
@@ -232,7 +246,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, integratedLowerSurfaceVerified: true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));

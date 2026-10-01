@@ -1,7 +1,7 @@
 /* Emily shared visual system. All screens use these tokens/components;
    radio-design.css contains only the listening layout, never global overrides. */
 :root {
-  --night:#090c13; --stage:#121417; --paper:#fff; --inset:#f3f5f4;
+  --night:#090c13; --stage:#121417; --paper:#f5f7f5; --inset:#ecf0ed;
   --ink:#202525; --muted:#68716f; --subtle:#84908a; --line:#e3e8e5;
   --mint:#85ddbc; --mint-dark:#276a51; --selected:#eaf6ef;
   --danger:#9e3948; --danger-bg:#faeef0; --radius:28px; --inset-radius:16px; --control-radius:12px;
@@ -194,7 +194,7 @@ input[type=range] { accent-color:var(--ink); cursor:pointer; min-width:0; }
 .logout-button { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:24px; min-height:44px; padding:12px 16px; width:100%; background:var(--danger-bg); color:var(--danger); border-radius:var(--control-radius); font-size:14px; }
 .settings-footnote { margin-top:24px; color:var(--muted); text-align:center; font:10px/1.8 var(--font-meta); }
 
-.mini-player { position:fixed; z-index:25; bottom:24px; left:50%; transform:translateX(-50%); width:min(680px,calc(100% - 48px)); display:flex; align-items:center; gap:8px; padding:12px 16px; background:#ffffffed; backdrop-filter:blur(18px); border:1px solid var(--line); border-radius:var(--inset-radius); box-shadow:0 8px 32px #0003; }
+.mini-player { position:fixed; z-index:25; bottom:24px; left:50%; transform:translateX(-50%); width:min(680px,calc(100% - 48px)); display:flex; align-items:center; gap:8px; padding:12px 16px; background:#f5f7f5ed; backdrop-filter:blur(18px); border:1px solid var(--line); border-radius:var(--inset-radius); box-shadow:0 8px 32px #0003; }
 .mini-player[data-playing=true] { border-color:var(--mint-dark); }
 .mini-track { display:flex; align-items:center; gap:12px; min-width:0; flex:1; text-align:left; background:transparent; color:var(--ink); padding:0; }
 .mini-track > span:last-child { min-width:0; }
