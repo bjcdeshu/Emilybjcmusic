@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：上下部连续沉浸播放界面已发布4e2f2fc（2026-10-01）
+## 当前阶段：手机首屏收听与信息层级已发布f49c838（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -161,9 +161,21 @@ David肯定19ee849『上面动效感觉很好』，但下面播放卡片不够�
 - RN身份核验/npm ci/build/testtypecheck/server35；仅停Emily后配对SQLite+env root-only pre-4e2f2fc/cmp、原子切current，保留19ee849，无backend/schema/runtime/adapter/DNS/proxy/其他业务变化。资产index-DSNE-9WV.css/index-Cep3MmGf.js。
 - 公开真实Chrome现有英文DJ→网易歌曲能量/下部光非零、continuous透明零圆角/全机light running；进入沉浸不断音、393/1360无overflow、reduce静态、pause零能量/漂移停、Escape/nav/logout清audio、pageErrors[]。无新节目/模型请求/feedback/网易写入，保持原漫游选择；最终paused/logout。未重测长自然播放/人工听感/真机。新下部融合仍待实际反馈。
 
+## 手机首屏UX与信息取舍（2026-10-01）
+
+David指出手机进入播放页仍不沉浸，要下滑才能看到信息，要求检查哪些内容必要。Pi发布 **f49c838**，RN current=`/opt/emily/releases/f49c838`；本轮实际效果待David反馈。
+
+- 手机普通收听直接进入播放器，隐藏重复站名页头/营销页尾，保留底部导航；舞台/音波高度用dvh按实际视口收敛，短屏进一步压缩留白，不通过全局缩字或固定高度裁切内容。播放/切歌动作返回页面顶部。当前真实歌名成为主标题，歌手次级；长原名首屏最多两行/一行，完整原名仍在『听感与节目』可读。
+- 移除重复计时与Emily FM标签、常驻AI徽章及大节目标题；节目名称/真实选曲来源/音量/减少类似/漫游开关与说明放入『听感与节目』。『接下来』默认显示真实下一首/剩余数，可展开完整有界队列。喜欢/安静/对话仍直接可达。
+- 主持文案使用原生details：默认关闭，仅非安静DJ阶段显示最多两行真实预览（短屏一行），不伪逐字字幕；全文可展开、缺语音说明保留。播放失败/自动播放阻断/媒体警告、离线/缺配置/账号问题仍直接可见。节目编排警告和来源在返回now的展开区呈现，不再复制横幅挤占首屏。
+- 小后端修正：重启提示只在成功重新解析音源后过期，普通programme警告不随play被抹除；新增36th server回归。未改音频engine、模型、权益、schema、桥接、依赖或缓存策略。保留真实频率/同一analysis能量/连续石墨空间、暂停/reduce/visibility gate。
+- Windows typecheck/server testtypecheck/build、server36/web29/browser1/built通过。联合浏览器新增360×560、393×640/740/851首屏所有主控与展开入口高于导航、长歌名/歌手/长主持词stress、全文/音量可达与展开不改audio，保留旧四宽/audio/dialogue/跨12→13/immersion/PWA断言。首次stress差4px，缩短短屏留白后完整通过；不删断言。实际查看fixture与公开截图，私有素材不入Git。
+- RN身份核验/npm ci/build/testtypecheck/server36；仅停Emily，停后一致性配对SQLite+env root-only `pre-f49c838`/cmp，再原子current，保留4e2f2fc。adapter/其他业务/Node/DNS/反代不改。资产index-K8zveFZd.css/index-B5koEqX9.js。
+- 公开真实Chrome现有英文DJ→网易歌曲：restored/playing/immersive/paused四态各360×560、393×640/740/851，歌名/进度/切歌/主要工具/队列与选项入口均首屏可达无横溢出。真实能量/下部光、全文/音量展开不中断、入沉浸不断音、desktop1360、reduce/pause/Escape/logout/pageErrors[]通过。重启提示初始未出现，因此提示过期本轮由fixture证明，公开仅核验播放后无过时提示。不新建programme/调用模型/写永久反馈/编辑网易歌单，漫游选择保留，最终paused/logout；不外推长时/真机/人工听感或整体设计认可。
+
 ## 下一步
 
-1. 当前4e2f2fc含上下部连续融合及既有沉浸/声音响应/对话/原歌单漫游已发布；保留David肯定的音波/氛围，按实际反馈改善下部及聊天体验，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
+1. 当前f49c838含手机首屏层级及既有连续融合/沉浸/声音响应/对话/原歌单漫游已发布；保留David肯定的音波/氛围，等待实际反馈，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
 2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
 3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 

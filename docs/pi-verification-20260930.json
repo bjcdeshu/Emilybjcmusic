@@ -1,5 +1,15 @@
 {
   "date": "2026-09-30",
+  "mobileFirstScreenUx": {
+    "date":"2026-10-01","release":"f49c838",
+    "request":"David reports mobile entry is not immersive, requires scrolling; evaluate necessary information.",
+    "local":{"typecheck":true,"serverTestTypecheck":true,"build":true,"serverTests":36,"webTests":29,"browserFixtureTests":1,"builtEntrypoint":true,"viewports":[[360,560],[393,640],[393,740],[393,851]],"allMainControlsAndDisclosuresAboveNav":true,"longCatalogueAndHostingStress":true,"fullTranscriptAndVolumeAccessible":true,"disclosureKeepsAudio":true,"originalAudioDialogueRoamingPwaAssertionsRetained":true,"pageErrors":[]},
+    "initialStressFailure":"Long-content options entry exceeded short-screen navigation by4px; reduced short-screen whitespace, kept assertions, full rerun passed.",
+    "live":{"fixture":false,"loginHttp":200,"newAsset":true,"states":["restored","playing","immersive","paused"],"all16FirstScreensPassed":true,"existingEnglishDjThenNeteaseSongEnergy":true,"continuousAndLowerLight":true,"fullTranscriptAndOptions":true,"disclosureAndImmersionKeepAudio":true,"desktop1360NoOverflow":true,"reduceStatic":true,"pauseZeroEnergyAndStopsDrift":true,"escapeAndLogout":true,"roamingRetained":true,"obsoleteHintAbsentAfterPlay":true,"restartHintInitially":false,"pageErrors":[],"noNewProgrammeModelPermanentFeedbackOrNeteaseWrites":true},
+    "deployment":{"current":"/opt/emily/releases/f49c838","previousRetained":"4e2f2fc","identityVerified":true,"rnBuildTestTypecheckServer36":true,"pairedBackup":"pre-f49c838","backupCompared":true,"onlyEmilyRestarted":true,"noSchemaRuntimeAdapterDnsProxyChanges":true},
+    "boundaries":["real errors visible; successful selection context/warnings readable in disclosure","narrow backend restart-hint expiry regression proven by fixture, initial live hint absent","no fixed-height content clipping/new audio graph/fake timing","no long natural playback/device/human-listening claims","private screenshots reviewed outside Git; aesthetic acceptance pending"],
+    "evidenceDirectories":["../.tmp/emily-browser-tools/design-mobile-ux","../.tmp/emily-browser-tools/design-mobile-ux-live"]
+  },
   "continuousListeningSurface": {
     "date":"2026-10-01","release":"4e2f2fc",
     "feedback":"David likes upper motion, requests lower playback card integrated into the same immersive space; not whole-product acceptance.",
