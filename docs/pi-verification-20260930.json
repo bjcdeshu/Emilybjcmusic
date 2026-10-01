@@ -1,5 +1,15 @@
 {
   "date": "2026-09-30",
+  "immersiveAudioMotion": {
+    "date":"2026-10-01", "release":"19ee849",
+    "request":"More overall immersion and more moving playback-screen regions; preserve positively reviewed bars/atmosphere, not a new theme.",
+    "local":{"typecheck":true,"build":true,"webTests":29,"browserFixtureTests":1,"energyFromRealSamples":true,"pauseZeroEnergyAndDriftStopped":true,"reducedMotionStatic":true,"immersiveEntryKeepsAudio":true,"immersiveFourWidthsAndEscape":true,"widths":[360,393,768,1360],"existingAudioDialogueRoamingPwaAssertionsRetained":true,"pageErrors":[]},
+    "initialFailure":"Immersive ambient layer overflowed small widths; narrowed bounds/transform, retained assertion, rerun passed.",
+    "live":{"fixture":false,"loginHttp":200,"existingEnglishDjAndSongEnergy":true,"entryKeepsAudio":true,"navHidden":true,"noOverflow":true,"reduceStatic":true,"pauseZeroEnergy":true,"pauseStopsDrift":true,"escapeRestoresNav":true,"logoutAudioCleared":true,"pageErrors":[],"noNewProgrammeModelFeedbackOrNeteaseWrites":true},
+    "deployment":{"current":"/opt/emily/releases/19ee849","previousRetained":"07e8897","identityVerified":true,"rnBuildAndServerTestTypecheck":true,"rnServerTests":35,"pairedBackup":"pre-19ee849","backupCompared":true,"onlyEmilyRestarted":true,"backendSchemaRuntimeAdapterDnsProxyUnchanged":true},
+    "boundaries":["slow drift is decorative atmosphere, sample intensity is real; no beat/BPM claim","one existing analyser RAF, no new audio graph/per-frame React render","immersive page layout, not browser or system fullscreen","no long natural playback/device/human listening/full-catalogue validation this round","private screenshots reviewed outside Git, not David aesthetic approval"],
+    "evidenceDirectories":["../.tmp/emily-browser-tools/design-immersion","../.tmp/emily-browser-tools/design-immersion-live"]
+  },
   "dialogueLogicAndPlaylistRoaming": {
     "date":"2026-10-01", "featureRelease":"e5df56f", "currentRelease":"07e8897",
     "local":{"typecheck":true,"serverTestTypecheck":true,"build":true,"serverTests":35,"webTests":28,"browserFixtureTests":1,"builtEntrypoint":true,"fixtureSeekThenRealEndedCrossesBatch12To13":true,"toggleKeepsPausedAudio":true,"widths":[360,393,768,1360],"pageErrors":[]},
