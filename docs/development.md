@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：中文女声、台词阅读滚动、真实歌词与波形调整本机通过，待RN发布（2026-10-01）
+## 当前阶段：中文女声、台词阅读滚动、真实歌词与波形调整已发布54b04f1（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -185,7 +185,7 @@ David认为f49c838实现不够优雅；Pi比较三种方案后，David明确『�
 - 公开真实Chrome现有英文DJ→网易歌：restored/playing/paused各四手机viewport共12首屏fullbleed/navHidden/controlsFit/noOverflow；真实energy、主持全文/音量可达/focus返回、展开不断源、队列panel pause/resume保持同song、reduce静态/pause归零停止drift、返回节目后mini/nav、logout清audio/pageErrors[]全部通过。无新programme/model/permanentfeedback/网易写入，原漫游选择保留，最终paused/logout；非长时自然播放/真机/人工听感证据。
 - David随后希望串场台词自然滚动、歌曲显示歌词。当前仅核对固定上游存在lyric/lyric_new模块（LRC/新版逐字接口），Emily私有bridge九路尚无歌词路由，项目无歌词API/解析/显示；未进行真实歌词请求，不能宣称歌词已可用。建议原文字区phase切换：台词慢速阅读辅助非伪时间对齐；歌词实际时间戳随真实audio.time/seek，无歌词或无时间轴诚实降级。新功能尚未实施，不把当前正面反馈当作已完成歌词。
 
-## 中文主持、台词阅读滚动、歌词与波形（2026-10-01，本机通过，待RN发布）
+## 中文主持、台词阅读滚动、歌词与波形（2026-10-01，已发布54b04f1）
 
 David最新要求去掉『Emily正在串场』label，用效果提示；改中文女声并请Pi推荐；接续台词自然滚动/真实歌词；询问频谱左高右变。保留已『很舒服』的整屏与底部transport，不重做布局。中文批准替代初始英文默认，不再把旧English-only当当前禁令。
 
@@ -195,11 +195,13 @@ David最新要求去掉『Emily正在串场』label，用效果提示；改中�
 - 私有桥新增唯一固定POST `/lyric`（10路）且lyrics专用参数限id/cookie/timestamp/noCookie；其他allowlist/鉴权/4MB/16KB/限额/无cache/log/Set-Cookie保持。owner/no-store `GET /api/music/lyrics/:id` 要已知真实catalogue/本人连接，共享90/min provider-read；parser≤100k chars/2000rows/offset/multi-tags/fractions/blank，缺词/纯乐/无时间轴/错误诚实。歌曲actual media时间/seek定位current，上下淡，short只current；全文原native sheet不换源。volatile≤12cache/abort stale/清私有状态，不存歌词/发模型/SW。
 - 左侧高的代码原因：旧pow1.8低→高bin映射在fft256下重复粗低频bin，音乐本身也常低频强。保留竖条，改真正time-domain RMS非重叠窗，固定sqrt显示尺度，静音/缺分析flat。频率energy/bass仍复用原graph/RAF/light，暂停/hidden/offscreen/reduce gate保留；不随机补右边/伪节拍/音源EQ。
 - Windows typecheck/server testtypecheck/build/server40/web31/deployment7/browser2/built通过，0跳过。原联合回归audio/conversation/roaming12→13/PWA/four-width/short/sheets/focus保留；新增25秒tone与中文/lyrics explicitfixture覆盖scroll/pause/reduce/manual/modal、actual keyboard seek/paused、plain/instrumental/missing/error still plays。首次新增seek fixture失败是未等歌曲metadata且media fixture缺Range，补真实Range/metadata wait、保留断言后完整browser2通过；未把失败删掉。实际看fixture截图并移除主持链接默认button白底。
-- 当前生产仍e3328e8；歌词真实请求/新Gemini中文/线上播放尚未验证，不冒称完成。此次要更新私有bridge并重启Emily+adapter（与前轮只Emily不同），不动Node/DNS/proxy/主站/其他业务。
+- RN身份核验、npm ci/build/server testtypecheck/server40/web31通过，专用用户实际晓晓49,824bytes/8.304秒/解码缓存；node22.23.3不改。停Emily后配对SQLite+env/key+adapter.env+原bridge保存/cmp至root-only `pre-54b04f1`，旧e3328e8保留；新固定lyrics桥与应用原子更新，仅Emily及其adapter停启，配置只加默认晓晓，不改Node/DNS/proxy/主站/其他业务/schema/依赖。两个units最终active/NRestarts0，专用用户preflight全通过。资产index-BASK9jz7.css/index-CamybVP6.js。
+- 发布脚本第一次把不存在的EMILY_TTS_VOICE行当必须存在，断言停止后恢复两服务，current仍旧e3328e8（bridge已窄更新）；修为缺项添加而不覆盖其他env。第二次以root误跑owner预检导致uid检查失败，脚本按trap回滚code/env/bridge，两服务active；实际权限始终emily0700/0600未放宽。改以专用用户预检后完成正式发布，未重复/覆盖初始配对备份。
+- 公开真实Chrome登录200/本人连接保留/setting=zh+Xiaoxiao/tts available；使用现有真实候选新编两首programme200/model/0warning，Gemini自然中文DJ/实际TTS ready→网易song；实际scroll/Chinese lang/无可见串场label/voice dot与振幅bars、hosting pause/fullsheet/focus/source通过。当前歌曲取到49条真实LRC，显示/actual media seek/current line/pause/fulllyrics sheet同源通过；12手机首屏（restored/song-lyrics/paused×360×560、393×640/740/851）controlsFit/fullbleed/navHidden/noOverflow；reduce零、pause零/driftstop/返回mini/中文声线选项/logout清音源与歌词/pageErrors[]、completed=true。实际看公开speaking/lyrics/fulllyrics截图，私有证据不入Git。新建一条节目历史，未写永久feedback或网易歌单；这次显式候选新programme不启漫游，不冒称保持旧programme scope。最终paused/logout，既有漫游功能由fixture保留证明，不外推本次真实跨批/全目录/长自然/人工听感/真机验证。当前版本效果仍待David实际体验；先前『很舒服』属于e3328e8布局，不自动升格新功能认可。
 
 ## 下一步
 
-1. 在原RN窄范围构建发布并保留旧e3328e8与一致性SQLite+env/key+adapter配置/bridge回滚；真实验证固定歌词接口、中文Gemini/TTS→实际歌曲/seek/pause/面板/reduce与短屏，最终paused/logout。
+1. 当前生产54b04f1已含中文串场/台词滚动/真实歌词/振幅bars，保留旧e3328e8与root-only `pre-54b04f1`。等待David实际体验，不重复部署/更换已舒服的布局。无真实句级TTS时间轴，台词只阅读辅助；歌词仅实际LRC，未知格式诚实降级。
 2. 本人授权保留，无需重新扫码。缺歌词不解灰/换源，不要求真机锁屏/PWA专项；保留舒服布局与连续声音响应，不将技术测试当新效果认可。
 3. 维护当前入口与相关契约/共享记忆，开发分支可同步，不覆盖main或秘密。
 

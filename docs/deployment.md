@@ -1,6 +1,6 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新UI6493d9e已发布，设计反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新54b04f1中文串场/真实歌词/振幅bars已发布，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
 ## 当前适合的部署方式
 
@@ -63,19 +63,23 @@
 ## RN运行导航（2026-09-30已部署，非最终收听验收）
 
 - URL：`https://emily.unbow.de`，Cloudflare DNS-only A/TTL300，直连RN，不代理音乐到CDN；Let's Encrypt独立证书。
-- App：`/opt/emily/current` → `/opt/emily/releases/6493d9e`（第二轮视觉/动效；后端功能同fcf4df6）（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
+- App：`/opt/emily/current` → `/opt/emily/releases/54b04f1`（中文主持/真实歌词/振幅bars；原整屏/对话/漫游保留）（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
 - Music：`/opt/emily/adapter-135df9e` upstream4.40.1/135df9eddab12cc8879f63c090c0ce808040504f，专用lockfile与MIT LICENSE；解灰依赖/分支/route移除，audit0。仅 `/opt/emily/netease-bridge.cjs` 私有桥接，`emily-adapter.service` 回环3101；ENABLE_GENERAL_UNBLOCK/ENABLE_PROXY/ENABLE_RANDOM_CN_IP=false。新xeapi注册在RN超时，桥接把xeapi请求改成网易eapi原始传输；本人QR授权、实际2首安全网易CDN整曲数据与浏览器连播通过；不代表全目录/VIP档位验收。重建补丁用 `deploy/prepare-netease-upstream.mjs`，拒绝不匹配的上游文件hash；bridge test为明确fixture安全测试。
 - 私有环境：`/etc/emily/emily.env`、`adapter.env`（0600/emily），data=`/var/lib/emily/radio`（0700），SQLite0600；模型=`https://oapi.unbow.de/v1` / `gemini-3.8-flash` / Emily专用key，timeout30秒。主人密码本机安全副本 `C:/Users/David/AppData/Local/Emily-private/owner-password.txt`，已核验ACL；不打印/上传/提交。
-- TTS：`/opt/emily/tools/tts/bin/edge-tts` 7.2.3专用venv，requirements-resolved.txt记录依赖；专用用户真实合成与解码/缓存成功。应用无需使用root uvx。
+- TTS：`/opt/emily/tools/tts/bin/edge-tts` 7.2.3专用venv，requirements-resolved.txt记录依赖；专用用户真实合成与解码/缓存成功；当前默认晓晓zh-CN-XiaoxiaoNeural，晓伊及七款英文可选。应用无需使用root uvx。
 - HTTPS：`/opt/1panel/www/conf.d/emily.unbow.de.conf`，专用网站SSL/ACME路径；API无缓存/无代理落盘/无票据日志，保留Range，TLS1.2/1.3、HTTP308。只做nginx-t+平滑reload，原容器和业务未重启。已有nginx listen-http2弃用警告未顺手处理。
 - 续期：`/etc/emily/acme` 为本应用专用acme配置，`emily-cert-renew.timer` 每日随机延迟/持久化，实际cron检查Result=success；reloadcmd先nginx-t再reload。不更改其他ACME账户/证书/任务。
 - 查看：`systemctl status emily emily-adapter`，`systemctl list-timers emily-cert-renew.timer`；不得用 `systemctl show Environment`、输出private env或raw provider日志。health=/api/health，未登录保护接口401。
 - 首次回滚：`/var/backups/emily-20260930/rollback.txt`；停止并禁用Emily两个units及专用续期timer，移出新增Emily nginx配置后nginx-t/reload，撤销仅Emily新增DNS记录；保留 `/etc/emily` 与 `/var/lib/emily`，不删除主人授权或修改主站/网关。DNS对象ID仅留运行记录，不保留令牌。
-- 升级：停止Emily专用实例或一致性备份SQLite，与AES key同等保护；新release构建/test/权限预检后原子换current，再仅restart emily。适配器单独审核与锁版本，不更新latest/整个fleet。权限、TLS和续期检查分别记录，不把网页200当最终体验通过。
+- 升级：停止Emily专用实例或一致性备份SQLite，与AES key同等保护；新release构建/test/权限预检后原子换current，再仅restart相关Emily units（通常仅app，54b04f1固定歌词桥也涉及adapter）。适配器单独审核与锁版本，不更新latest/整个fleet。权限、TLS和续期检查分别记录，不把网页200当最终体验通过。
 
 实际验证更新：fcf4df6后本地后端28+前端28+部署7+Chrome fixture1=64全绿，RN后端28+前端28/build/testtypecheck通过，私有preflight再次全通过。本人扫码及服务重启后连接保留；真实Gemini 2首programme200/0 warning、真实TTS/歌曲切换、pause/seek/quiet/logout与Range通过，两首完整媒体3,210,388/3,543,981bytes。另一次安静模式自然播完200.587秒并自动下一首成功。未知VIP档位和未测试曲目不泛化通过；小米物理后台未测试但已取消门槛。
 
 超时修复：Fastify idle connection150秒（原10秒造成真实programme502），入站body timeout30秒/16KB不变；前端programme/player135秒，普通read45秒。现有model/provider30秒、TTS60秒有限制，不把等待伪装进度。修复只更新Emily application、保留旧release和 `/var/backups/emily-20260930/pre-fcf4df6` 一致性SQLite/env备份。密钥备份必须和数据库配对；无schema改动，不用备份覆盖新授权/历史作为默认回滚。
+
+### 当前54b04f1更新（2026-10-01）
+
+固定上游版本不改；私有桥新增第10路固定POST lyric，仅id/cookie/timestamp/noCookie。App新增owner/no-store/known catalogue lyrics/LRC parser，真实49行歌词、当前行随actual media seek/pause/全文同源通过。中文Gemini programme200/model/0warnings→晓晓真实语音→网易歌曲、12手机首屏/暂停reduce/退出通过；本机server40/web31/deployment7/browser2，RNserver40/web31/build/testtypecheck与专用用户晓晓解码缓存通过。旧e3328e8和root-only `pre-54b04f1`（停app一致性SQLite+emily.env/key+adapter.env+旧bridge，cmp）保留；不改系统Node/DNS/proxy/其他业务。初次脚本缺voice行断言停，第二次root误跑owner-preflight回滚，最终以服务用户预检发布通过；权限未放宽。回滚优先旧code+必要bridge/env窄恢复，不能默认覆盖后续授权/历史；如要回英文须显式选择声线（一次性中文迁移已持久化）。
 
 ## 验收与放行
 
