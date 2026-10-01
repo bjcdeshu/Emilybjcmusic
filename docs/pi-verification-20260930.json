@@ -1,5 +1,14 @@
 {
   "date": "2026-09-30",
+  "fullScreenRadioAndSheets": {
+    "date":"2026-10-01","release":"e3328e8","choice":"David unambiguously chooses option1 full-screen radio + bottom sheets; final UI approval pending",
+    "local":{"typecheck":true,"build":true,"webTests":29,"browserFixtureTests":1,"builtEntrypoint":true,"mobileViewports":[[360,560],[393,640],[393,740],[393,851]],"fourWidthScreensAndSheets":[360,393,768,1360],"fullBleedNavHiddenControlsFit":true,"longContentStress":true,"sheetInternalScrollPersistentTransport":true,"focusTrapRestoreEscapeBackdrop":true,"sheetPauseResumeSameSource":true,"escapeSheetBeforeImmersive":true,"originalAudioDialogueRoamingPwaAssertionsRetainedWithNewUiSelectors":true,"pageErrors":[]},
+    "initialSheetFailure":"Long sheet inner height did not account for1px top border; footer extended1px. Corrected max-height, retained assertion, full rerun passed.",
+    "live":{"fixture":false,"loginHttp":200,"newAsset":true,"realEnglishDjThenNeteaseSongEnergy":true,"states":["restored","playing","paused"],"all12MobileFirstScreensPassed":true,"fullHostingVolumeAndFocusReturn":true,"sheetControlsPauseResumeSameSong":true,"disclosureKeepsSource":true,"reduceStatic":true,"pauseZeroEnergyAndStoppedDrift":true,"returnProgrammeMiniAndNav":true,"roamingRetained":true,"logoutAudioCleared":true,"pageErrors":[],"noNewProgrammeModelPermanentFeedbackOrNeteaseWrites":true},
+    "deployment":{"current":"/opt/emily/releases/e3328e8","previousRetained":"f49c838","rnIdentityVerified":true,"npmCiBuildTestTypecheckServer36":true,"pairedBackup":"pre-e3328e8","compared":true,"onlyEmilyRestarted":true,"noBackendSchemaRuntimeAdapterDnsProxyOtherServiceChanges":true},
+    "boundaries":["mobile full-screen page, not browser fullscreen","native bottom sheet; no implemented drag gesture claim","same existing analyser graph/RAF/audio engine and actual samples","private screenshots reviewed, not final David approval","no long natural/device/human-listening validation"],
+    "evidenceDirectories":["../.tmp/emily-browser-tools/design-radio-space","../.tmp/emily-browser-tools/design-radio-space-live"]
+  },
   "mobileFirstScreenUx": {
     "date":"2026-10-01","release":"f49c838",
     "request":"David reports mobile entry is not immersive, requires scrolling; evaluate necessary information.",

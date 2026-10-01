@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：手机首屏收听与信息层级已发布f49c838（2026-10-01）
+## 当前阶段：方案一整屏电台与底部面板已发布e3328e8（2026-10-01）
 
 本文件是唯一的项目当前执行状态入口。日期交接快照见 [handoff-to-pi-20260930.md](handoff-to-pi-20260930.md)，机器可读验证见 [handoff-verification-20260930.json](handoff-verification-20260930.json)。
 
@@ -173,9 +173,21 @@ David指出手机进入播放页仍不沉浸，要下滑才能看到信息，要
 - RN身份核验/npm ci/build/testtypecheck/server36；仅停Emily，停后一致性配对SQLite+env root-only `pre-f49c838`/cmp，再原子current，保留4e2f2fc。adapter/其他业务/Node/DNS/反代不改。资产index-K8zveFZd.css/index-B5koEqX9.js。
 - 公开真实Chrome现有英文DJ→网易歌曲：restored/playing/immersive/paused四态各360×560、393×640/740/851，歌名/进度/切歌/主要工具/队列与选项入口均首屏可达无横溢出。真实能量/下部光、全文/音量展开不中断、入沉浸不断音、desktop1360、reduce/pause/Escape/logout/pageErrors[]通过。重启提示初始未出现，因此提示过期本轮由fixture证明，公开仅核验播放后无过时提示。不新建programme/调用模型/写永久反馈/编辑网易歌单，漫游选择保留，最终paused/logout；不外推长时/真机/人工听感或整体设计认可。
 
+## 方案一：整屏电台与底部面板（2026-10-01）
+
+David认为f49c838实现不够优雅；Pi比较三种方案后，David明确『毫无疑问选择方案一』。已发布 **e3328e8**，RN current=`/opt/emily/releases/e3328e8`。选择设计方向不等于认可最终页面；发布后David随后明确反馈『现在这个方案，我感觉很舒服』，因此当前整屏方案已获实际正面评价，不外推所有页面/功能完美。
+
+- 手机普通收听即整屏：零卡片边缘/外边距、无常驻四栏nav，顶部明确『节目』返回和听感按钮；其他页面保留导航/真实mini。中部原真实频率条与声音柔光延展，底部歌名/歌手→真实进度→居中64px transport→喜欢/聊聊/队列。flex+100dvh分配空间，长内容不以hidden假裁切；短屏降低stage留白/主按钮56px，不改audio graph/RAF/engine。真实主持预览占稳定区域，点击阅读全文，歌曲时轻入口；无伪逐字字幕。
+- 新RadioSheet原生modal dialog承载队列/主持全文/听感选项，独立内部滚动，底部固定真实当前歌曲/播放暂停/切歌。明确close、Escape、backdrop关闭，焦点锁定/返回trigger、body scroll cleanup；面板与页面使用同一audio，开关不seek/换源/暂停。选择队列曲才关闭并显式选歌。media错误面板内也可见，播放错误不藏；喜欢成功toast移至上方不盖底部transport。
+- 桌面保留站点导航和较宽电台desk，沉浸切换继续可用；手机默认就是所选整屏，不增加第二个必点模式。Escape先关闭sheet，不意外退出桌面immersive；model dialogue依旧共享原dialog/volatile context/explicit accept。底部sheet是页面交互，不声称系统fullscreen或实现拖拽手势。
+- Windows typecheck/build/web29/browser1/built通过；四宽原跨页/声音energy/pause/reduce/dialogue/seek+真实ended跨12→13/PWA回归保留；更新旧selector和导航断言以对应批准的新交互。新增360×560、393×640/740/851 fullbleed/navHidden/controlsFit，长名/长主持词stress、长sheet内部滚动/transport留在视口、focus trap/return/backdrop、四宽sheet边界及sheet play/pause不换源。首次长sheet footer差1px（顶border），调整inner max-height后保留断言通过。实际查看fixture播放/queue/desktop以及公开播放/queue/hosting截图，私有内容不入Git。
+- RN身份核验/npm ci/build/testtypecheck/server36；仅停Emily，停后配对SQLite+env root-only `pre-e3328e8`/cmp、原子切current，保留f49c838。无backend/schema/runtime/adapter/DNS/反代/其他业务变化。资产index-CAbuvm08.css/index-D31jHOQU.js。
+- 公开真实Chrome现有英文DJ→网易歌：restored/playing/paused各四手机viewport共12首屏fullbleed/navHidden/controlsFit/noOverflow；真实energy、主持全文/音量可达/focus返回、展开不断源、队列panel pause/resume保持同song、reduce静态/pause归零停止drift、返回节目后mini/nav、logout清audio/pageErrors[]全部通过。无新programme/model/permanentfeedback/网易写入，原漫游选择保留，最终paused/logout；非长时自然播放/真机/人工听感证据。
+- David随后希望串场台词自然滚动、歌曲显示歌词。当前仅核对固定上游存在lyric/lyric_new模块（LRC/新版逐字接口），Emily私有bridge九路尚无歌词路由，项目无歌词API/解析/显示；未进行真实歌词请求，不能宣称歌词已可用。建议原文字区phase切换：台词慢速阅读辅助非伪时间对齐；歌词实际时间戳随真实audio.time/seek，无歌词或无时间轴诚实降级。新功能尚未实施，不把当前正面反馈当作已完成歌词。
+
 ## 下一步
 
-1. 当前f49c838含手机首屏层级及既有连续融合/沉浸/声音响应/对话/原歌单漫游已发布；保留David肯定的音波/氛围，等待实际反馈，不将发布或测试当作全面设计认可。本人授权保留，不要求重新扫码。
+1. 当前e3328e8含获选方案一整屏电台/底部面板及既有连续声音响应/对话/原歌单漫游已发布；保留David肯定的音波/氛围，已得到David『很舒服』的当前方案反馈，保留此布局，下一项讨论为台词自然滚动/真实歌词；不将局部认可外推为全面完美。本人授权保留，不要求重新扫码。
 2. 持续保持英文朗读边界与原名UI分离；故障不解灰、不替代音源，不以设备锁屏/PWA专项测试拖延设计工作。
 3. 维持相关构建与浏览器回归，避免外观改动破坏音频、QR和设置；不用大量验证日志替代设计成果。
 
