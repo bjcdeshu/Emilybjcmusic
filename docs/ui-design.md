@@ -4,10 +4,10 @@
 
 ## Direction
 
-A private radio desk, extending mmguo's dark dot-matrix stage and overlapping white programme across the whole product. No vinyl metaphor, marketing landing page, unrelated pastel moods or admin-dashboard sections. Catalogue artwork is genuine content, not wallpaper. Dot-matrix station lettering is the signature; speech and tracks still use actual APIs/audio.
+A private radio desk, extending mmguo's dark dot-matrix identity across the whole product. Earlier releases used an overlapping white programme; David's latest 2026-10-01 correction explicitly requests the listening controls and motion to feel like ONE continuous space. The player now has a continuous graphite surface; collection/archive/preferences/dialog retain reading paper. No vinyl metaphor, marketing landing page, unrelated pastel moods or admin-dashboard sections. Catalogue artwork is genuine content, not wallpaper. Dot-matrix station lettering is the signature; speech and tracks still use actual APIs/audio.
 
 - World: a personal programme, its collection, archive and listening preferences.
-- Surfaces: graphite signal stage, soft cool-white reading paper, soft-grey inset fields, transcript on the same uninterrupted paper, thin neutral rules.
+- Surfaces: continuous graphite listening stage/control/transcript surface; soft cool-white reading paper for collection/archive/preferences/dialog, soft-grey inset fields there, thin neutral rules. Light extends through the player rather than stopping at a rounded white-card edge.
 - Palette: night `#090c13`, stage `#121417`, paper `#f5f7f5`, inset `#ecf0ed`, ink `#202525`, secondary `#68716f`, mint `#85ddbc`; red only for destructive/error actions.
 - Typography: one system sans stack across ALL screens, including player/login/dialog; original SVG dot lettering for station identity; monospace ONLY for labels/time. No italic e or per-page font overrides.
 - Scale: body14/line1.65, captions12, section18, page/programme32 desktop/28 mobile. 4px spacing rhythm, 24px desktop/20px mobile surface padding; outer28/inset16/control12 radii.
@@ -30,7 +30,7 @@ All authenticated screens share the same 680px desktop surface/grid edge; mobile
 
 ## Screens
 
-- Listen: retain the positively reviewed reference stage and actual analysis. One continuous lower reading surface: programme/track, transport, transcript, quiet secondary controls, queue. Align transcript with programme text; no large nested transcript card or artificial speaking-state fill. Speaking is indicated by the real-state dot/label, not simulated word timing. Reduce excess fixed whitespace and preserve44px controls. DOM follows reading order, with no CSS order overrides.
+- Listen: retain the positively reviewed reference stage and actual analysis. One continuous dark reading surface: programme/track, transport, transcript, quiet secondary controls, queue. Scope night tokens to radio-device (light text/muted mint controls/subtle rules) rather than changing global styles or darkening unrelated screens. Remove second-card background/radius/overlap/shadow; actual-sample diffuse light flows from stage to lower controls and transcript. Align transcript with programme text; no large nested transcript card or artificial speaking-state fill. Speaking is indicated by the real-state dot/label, not simulated word timing. Reduce excess fixed whitespace and preserve44px controls. DOM follows reading order, with no CSS order overrides.
 - Programme: clear three-step flow within one paper: listening direction, genuine playlist, optional search. Mood presets are neutral segmented cards; mint denotes selection, not unrelated categories. Primary launch reflects selected music. Real covers remain collection-first.
 - Archive: date/track count are small metadata; programme title and real tracks form consistent rows, no ornamental History badges. Revisit action is the same secondary button as elsewhere.
 - Preferences: listening/voice first, account & service status second, install/help collapsed by default; technical voice IDs replaced with human labels. Connection/disconnection/logout boundaries unchanged.
@@ -46,6 +46,10 @@ The original reference's conversation intent returns as an owner-only listening 
 Retain the positively reviewed bars, original dot identity and uninterrupted reading paper. Add low-contrast mint/blue light around the desk and beneath the signal, spreading the same real audio energy into small indicators/edges. Reuse the signal's existing RAF/analyser buffer to set CSS variables, without React state per frame, another audio graph or synthetic waveform. Decorative slow drift is a playing-state atmosphere, not an audio metric; actual intensity remains actual samples, zero when silent/unavailable. Text remains stationary while reading; existing programme/track/transcript content enters only when content changes.
 
 The existing immersion button now hides shell navigation/footer, widens the listening desk to820px desktop, enlarges the signal stage responsively, and retains pause/seek/next/previous/chat/exit. Enter/exit never remounts audio or changes transport. Exit button and Escape (unless a dialog owns it) restore ordinary navigation. This is a page layout, NOT an OS/browser fullscreen promise; no permanent setting/cache and no new service. Small widths must not overflow from moving background layers. Mobile remains scrollable for long real transcripts/warnings, rather than clipping to a fixed-height fake full-screen mockup.
+
+## Continuous playback surface (David correction / 2026-10-01)
+
+David likes the upper motion, but finds the lower playback card insufficiently immersive and wants the two integrated. Preserve the upper bars/stage treatment rather than redesigning them. Use one stage background and an aria-hidden whole-device light layer, reusing the existing energy/bass CSS variables and playing/visibility gate. The lower area is transparent with zero second-card radius and no independent edge/shadow; its diffuse response extends the upper light. Keep reading text still, indicators honest, layout/focus order and44px controls unchanged. Waveform bottom has a small alpha feather so silence's flat baseline does not become a new dividing rule; frequency heights still come from actual samples. Reduced motion suppresses new light layers; pause stops ongoing drift. The page-level immersive mode and ordinary listen both use this continuity, not only a special screenshot variant. Other screens remain their established graphite+paper system.
 
 ## Review and boundaries
 

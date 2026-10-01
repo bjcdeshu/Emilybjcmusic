@@ -4,8 +4,12 @@
 .listen-column::before,.listen-column::after { content:""; position:absolute; z-index:-1; pointer-events:none; inset:-56px 0; border-radius:40%; opacity:0; transition:opacity 1s ease; animation:room-drift 18s ease-in-out infinite alternate; animation-play-state:paused; background:radial-gradient(ellipse at 24% 24%,#85ddbc28,transparent 58%); }
 .listen-column::after { background:radial-gradient(ellipse at 76% 60%,#6c8ea332,transparent 60%); animation-duration:24s; animation-direction:alternate-reverse; }
 .listen-column[data-motion=live]::before,.listen-column[data-motion=live]::after { opacity:calc(.5 + var(--signal-energy) * .5); animation-play-state:running; }
-.radio-device { --signal-energy:0; --signal-bass:0; width:100%; overflow:hidden; background:var(--stage); border:1px solid #ffffff12; border-radius:var(--radius); box-shadow:0 24px 72px #0003; animation:surface-in .4s var(--ease-out); }
-.host-panel { height:215px; position:relative; padding:28px var(--surface-padding) 0; color:#fff; background:radial-gradient(#ffffff0e .7px,transparent .7px) 0 0/16px 16px,var(--stage); }
+/* One continuous listening surface. Night tokens are scoped to the radio only;
+   collection/dialog/settings keep the shared reading-paper system. */
+.radio-device { --signal-energy:0; --signal-bass:0; --ink:#e5eee9; --muted:#a9b8b0; --subtle:#9baba3; --line:#ffffff16; --mint-dark:var(--mint); --selected:#85ddbc18; --inset:#ffffff09; --danger:#ffc2ce; --danger-bg:#502631; position:relative; isolation:isolate; color:var(--ink); width:100%; overflow:hidden; background:var(--stage); border:1px solid #ffffff12; border-radius:var(--radius); box-shadow:0 24px 72px #0003; animation:surface-in .4s var(--ease-out); }
+.listening-light { position:absolute; z-index:0; inset:0; pointer-events:none; background:radial-gradient(ellipse at 22% 25%,#85ddbc38,transparent 64%),radial-gradient(ellipse at 80% 70%,#6c8ea336,transparent 65%); opacity:clamp(.12,calc(.12 + var(--signal-energy) * 2),.65); transform:scale(calc(1 + var(--signal-bass) * .05)); transition:opacity .4s,transform .4s; animation:stage-drift 16s ease-in-out infinite alternate paused; }
+.radio-device[data-motion=live] .listening-light { animation-play-state:running; }
+.host-panel { height:215px; position:relative; padding:28px var(--surface-padding) 0; z-index:1; color:#fff; background:radial-gradient(#ffffff0e .7px,transparent .7px) 0 0/16px 16px; }
 .host-light { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 30% 90%,#85ddbc4a,transparent 65%),radial-gradient(ellipse at 80% 100%,#6c8ea344,transparent 60%); opacity:clamp(0,var(--signal-energy) * 4,.65); transform:scale(calc(1 + var(--signal-bass) * .16)); transition:opacity .35s,transform .35s; animation:stage-drift 12s ease-in-out infinite alternate paused; }
 .radio-device[data-motion=live] .host-light { animation-play-state:running; }
 .host-topline { position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
@@ -20,9 +24,10 @@
 .radio-device[data-motion=live] .on-air > span::after { opacity:calc(.2 + var(--signal-energy) * .5); transform:scale(calc(1 + var(--signal-energy) * 1.5)); transition:transform .2s,opacity .2s; }
 .host-icon-button { position:absolute; right:20px; top:52px; color:#9ba9a1; }
 .host-clock { position:absolute; top:30px; right:var(--surface-padding); font:12px var(--font-meta); color:#b0bcb5; }
-.radio-signal { position:absolute; bottom:0; left:0; width:100%; height:96px; pointer-events:none; opacity:.85; }
-.player-paper { position:relative; display:flex; flex-direction:column; padding:20px var(--surface-padding) 12px; margin-top:-16px; border-radius:var(--radius) var(--radius) 0 0; background:var(--paper); box-shadow:0 -1px 0 #e4eee624; }
-.player-paper::before { content:""; position:absolute; top:0; left:var(--surface-padding); right:var(--surface-padding); height:1px; background:linear-gradient(90deg,transparent,#85ddbc66,transparent); pointer-events:none; transform:scaleX(calc(.7 + var(--signal-bass) * .3)); opacity:calc(.3 + var(--signal-energy) * .7); transition:transform .35s,opacity .35s; }
+.radio-signal { position:absolute; bottom:0; left:0; width:100%; height:96px; pointer-events:none; opacity:.85; mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 8px),transparent 100%); }
+.player-paper { position:relative; z-index:1; display:flex; flex-direction:column; padding:20px var(--surface-padding) 12px; margin-top:0; border-radius:0; background:transparent; box-shadow:none; }
+/* A diffused continuation, not a line or a second rounded card edge. */
+.player-paper::before { content:""; position:absolute; z-index:-1; top:-48px; left:0; right:0; height:320px; background:radial-gradient(ellipse at 36% 0,#85ddbc38,transparent 72%); pointer-events:none; opacity:clamp(0,var(--signal-energy) * 2,.45); transform:scaleX(calc(.9 + var(--signal-bass) * .1)); transition:transform .35s,opacity .35s; }
 .player-paper > * { grid-column:1/-1; }
 .programme-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
 .programme-heading .mint-tag { font:10px var(--font-meta); }
@@ -48,11 +53,11 @@
 .seek-range::-moz-range-thumb { width:9px; height:9px; border:0; border-radius:50%; background:var(--ink); }
 .seek-range:disabled { opacity:.5; cursor:default; }
 .transport-controls { display:flex; align-items:center; gap:0; flex-shrink:0; }
-.main-play { width:44px; height:44px; flex-shrink:0; display:grid; place-items:center; border-radius:50%; background:var(--ink); color:#fff; transition:background .24s,transform .24s var(--ease-out); }
+.main-play { width:44px; height:44px; flex-shrink:0; display:grid; place-items:center; border-radius:50%; background:var(--ink); color:var(--stage); transition:background .24s,transform .24s var(--ease-out); }
 .main-play::before { content:""; position:absolute; inset:-5px; border:1px solid var(--mint-dark); border-radius:50%; pointer-events:none; opacity:0; }
 .main-play { position:relative; }
 .radio-device[data-motion=live] .main-play::before { opacity:calc(.15 + var(--signal-energy) * .6); transform:scale(calc(1 + var(--signal-bass) * .2)); transition:transform .2s,opacity .2s; }
-.main-play:hover:not(:disabled) { background:#3c4540; }
+.main-play:hover:not(:disabled) { background:#c9e8da; }
 .main-play > svg:not(.spin) { width:20px; height:20px; }
 .play-spinner .spinner-label { display:grid; place-items:center; }
 .skip-button svg { width:20px; height:20px; }
@@ -72,7 +77,7 @@
 .transcript-dot { width:5px; height:5px; border-radius:50%; background:var(--subtle); transition:background .24s,box-shadow .24s; }
 .transcript-heading b { font-size:12px; font-weight:500; color:var(--muted); }
 .transcript-heading > span:last-child { margin-left:auto; color:var(--muted); font:9px var(--font-meta); }
-.transcript-text { color:#43534d; font-size:18px; line-height:1.8; overflow-wrap:anywhere; animation:content-in .4s var(--ease-out); }
+.transcript-text { color:#c3d2ca; font-size:18px; line-height:1.8; overflow-wrap:anywhere; animation:content-in .4s var(--ease-out); }
 .transcript-placeholder { color:var(--muted); font-size:14px; }
 .transcript-note { display:block; margin-top:12px; color:var(--muted); font-size:12px; }
 .playback-message { padding:12px 16px; border-radius:var(--control-radius); background:var(--inset); color:var(--muted); margin:0 0 16px; }
@@ -125,5 +130,5 @@
  .volume-control input { width:58px; }
 }
 @media(max-width:740px) { .immersive .programme-title { font-size:30px; } }
-@media(prefers-reduced-motion:reduce) { .listen-column::before,.listen-column::after,.host-light,.main-play::before,.on-air > span::after { opacity:0!important; } }
+@media(prefers-reduced-motion:reduce) { .listen-column::before,.listen-column::after,.host-light,.listening-light,.player-paper::before,.main-play::before,.on-air > span::after { opacity:0!important; } }
 @media(max-width:370px) { .quiet-button { padding:10px; } .volume-control { gap:4px; } .volume-control input { width:46px; } }

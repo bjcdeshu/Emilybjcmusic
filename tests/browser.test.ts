@@ -77,9 +77,11 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
             const transcript=document.querySelector('.transcript-card')!;
             const text=document.querySelector('.transcript-text')!.getBoundingClientRect();
             const tools=document.querySelector('.listening-tools')!;
-            return {aligned:Math.abs(title.left-text.left)<1,transparent:getComputedStyle(transcript).backgroundColor==='rgba(0, 0, 0, 0)',naturalOrder:!!(transcript.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING)&&getComputedStyle(tools).order==='0',quietTarget:document.querySelector('.quiet-button')!.getBoundingClientRect().height>=44};
+            const paper=document.querySelector('.player-paper')!;
+            const stage=document.querySelector('.host-panel')!.getBoundingClientRect();
+            return {continuous:getComputedStyle(paper).backgroundColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(paper).borderTopLeftRadius==='0px'&&Math.abs(paper.getBoundingClientRect().top-stage.bottom)<1,aligned:Math.abs(title.left-text.left)<1,transparent:getComputedStyle(transcript).backgroundColor==='rgba(0, 0, 0, 0)',naturalOrder:!!(transcript.compareDocumentPosition(tools)&Node.DOCUMENT_POSITION_FOLLOWING)&&getComputedStyle(tools).order==='0',quietTarget:document.querySelector('.quiet-button')!.getBoundingClientRect().height>=44};
           });
-          assert(lower.aligned && lower.transparent && lower.naturalOrder && lower.quietTarget, `integrated listening surface at ${width}px`);
+          assert(lower.continuous && lower.aligned && lower.transparent && lower.naturalOrder && lower.quietTarget, `integrated listening surface at ${width}px`);
         }
         designScreens[`${name}-${width}`] = checks;
         if (env.EMILY_BROWSER_EVIDENCE_DIR && [393,1360].includes(width)) {
@@ -144,6 +146,8 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'live');
     assert(await page.locator('.host-light').evaluate(el=>Number(getComputedStyle(el).opacity)>0),'surround light follows actual audio energy');
     assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'running');
+    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+    assert(await page.locator('.player-paper').evaluate(el=>Number(getComputedStyle(el,'::before').opacity)>0),'light extends into lower playback area');
     await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),false,'immersion never interrupts audio');
     if(env.EMILY_BROWSER_EVIDENCE_DIR) await page.screenshot({path:join(env.EMILY_BROWSER_EVIDENCE_DIR,'mobile-immersive-playing.png'),fullPage:true});
@@ -162,6 +166,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), pausedSignal);
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'still');
     assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'paused');
+    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
     assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-energy')),'0.000');
     await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
     for(const width of [393,1360,360,768]) {
@@ -189,6 +194,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.waitForTimeout(80); // Allow the media-query change event to redraw its static baseline.
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'still');
     assert.equal(await page.locator('.host-light').evaluate(el=>getComputedStyle(el).opacity),'0');
+    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).opacity),'0');
     const stillFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
     await page.waitForTimeout(100);
     assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), stillFrame);
@@ -333,7 +339,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, continuousDarkListeningSurfaceVerified:true, immersiveMotionVerified:true, energyPauseAndReducedMotionVerified:true, immersiveFourWidthsAndEscapeVerified:true, integratedLowerSurfaceVerified: true, conversationRefinementAndExplicitPlayVerified:true, playlistRoamingPastBatchVerified:true, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));
