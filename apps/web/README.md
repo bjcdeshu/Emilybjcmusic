@@ -17,6 +17,10 @@ Development and preview bind `127.0.0.1`. Development `/api` proxies to the loop
 
 The 27 automated tests are **explicitly test-only fixtures**, not real provider acceptance. They cover audio sequencing, pause/async-operation races, stale play promises, actual-property progress/seek, autoplay rejection, audio/TTS failure, empty queues, logout cleanup, API envelopes/401, URL boundaries, and static-only service-worker caching. `FakeAudio` is never imported by the application. The root `npm run test:browser` also inspects login/listen/library/history/settings/QR and empty archive at360/393/768/1360px, shared control typography and44px primary controls, using explicitly browser-only collection/cover fixtures. It now exercises actual Chrome decoding, DJ/song/next sequencing, pause/seek/quiet mode, feedback/history/voice selection/logout and static-only offline PWA against explicit local HTTP/tone-MP3 fixtures. Real account audio, human listening and physical Xiaomi background playback remain unverified.
 
+## Listening conversation (Pi / 2026-10-01)
+
+Player's “聊聊想听什么” and Programme's “和 Emily 聊聊” open the shared station dialog. Written dialogue supports Chinese/preferences/named tracks and refinement, then displays only the server's actual rights-checked candidates. Explicit “播放这档节目” uses the existing programme/audio flow; consultation itself never interrupts playback. Dialogue lives only in page memory (bounded30 turns/latest11 sent), survives dialog close/navigation, clears on logout/disconnect/reload, and is never cached/persisted. Context/catalogue metadata are sent to the existing configured model; English hosting remains separate. Failure stays visible and does not silently switch tracks. Browser covers two-turn refinement, reopen, explicit acceptance and clear; server contracts cover IDs/rights/auth/limits/failure.
+
 ## Implementation boundaries
 
 - A single mounted `<audio>` plays a prepared `tts_ready` DJ segment, then the song. Only media events/properties determine the local transport state and progress. Server `playing` flags never cause restore/autoplay.

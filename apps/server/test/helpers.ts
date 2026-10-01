@@ -40,6 +40,7 @@ export class HttpFixture {
   hangPath: string | undefined;
   unsafeAudio = false;
   malformedPath: string | undefined;
+  dialogueMode: "clarify" | "valid" | "invented" | "duplicate" | "mismatch" | undefined;
   modelMode: "valid" | "invented" | "duplicate" | "biography" | "unavailable" = "valid";
   readonly server = createServer((request, response) => { void this.respond(request, response); });
   base = "";
@@ -78,6 +79,16 @@ export class HttpFixture {
     else if (path === "/login/qr/create") value = { code: 200, data: { qrurl: `https://music.163.com/login?codekey=${body.key}`, qrimg: "data:image/png;base64,iVBORw0KGgo=" } };
     else if (path === "/login/qr/check") value = { code: this.qrCode, ...(this.qrCode === 803 ? { cookie: COOKIE_SENTINEL } : {}) };
     else if (path === "/v1/chat/completions") {
+      const system = String((body.messages as {content:string}[] | undefined)?.[0]?.content || '');
+      if(this.dialogueMode && system.includes('ONE private radio owner')) {
+        value={choices:[{message:{content:JSON.stringify({reply:'想听什么样的音乐？',action:this.dialogueMode==='clarify'?'clarify':'find',prompt:'柔和，但不要太伤感',queries:['Fixture artist']})}}]};
+        response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify(value));return;
+      }
+      if(this.dialogueMode && system.includes('Output ONLY JSON')) {
+        const ids=this.dialogueMode==='invented'?['999999']:this.dialogueMode==='duplicate'?['101','101']:this.dialogueMode==='mismatch'?[]:['101','202'];
+        value={choices:[{message:{content:JSON.stringify({reply:'这些是真实找到的音乐。要不要从这几首开始？',ids})}}]};
+        response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify(value));return;
+      }
       if (this.modelMode === "unavailable") { response.writeHead(503).end(COOKIE_SENTINEL); return; }
       const selections = [{ id: "202", transition: "settle_in", reason: "flow" }, { id: "101", transition: "keep_flow", reason: "variety" }];
       if (this.modelMode === "invented") selections[0]!.id = "999999";

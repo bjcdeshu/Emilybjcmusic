@@ -34,8 +34,8 @@ test("programme and provider-backed controls get a bounded preparation budget; o
   t.mock.method(globalThis, "setTimeout", (_fn, ms) => { budgets.push(ms); return 0; });
   t.mock.method(globalThis, "clearTimeout", () => {});
   t.mock.method(globalThis, "fetch", async () => Response.json({ ok: true, data: {} }));
-  await post("/api/programme", {}); await post("/api/player/next"); await api("/api/settings");
-  assert.deepEqual(budgets, [135_000, 135_000, 45_000]);
+  await post("/api/programme", {}); await post("/api/player/next"); await post("/api/conversation", {}); await api("/api/settings");
+  assert.deepEqual(budgets, [135_000, 135_000, 135_000, 45_000]);
 });
 test("URL boundary rejects scripting, credentials, mixed content and unsafe image data", () => {
   for (const url of ["javascript:alert(1)", "file:///test-only", "https://owner:secret@example.test/audio", "http://example.test/audio"]) assert.equal(safeUrl(url), undefined);

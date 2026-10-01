@@ -1,13 +1,14 @@
 import { Readable } from "node:stream";
 import fastify, { type FastifyInstance } from "fastify";
 import { MAX_PROGRAMME_TRACKS } from "@emily/shared";
-import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, RadioSettings, SetupStatus } from "@emily/shared";
+import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
 import { loadConfig, ENGLISH_FEMALE_VOICES, type AppConfig } from "./config.js";
 import { Store } from "./store.js";
 import { OwnerAuth } from "./auth.js";
 import { NeteaseAdapter } from "./netease.js";
 import { ProgrammeSelector } from "./model.js";
+import { ListeningConversation } from "./conversation.js";
 import { EdgeTts, type TtsPort } from "./tts.js";
 import { Radio } from "./radio.js";
 import { AppError, fail } from "./errors.js";
@@ -45,11 +46,12 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   const auth = new OwnerAuth(config, store, clock);
   const music = new NeteaseAdapter(config, store, clock);
   const selector = new ProgrammeSelector(config);
+  const conversation = new ListeningConversation(config, music, store);
   const tts = options.tts || new EdgeTts(config, clock);
   const radio = new Radio(config, store, music, selector, tts, clock);
   const mediaOpener = options.mediaOpener || openProviderMedia;
   app.decorate("services", { store, auth, music, radio });
-  app.addHook("onClose", async () => { await radio.close(); store.close(); });
+  app.addHook("onClose", async () => { await conversation.close(); await radio.close(); store.close(); });
   app.addHook("preValidation", async request => {
     // Empty action bodies are optional in the wire contract; explicit null/non-object bodies still fail.
     if (["POST", "PATCH"].includes(request.method) && request.body === undefined) request.body = {};
@@ -65,6 +67,9 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     const route = request.routeOptions.url || "";
     if (["/api/setup", "/api/music/playlists", "/api/music/search"].includes(route) && !store.takeRate("provider-read", 90, 60_000, clock())) {
       throw new AppError(429, "PROVIDER_RATE_LIMITED", "Please wait before making another provider request.");
+    }
+    if (route === "/api/conversation" && !store.takeRate("conversation", 12, 300_000, clock())) {
+      throw new AppError(429, "CONVERSATION_RATE_LIMITED", "请稍等再继续对话选曲。");
     }
     if (route === "/api/programme" && !store.takeRate("programme", 8, 300_000, clock())) {
       throw new AppError(429, "PROGRAMME_RATE_LIMITED", "Please wait before creating another programme.");
@@ -102,6 +107,9 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     if (body.playlistId && body.trackIds) throw new AppError(400, "INVALID_INPUT", "Choose a playlist or explicit tracks, not both.");
     return success(await radio.programme(body));
   });
+  app.post<{ Body: ListeningRequest }>("/api/conversation", {
+    schema: { body: objectSchema({ messages: { type: "array", minItems: 1, maxItems: 12, items: objectSchema({ role: { type: "string", enum: ["user", "assistant"] }, text: textSchema(800) }, ["role", "text"]) } }, ["messages"]), querystring: emptyQuery }
+  }, async request => success(await conversation.respond(request.body, radio.settings())));
   app.get("/api/now", { schema: { querystring: emptyQuery } }, async () => success(radio.now()));
   app.get("/api/queue", { schema: { querystring: emptyQuery } }, async () => success({ items: radio.now().queue }));
   app.post<{ Body: { trackId?: string } }>("/api/player/play", { schema: { body: objectSchema({ trackId: idSchema }), querystring: emptyQuery } }, async request => success(await radio.play(request.body?.trackId)));

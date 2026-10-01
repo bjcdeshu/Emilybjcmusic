@@ -1,6 +1,6 @@
 import type { CSSProperties, RefObject } from "react";
 import type { AudioAnalysis } from "./audio-analysis";
-import { ArrowRight, Headphones, Heart, ListMusic, Maximize2, Minimize2, Moon, Pause, Play, RefreshCw, SkipBack, SkipForward, ThumbsDown, Volume2, VolumeX } from "lucide-react";
+import { Headphones, Heart, ListMusic, Maximize2, MessageCircle, Minimize2, Moon, Pause, Play, RefreshCw, SkipBack, SkipForward, ThumbsDown, Volume2, VolumeX } from "lucide-react";
 import type { NowPlayingState, QueueItem, RadioSettings, SetupStatus } from "@emily/shared";
 import { Cover, Spinner } from "./components";
 import { formatTime, type PlaybackSnapshot } from "./playback";
@@ -12,7 +12,7 @@ type Props = {
   now: NowPlayingState | null; queue: QueueItem[]; playback: PlaybackSnapshot; settings: RadioSettings | null; setup: SetupStatus | null;
   loading: boolean; busy: boolean; feedbackBusy: boolean; feedbackKind?: string | undefined; immersive: boolean;
   toggleImmersive: () => void; play: () => void; pause: () => void; next: () => void; previous: () => void;
-  seek: (time: number) => void; volume: (volume: number) => void; quiet: () => void; library: () => void;
+  seek: (time: number) => void; volume: (volume: number) => void; quiet: () => void; library: () => void; conversation: () => void;
   feedback: (kind: "like" | "less_like_this") => void; selectTrack: (id: string) => void; retry: () => void;
 };
 const statuses = { idle: "READY WHEN YOU ARE", loading: "TUNING IN", playing: "ON AIR", paused: "TAKE YOUR TIME", blocked: "ONE TAP TO CONTINUE", error: "SIGNAL INTERRUPTED", ended: "UNTIL NEXT TIME" };
@@ -33,7 +33,7 @@ export function Player(props: Props) {
       <span className="host-clock">{formatTime(playback.time)}</span>
     </section>
     <div className="player-paper">
-      <div className="programme-heading"><span className="mint-tag"><Headphones size={13} />你的私人频道</span><button className="text-button" onClick={props.library}>选节目<ArrowRight size={15} /></button></div>
+      <div className="programme-heading"><span className="mint-tag"><Headphones size={13} />你的私人频道</span><button className="text-button" onClick={props.conversation}>聊聊想听什么<MessageCircle size={15} /></button></div>
       <h1 className="programme-title" key={now?.programmeTitle || "programme"}>{now?.programmeTitle || (now?.track ? "Your own frequency." : "此刻，\n听你喜欢。")}</h1>
       {!now?.track && <p className="intro-copy">从你的网易云歌单开始。<br />Emily 用英文串起音乐，你只管听。</p>}
       <div className="current-track" key={now?.track?.id || "track"}><Cover title={now?.track?.title || "e"} url={now?.track?.coverUrl} className="current-cover" /><div><h2>{now?.track?.title || (props.loading ? "正在读取电台" : "还没有选择歌曲")}</h2><p>{now?.track?.artist || "这里会显示你真实选择的音乐"}{now?.track?.album && <span> · {now.track.album}</span>}</p></div></div>

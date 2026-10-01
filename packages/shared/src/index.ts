@@ -74,6 +74,11 @@ export type MusicQrPollResponse = {
 };
 export const MAX_PROGRAMME_TRACKS = 12;
 export type ProgrammeRequest = { playlistId?: string; trackIds?: string[]; prompt?: string; limit?: number };
+export type ListeningMessage = { role: "user" | "assistant"; text: string };
+export type ListeningRequest = { messages: ListeningMessage[] };
+export type ListeningResponse = {
+  reply: string; tracks: Track[]; warnings: string[]; programme?: ProgrammeRequest;
+};
 export type ProgrammeResponse = PlayerActionResponse & {
   selectionSource: "model" | "playlist";
   warnings: string[];

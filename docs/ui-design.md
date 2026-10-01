@@ -37,6 +37,10 @@ All authenticated screens share the same 680px desktop surface/grid edge; mobile
 - Login: station identity + private-access caption, concise Chinese entry, same input/action styles. No giant emblem or promotional headline.
 - QR: same section heading, status frame, explanatory copy and standard primary/secondary actions. Preserve original secure dialog and owner-scoped polling.
 
+## Listening dialogue (David request / 2026-10-01)
+
+The original reference's conversation intent returns as an owner-only listening consultation. Entry inside programme heading and collection page; same graphite identity and cool-white paper modal, calm written turns, verified-track proposal and one explicit play action. Do not turn this into a general agent console or a floating third-party widget. Chinese conversation is distinct from English spoken hosting. Suggestions do not interrupt audio; close/reopen preserves volatile context, logout clears it.
+
 ## Review and boundaries
 
 Use explicit local test catalogue with sufficient covers/history to inspect actual density, plus empty/error/modal states. Capture login/listen/programme/archive/preferences/dialog at393px and desktop, and check360/768px widths and 44px controls. Side-by-side contact sheet is a review aid, not a production fixture route. Keep private screenshots outside Git. Do not modify backend/schema/TTS/playback engine or add services for this design task. Publish only after whole-screen review and existing relevant browser regression; technical success never means David accepted aesthetics.

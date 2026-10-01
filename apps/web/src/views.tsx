@@ -11,8 +11,8 @@ const programmes = [
   { name: "Open Window", tag: "让熟悉与新鲜相遇", prompt: "A bright but relaxed personal radio programme. Find a thoughtful flow from my selected music, with concise English hosting.", icon: Sparkles }
 ];
 
-type LibraryProps = { setup: SetupStatus | null; busy: boolean; createProgramme: (request: ProgrammeRequest) => void; playTrack: (id: string) => void; openQr: () => void };
-export function Library({ setup, busy, createProgramme, playTrack, openQr }: LibraryProps) {
+type LibraryProps = { setup: SetupStatus | null; busy: boolean; createProgramme: (request: ProgrammeRequest) => void; playTrack: (id: string) => void; openQr: () => void; conversation: () => void };
+export function Library({ setup, busy, createProgramme, playTrack, openQr, conversation }: LibraryProps) {
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [playlistId, setPlaylistId] = useState("");
   const [showAllPlaylists, setShowAllPlaylists] = useState(false);
@@ -59,6 +59,7 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr }: Lib
   return <section className="view-panel" aria-labelledby="library-title">
     <PageHeading id="library-title" section="节目" title="今天，想听些什么？">选一个歌单，让 Emily 串起这一段音乐。</PageHeading>
     {!setup?.music.connected ? <Empty title={setup?.music.configured ? "先连接你的音乐" : "音乐服务还没配置"} action={setup?.music.configured && <button className="primary-button" onClick={openQr}>连接网易云<ArrowUpRight size={17} /></button>}>{setup?.music.configured ? "用本人的网易云账号扫码。你的会员权限仍属于你。" : "请由服务端配置授权的网易云适配器。这里不会用示例歌曲代替真实音乐。"}</Empty> : <>
+      <button className="conversation-invitation" onClick={conversation}><Sparkles size={20}/><span><b>和 Emily 聊聊</b><small>说说想听的音乐，也可以点一首歌。</small></span><ArrowRight size={18}/></button>
       <section className="programme-section"><div className="section-heading"><h2>节目方向</h2><span className="muted tiny">节目方向，不是固定歌单</span></div>
         <div className="programme-grid">{programmes.map(({ name, tag, icon: Icon }, index) => <button key={name} className={`programme-card ${selectedProgramme === index ? "selected" : ""}`} aria-pressed={selectedProgramme === index} onClick={() => setSelectedProgramme(index)}><Icon size={22} aria-hidden="true" /><b>{name}</b><small>{tag}</small>{selectedProgramme === index && <Check size={15} className="programme-check" />}</button>)}</div>
         <label className="field-label" htmlFor="programme-prompt">或者，告诉 Emily 此刻的心情 <span className="optional">可选</span></label>

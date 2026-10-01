@@ -1,11 +1,11 @@
 # Emily personal radio — v1 integration contract
 
-Owner: Iris / Hermes default. Task: `emily-v1-english-20260930`.
+Original integration owner: Iris / Hermes default. Task: `emily-v1-english-20260930`. Pi additions follow current responsibility/authorization in development.md; original worker limits below are historical.
 This contract coordinates the two Hermes implementation workers. `packages/shared/src/index.ts` is the wire-type source. All responses use `ApiResponse<T>`; failures also use meaningful HTTP status codes. No provider cookies, keys, passwords or raw secret-bearing errors appear in JSON or logs.
 
 ## Scope and boundary
 
-Personal, single-owner Web/PWA radio; independent unbow subdomain is the eventual deployment target. Xiaomi 12S / Android Chrome is the primary client. English female hosting is the current default, adjustable voice. No public registration, shared VIP pool, rooms/chat, unlocking tracks or bypassing music entitlements. Never show mock songs/queues/progress as real external data. Test fixtures are explicitly test-only.
+Personal, single-owner Web/PWA radio; independent unbow subdomain is the eventual deployment target. Xiaomi 12S / Android Chrome is the primary client. English female hosting is the current default, adjustable voice. No public registration, shared VIP pool, public rooms/chat, unlocking tracks or bypassing music entitlements. Never show mock songs/queues/progress as real external data. Test fixtures are explicitly test-only.
 
 Local implementation/testing is authorized. Do not push, publish, modify DNS, restart existing services, change runtime profiles, log into a CLI account or use Codex CLI. Servers used in tests bind loopback only. Only the parent integrates shared files and handles publication/credential setup.
 
@@ -23,6 +23,7 @@ Local implementation/testing is authorized. Do not push, publish, modify DNS, re
 - `GET /api/music/playlists` → `PlaylistResponse`, protected.
 - `GET /api/music/search?q=...` → `MusicSearchResponse`, protected, bounded input.
 - `POST /api/programme` body `ProgrammeRequest` → `ProgrammeResponse`, protected. Assemble playable real catalogue candidates; validate model-selected IDs against those candidates. With no model, return the honest `selectionSource: playlist` and a warning, not simulated AI success. With no connected source, return a clear setup error and no fake playlist.
+- `POST /api/conversation` body `ListeningRequest` → `ListeningResponse`, owner-protected/no-store. 1–12 role=user/assistant messages, ≤800 chars each, last message nonempty user; ≤16KB body. Written conversation follows listener language, separate from English TTS. Uses the same configured model to clarify or derive at most2 music searches/one exact owner playlist, checks actual full-playback rights, then validates ≤12 unique IDs against those candidates. Returns reply/tracks/warnings and optional ProgrammeRequest proposal; NEVER mutates current queue/playback/history or synthesizes speech. Only explicit frontend acceptance calls /api/programme, rechecking rights. Missing/failed/invalid model gives honest503/502, not fake chatbot fallback. One in-flight consultation; durable12 requests/5min; model/provider calls remain bounded,95s elapsed stage budget,frontend135s. UI retains≤30 turns in volatile page memory, sends latest≤11, clears on logout/disconnect; no localStorage, chat database or logs. Conversation/context and selected catalogue metadata go to the owner's configured model, not to Tavily or a new service.
 - `GET /api/now` → `NowPlayingState`; `GET /api/queue` → `QueueResponse`, protected.
 - `POST /api/player/play` `PlayRequest`; `POST /api/player/pause`; `POST /api/player/next`; `POST /api/player/previous` → `PlayerActionResponse`, protected. Next/previous returns resolved actual track and its English DJ segment when available.
 - `POST /api/feedback` `FeedbackRequest` → `{ saved: true }`, protected. Skipping is NOT a permanent dislike.
