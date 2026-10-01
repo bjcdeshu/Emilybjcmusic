@@ -55,7 +55,45 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     const errors: string[] = [];
     const phases: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
+    const designScreens: Record<string, unknown> = {};
+    async function reviewScreen(name: string) {
+      for (const width of [393, 1360, 360, 768]) {
+        await page.setViewportSize({ width, height: width > 740 ? 1000 : 851 });
+        await page.evaluate(() => window.scrollTo({top:0,behavior:'instant'}));
+        await page.waitForTimeout(450);
+        const checks = await page.evaluate(() => {
+          const surface = document.querySelector('.view-panel,.radio-device,.login-device,.modal');
+          const button = document.querySelector('.primary-button,.main-play');
+          return { overflow: document.documentElement.scrollWidth > innerWidth, font: getComputedStyle(document.body).fontFamily, controlFont:button?getComputedStyle(button).fontFamily:null,
+            surfaceRadius: surface ? getComputedStyle(surface).borderRadius : null,
+            buttonHeight: button?.getBoundingClientRect().height ?? null };
+        });
+        assert.equal(checks.overflow, false, `${name} at ${width}px must fit`);
+        if(checks.controlFont) assert.equal(checks.controlFont, checks.font, `${name} controls must use the shared font`);
+        if (checks.buttonHeight !== null) assert(checks.buttonHeight >= 44, `${name} primary target at ${width}px`);
+        designScreens[`${name}-${width}`] = checks;
+        if (env.EMILY_BROWSER_EVIDENCE_DIR && [393,1360].includes(width)) {
+          await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
+          await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, `${width > 740 ? 'desktop' : 'mobile'}-${name}.png`), fullPage: name!=='qr-dialog' });
+        }
+      }
+      await page.setViewportSize({ width:393, height:851 });
+    }
+    // Richer collection is explicit browser-only data, never stored or published.
+    await page.route('https://*.music.126.net/**', async route => {
+      const colours = ['#476458','#657181','#806a61','#a5a080','#526678','#777465','#796477','#57776c'];
+      const url = route.request().url(); const index = Number(/fixture-cover-(\d+)/.exec(url)?.[1] || 0);
+      const base = colours[index % colours.length];
+      await route.fulfill({status:200,contentType:'image/svg+xml',body:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="${base}"/><circle cx="140" cy="70" r="75" fill="#ffffff20"/><path d="M0 170 L80 95 L200 155 V200 H0" fill="#00000020"/><text x="20" y="42" font-family="sans-serif" font-size="10" fill="white">TEST COLLECTION</text><text x="20" y="180" font-family="sans-serif" font-size="26" fill="white">${index+1}</text></svg>`});
+    });
+    await page.route('**/api/music/playlists', async route => {
+      const response = await route.fetch(); const payload = await response.json();
+      const first = {...payload.data.items[0],coverUrl:'https://p1.music.126.net/fixture-cover-0'};
+      payload.data.items = [first, ...['Fixture evening collection','Fixture quiet mornings','Fixture driving songs','Fixture familiar voices','Fixture slow weekends','Fixture piano collection','Fixture open windows'].map((name,index) => ({...first,id:String(701+index),name,coverUrl:`https://p1.music.126.net/fixture-cover-${index+1}`}))];
+      await route.fulfill({response,json:payload});
+    });
     await page.goto(origin);
+    await reviewScreen('login');
     await page.getByLabel("个人登录口令").fill(OWNER_PASSWORD);
     await page.getByRole("button", { name: "进入电台" }).click();
     await page.locator(".main-play").waitFor();
@@ -67,7 +105,12 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       });
     });
     const nav = () => page.locator(".mobile-nav");
+    await nav().getByRole("button", { name: "历史", exact: true }).click();
+    await page.getByText("第一档节目，留给现在。", {exact:true}).waitFor();
+    await reviewScreen('empty-history');
     await nav().getByRole("button", { name: "节目", exact: true }).click();
+    await page.locator('.playlist-card').first().waitFor();
+    await reviewScreen('library');
     await page.getByRole("button", { name: /Fixture owner playlist/ }).click();
     await page.getByRole("button", { name: "开始这档节目" }).click();
     await wait(page, () => {
@@ -128,13 +171,11 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await page.getByRole("button", { name: "关闭提示" }).click();
-      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-listen.png"), fullPage: true });
-      await page.setViewportSize({ width: 1360, height: 1000 });
-      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "desktop-listen.png"), fullPage: true });
-      await page.setViewportSize({ width: 393, height: 851 });
+      await reviewScreen('listen');
     }
     await nav().getByRole("button", { name: "历史", exact: true }).click();
     await page.getByRole("button", { name: "重新编排" }).waitFor();
+    await reviewScreen('history');
     const mini = page.getByRole("complementary", { name: "正在收听" });
     await mini.getByRole("button", { name: "播放", exact: true }).click();
     await wait(page, () => !document.querySelector("audio")!.paused);
@@ -143,9 +184,11 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await nav().getByRole("button", { name: "节目", exact: true }).click();
       await page.getByRole("button", { name: /Fixture owner playlist/ }).waitFor();
-      await page.screenshot({ path: join(env.EMILY_BROWSER_EVIDENCE_DIR, "mobile-library.png"), fullPage: true });
+      await reviewScreen('library');
     }
     await nav().getByRole("button", { name: "设置", exact: true }).click();
+    await page.getByLabel("英文女声", { exact: true }).waitFor();
+    await reviewScreen('settings');
     await page.getByLabel("英文女声", { exact: true }).selectOption("en-GB-SoniaNeural");
     await page.getByRole("button", { name: "保存偏好" }).click();
     await page.getByText("已保存", { exact: true }).waitFor();
@@ -162,6 +205,17 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await wait(page, () => !document.querySelector("audio")!.paused && document.querySelector("audio")!.currentSrc.includes("/api/audio/"));
     await page.getByRole("button", { name: "暂停", exact: true }).click();
     await nav().getByRole("button", { name: "设置", exact: true }).click();
+    // Inspect QR failure state without reconnecting/changing the real fixture auth.
+    await page.route('**/api/setup', async route => {
+      const response = await route.fetch(); const payload = await response.json(); payload.data.music.connected=false;
+      await route.fulfill({response,json:payload});
+    }, {times:1});
+    await page.getByRole('button',{name:'重新检查服务配置'}).click();
+    await page.getByRole('button',{name:'连接',exact:true}).click();
+    await page.getByRole('dialog').waitFor();
+    await page.waitForTimeout(500);
+    await reviewScreen('qr-dialog');
+    await page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
     await page.getByRole("button", { name: "退出个人电台" }).click();
     await page.getByLabel("个人登录口令").waitFor();
     assert.equal(await page.evaluate(() => document.querySelector("audio")!.getAttribute("src")), null);
@@ -178,7 +232,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.reload();
     await page.getByText("当前离线，需要网络才能登录。", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
+    const evidence = { realBrowser: browser.version(), mobileViewport: "393x851", phases, designScreens, realAudioSignalVerified: true, noVinylOrCoverStage: true, reducedMotionVerified: true, repairedIntroOnFirstPlay: true, pausedPositionStable: true, seek: true, feedback: true, history: true, logoutAudioCleared: true, serviceWorkerInstalled: true, offlineShell: true, cachedPaths: cached, pageErrors: errors, provider: "explicit local HTTP fixture", media: "explicit ffmpeg tone MP3 fixture, not NetEase music or human listening" };
     if (env.EMILY_BROWSER_EVIDENCE_DIR) {
       await mkdir(env.EMILY_BROWSER_EVIDENCE_DIR, { recursive: true });
       await writeFile(join(env.EMILY_BROWSER_EVIDENCE_DIR, "browser-fixture-result.json"), JSON.stringify(evidence, null, 2));

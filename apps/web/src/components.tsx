@@ -2,13 +2,22 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUpRight, Check, CheckCircle2, LoaderCircle, QrCode, RefreshCw, X } from "lucide-react";
 import type { MusicQrPollResponse, MusicQrSession, SetupStatus } from "@emily/shared";
 import { api, errorMessage, post, safeUrl } from "./api";
+import { HostWordmark } from "./HostWordmark";
+
+export function StationIdentity({ label = "Personal radio" }: { label?: string }) {
+  return <div className="station-identity"><span className="sr-only">Emily</span><HostWordmark /><span className="station-label">{label}</span></div>;
+}
+
+export function PageHeading({ id, section, title, children }: { id: string; section: string; title: string; children: ReactNode }) {
+  return <header className="view-heading"><StationIdentity label={section} /><h1 id={id}>{title}</h1><p>{children}</p></header>;
+}
 
 export function Spinner({ label = "正在载入" }: { label?: string }) {
   return <span className="spinner-label"><LoaderCircle size={17} className="spin" aria-hidden="true" />{label}</span>;
 }
 
 export function Empty({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
-  return <div className="empty-state"><span className="empty-orbit" aria-hidden="true">e</span><h3>{title}</h3><p>{children}</p>{action}</div>;
+  return <div className="empty-state"><h3>{title}</h3><p>{children}</p>{action}</div>;
 }
 
 export function Cover({ url, title, className = "" }: { url?: string | undefined; title: string; className?: string }) {
@@ -26,7 +35,7 @@ export function Modal({ title, children, close }: { title: string; children: Rea
     return () => dialog?.close();
   }, []);
   return <dialog className="modal" ref={ref} aria-labelledby="modal-title" onCancel={(e) => { e.preventDefault(); close(); }} onClick={(e) => { if (e.target === ref.current) close(); }}>
-    <div className="modal-inner"><header className="section-heading"><div><p className="eyebrow">YOUR ACCOUNT, YOUR MUSIC</p><h2 id="modal-title">{title}</h2></div><button className="icon-button" aria-label="关闭" onClick={close}><X size={22} /></button></header>{children}</div>
+    <div className="modal-inner"><header className="section-heading"><div><StationIdentity label="音乐账号" /><h2 id="modal-title">{title}</h2></div><button className="icon-button" aria-label="关闭" onClick={close}><X size={22} /></button></header>{children}</div>
   </dialog>;
 }
 
