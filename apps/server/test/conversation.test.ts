@@ -15,7 +15,7 @@ test('listening dialogue: auth/input boundaries, clarification, real rights-filt
   assert.equal((await ask(Array.from({length:13},()=>({role:'user',text:'test'})))).statusCode,400);
   provider.dialogueMode='clarify';let result=await ask([{role:'user',text:'我想换个感觉'}]);
   assert.equal(result.statusCode,200,result.body);assert.deepEqual(result.json().data.tracks,[]);assert.equal(result.json().data.programme,undefined);
-  provider.dialogueMode='valid';const messages=[{role:'user',text:'想听柔和一点的音乐'},{role:'assistant',text:'想从什么方向开始？'},{role:'user',text:'中文，别太伤感'}];
+  provider.dialogueMode='valid';provider.dialogueFormatting=true;const messages=[{role:'user',text:'想听柔和一点的音乐'},{role:'assistant',text:'想从什么方向开始？'},{role:'user',text:'中文，别太伤感'}];
   result=await ask(messages);assert.equal(result.statusCode,200,result.body);const data=result.json().data;
   assert.deepEqual(data.tracks.map((t:{id:string})=>t.id),['101','202']);assert.deepEqual(data.programme.trackIds,['101','202']);assert(data.warnings.length);
   assert.equal(result.headers['cache-control'],'private, no-store');assert(!result.body.includes(COOKIE_SENTINEL));assert(!result.body.includes('m701.music'));

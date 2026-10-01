@@ -40,6 +40,7 @@ export class HttpFixture {
   hangPath: string | undefined;
   unsafeAudio = false;
   malformedPath: string | undefined;
+  dialogueFormatting = false;
   dialogueMode: "clarify" | "valid" | "invented" | "duplicate" | "mismatch" | undefined;
   modelMode: "valid" | "invented" | "duplicate" | "biography" | "unavailable" = "valid";
   readonly server = createServer((request, response) => { void this.respond(request, response); });
@@ -81,7 +82,8 @@ export class HttpFixture {
     else if (path === "/v1/chat/completions") {
       const system = String((body.messages as {content:string}[] | undefined)?.[0]?.content || '');
       if(this.dialogueMode && system.includes('ONE private radio owner')) {
-        value={choices:[{message:{content:JSON.stringify({reply:'想听什么样的音乐？',action:this.dialogueMode==='clarify'?'clarify':'find',prompt:'柔和，但不要太伤感',queries:['Fixture artist']})}}]};
+        const plan={reply:this.dialogueFormatting?'我理解了。\n换轻松一点的音乐。':'想听什么样的音乐？',action:this.dialogueMode==='clarify'?'clarify':'find',prompt:'柔和，但不要太伤感',queries:['Fixture artist'],...(this.dialogueFormatting?{playlistId:null}:{})};
+        value={choices:[{message:{content:this.dialogueFormatting?'```json\n'+JSON.stringify(plan)+'\n```':JSON.stringify(plan)}}]};
         response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify(value));return;
       }
       if(this.dialogueMode && system.includes('Output ONLY JSON')) {

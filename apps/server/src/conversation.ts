@@ -8,8 +8,8 @@ import type { Store } from './store.js';
 function text(value: unknown, max: number): string {
   if(typeof value!=='string') throw new Error('Invalid dialogue text');
   const result=value.trim();
-  if(!result || result.length>max || /[<>`\x00-\x1f\x7f]/.test(result)) throw new Error('Invalid dialogue text');
-  return result;
+  if(!result || result.length>max || /[<>`\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(result)) throw new Error('Invalid dialogue text');
+  return result.replace(/[\r\n]+/g,' ');
 }
 /** Read-only listening consultation: never changes radio state or invokes TTS.
  * Conversation stays in the authenticated browser's memory, not SQLite/logs. */
@@ -26,7 +26,10 @@ export class ListeningConversation {
     },this.config.httpTimeoutMs,this.config.modelKey);
     const content=asRecord(asRecord(asArray(response.choices)[0]).message).content;
     if(typeof content!=='string' || content.length>16000) throw new Error('Invalid dialogue response');
-    return asRecord(JSON.parse(content));
+    // Some compatible Gemini gateways return a JSON fence despite the prompt.
+    // Strip only one enclosing fence; never repair IDs or arbitrary JSON syntax.
+    const json=content.trim().replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i,'$1');
+    return asRecord(JSON.parse(json));
   }
   async respond(request:ListeningRequest,settings:RadioSettings):Promise<ListeningResponse> {
     if(!(this.config.modelBase && this.config.modelKey && this.config.modelName)) throw new AppError(503,'CONVERSATION_UNCONFIGURED','模型尚未配置，暂时不能对话选曲。你仍可手动选择歌单或搜索歌曲。');
@@ -53,7 +56,7 @@ export class ListeningConversation {
       if(intent.action!=='find') throw new Error('Invalid action');
       text(intent.prompt,600);
     } catch {
-      throw new AppError(502,'CONVERSATION_MODEL_FAILED','模型没有返回有效的听歌建议。当前播放未改变，请重试或手动选歌。');
+      throw new AppError(502,'CONVERSATION_INTENT_FAILED','模型没有返回有效的听歌建议。当前播放未改变，请重试或手动选歌。');
     }
     checkBudget();
     const prompt=text(intent.prompt,600);
@@ -61,7 +64,7 @@ export class ListeningConversation {
     try {
       if(!Array.isArray(intent.queries) || intent.queries.length>2) throw new Error();
       queries=intent.queries.map(q=>text(q,100));
-      if(intent.playlistId!==undefined && intent.playlistId!=='') {
+      if(intent.playlistId!==undefined && intent.playlistId!==null && intent.playlistId!=='') {
         if(typeof intent.playlistId!=='string' || !playlists.some(p=>p.id===intent.playlistId)) throw new Error();
         playlistId=intent.playlistId;
       }
@@ -92,6 +95,6 @@ export class ListeningConversation {
         used.add(id);return lookup.get(id)!;
       });
       return {reply,tracks,warnings,...(tracks.length?{programme:{trackIds:tracks.map(t=>t.id),prompt,limit:tracks.length}}:{})};
-    } catch { throw new AppError(502,'CONVERSATION_MODEL_FAILED','模型建议没有通过真实目录校验。当前播放未改变，请重试或手动选歌。'); }
+    } catch { throw new AppError(502,'CONVERSATION_SELECTION_FAILED','模型建议没有通过真实目录校验。当前播放未改变，请重试或手动选歌。'); }
   }
 }
