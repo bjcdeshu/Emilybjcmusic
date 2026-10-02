@@ -243,6 +243,16 @@ input[type=range] { accent-color:var(--ink); cursor:pointer; min-width:0; }
 .listening-replace { flex-shrink:0; }
 .listening-replace > p { color:var(--muted); font-size:11px; padding-top:8px; }
 .listening-accept { width:100%; margin:8px 0; flex-shrink:0; }
+.confirm-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; }
+.programme-confirm p { margin-top:12px; line-height:1.7; }
+.listening-dialog[data-compact=true] .section-heading { padding-top:4px; padding-bottom:4px; margin-bottom:4px; }
+.listening-dialog[data-compact=true] .station-identity,.listening-dialog[data-compact=true] .listening-footnote small { display:none; }
+.listening-dialog[data-compact=true] .listening-context { margin:4px 0; }
+.listening-dialog[data-compact=true] .listening-compose { padding-top:4px; }
+.listening-dialog[data-compact=true] .listening-compose textarea { min-height:44px; height:44px; }
+.listening-dialog[data-compact=true] .listening-footnote { margin-top:2px; }
+.new-reply { align-self:center; min-height:36px; flex-shrink:0; }
+.search-add { flex-shrink:0; padding:8px 10px; font-size:12px; }
 .listening-compose { display:flex; align-items:flex-end; gap:8px; padding-top:12px; flex-shrink:0; }
 .listening-compose textarea { resize:none; min-width:0; min-height:76px; }
 .listening-compose > button { min-width:44px; padding:12px; }
@@ -251,7 +261,7 @@ input[type=range] { accent-color:var(--ink); cursor:pointer; min-width:0; }
 .listening-footnote button { flex-shrink:0; font-size:11px; }
 .voice-audition { display:flex; align-items:center; gap:12px; margin:12px 0; }
 .voice-audition > small { color:var(--muted); font-size:12px; line-height:1.6; }
-@media(max-width:740px) { .modal.listening-dialog { width:100%; max-width:100%; max-height:100dvh; border-radius:24px 24px 0 0; position:fixed; inset:auto 0 0; margin:0; border-bottom:0; } .listening-dialog .modal-inner { height:min(800px,95dvh); padding-bottom:max(16px,env(safe-area-inset-bottom,0px)); } .listening-footnote small { font-size:10px; } .voice-audition { align-items:flex-start; flex-direction:column; } }
+@media(max-width:740px) { .modal.listening-dialog { width:100%; max-width:100%; max-height:100dvh; border-radius:24px 24px 0 0; position:fixed; inset:auto 0 0; margin:0; border-bottom:0; } .listening-dialog .modal-inner { height:min(800px,95dvh,var(--dialog-viewport,95dvh)); padding-bottom:max(16px,env(safe-area-inset-bottom,0px)); } .modal.listening-dialog { bottom:var(--keyboard-bottom,0px); } .listening-footnote small { font-size:10px; } .voice-audition { align-items:flex-start; flex-direction:column; } }
 
 /* QR uses the same stage + paper as every screen. */
 .modal { width:min(480px,calc(100% - 32px)); max-height:calc(100dvh - 40px); background:var(--paper); color:var(--ink); padding:0; border:1px solid #ffffff12; border-radius:var(--radius); box-shadow:0 24px 80px #0005; }

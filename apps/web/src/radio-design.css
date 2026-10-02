@@ -50,8 +50,13 @@
 .empty-programme-action { display:flex; margin:8px auto; }
 .player-transport { display:flex; flex-direction:column; gap:16px; margin:20px 0 12px; }
 .transport-progress { width:100%; min-width:0; }
+.seek-preview { font-size:10px; color:var(--ink); }
+.lyrics-reading-tools { position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; gap:8px; background:#19211f; z-index:1; min-height:44px; font-size:12px; color:var(--muted); }
+.lyrics-full .full-lyric-line { color:var(--muted); }
+.lyrics-full .full-lyric-line[aria-current=true] { color:var(--ink); text-decoration:underline; text-underline-offset:7px; text-decoration-color:#85ddbc55; }
+.lyrics-full:focus-visible { outline:1px solid var(--muted); outline-offset:-1px; }
 .progress-label { display:flex; justify-content:space-between; color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
-.seek-range { display:block; appearance:none; -webkit-appearance:none; width:100%; margin:0; height:28px; padding:0; background:transparent; }
+.seek-range { display:block; appearance:none; -webkit-appearance:none; width:100%; margin:0; height:44px; padding:0; background:transparent; touch-action:pan-y; }
 .seek-range::-webkit-slider-runnable-track { height:3px; background:linear-gradient(to right,var(--ink) var(--progress),var(--line) var(--progress)); border-radius:3px; }
 .seek-range::-moz-range-track { height:3px; background:var(--line); border-radius:3px; }
 .seek-range::-moz-range-progress { height:3px; background:var(--ink); }
@@ -160,7 +165,8 @@
  .hosting-history-link { min-height:24px; }
  .player-paper { padding-top:10px; padding-bottom:max(12px,env(safe-area-inset-bottom,0px)); }
  .programme-title { font-size:25px; }
- .player-transport { gap:8px; margin-top:10px; }
+ .player-transport { gap:4px; margin-top:4px; }
+ .seek-range { height:36px; }
  .main-play { width:56px; height:56px; }
 }
 @media(prefers-reduced-motion:reduce) { .listen-column::before,.listen-column::after,.host-light,.listening-light,.player-paper::before,.main-play::before,.on-air > span:first-child::after { opacity:0!important; } .radio-sheet[open],.current-track { animation:none; } .host-identity .host-wordmark { opacity:.88!important; filter:none!important; } .sheet-signal i { transform:scaleY(.14); opacity:.28; } .radio-device .skip-button svg,.radio-device .listening-tools button svg,.main-play { transition:none; } .radio-device button:active svg,.main-play:active:not(:disabled) { transform:none; } }

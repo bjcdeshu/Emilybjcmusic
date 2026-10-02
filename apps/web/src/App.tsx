@@ -32,6 +32,7 @@ export function App() {
   const [qrOpen, setQrOpen] = useState(false);
   const [conversationOpen, setConversationOpen] = useState(false);
   const [conversationTurns, setConversationTurns] = useState<ListeningTurn[]>([]);
+  const [conversationDraft, setConversationDraft] = useState('');
   const [immersive, setImmersive] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const epoch = useRef(0);
@@ -91,7 +92,7 @@ export function App() {
     if (volumeTimer.current) clearTimeout(volumeTimer.current);
     playerRef.current?.stop();
     setNow(null); setQueue([]); setSetup(null); setSettings(null); setFeedbacks({});
-    setQrOpen(false); setConversationOpen(false); setConversationTurns([]); setNotice(null); setActionBusy(false); setSettingsBusy(false); setFeedbackBusy(false); setLoading(false);
+    setQrOpen(false); setConversationOpen(false); setConversationTurns([]); setConversationDraft(''); setNotice(null); setActionBusy(false); setSettingsBusy(false); setFeedbackBusy(false); setLoading(false);
     setView("listen"); setImmersive(false);
   }
 
@@ -268,7 +269,7 @@ export function App() {
   async function disconnect() {
     const currentEpoch = ++epoch.current; metadataRevision.current++; previewRevision.current++;
     setSettingsBusy(true);
-    playerRef.current?.stop(); nowRef.current = null; setNow(null); setQueue([]); setConversationOpen(false); setConversationTurns([]);
+    playerRef.current?.stop(); nowRef.current = null; setNow(null); setQueue([]); setConversationOpen(false); setConversationTurns([]); setConversationDraft('');
     try {
       const response = await post<SetupStatus>("/api/music/disconnect");
       if (currentEpoch === epoch.current) { setSetup(response); setNotice({ kind: "info", text: "已断开你的音乐账号。" }); }
@@ -311,12 +312,12 @@ export function App() {
             {!loading && !setup?.music.connected && <div className="setup-callout"><div><b>{setup?.music.configured ? "你的音乐，还差一次连接。" : "先把真实音乐接进来。"}</b><p>{setup?.music.configured ? "用自己的网易云账号扫码，然后选择一档节目。" : "音乐适配器未就绪；这里不会播放示例歌曲。"}</p></div><button className="icon-button" aria-label={setup?.music.configured ? "连接网易云" : "查看服务设置"} onClick={setup?.music.configured ? openQr : () => navigate("settings")}><ChevronRight size={22} /></button></div>}
             {notice?.kind === "error" && <button className="retry-data text-button" disabled={loading} onClick={() => void refreshPrivate()}><RefreshCw size={16} />重新读取电台数据</button>}
           </div>
-        </> : view === "library" ? <Library setup={setup} busy={actionBusy} createProgramme={createProgramme} playTrack={playTrack} openQr={openQr} conversation={() => setConversationOpen(true)} /> : view === "history" ? <RadioHistory createProgramme={createProgramme} busy={actionBusy} refreshKey={historyRefresh} /> : <Settings settings={settings} setup={setup} busy={settingsBusy} save={saveSettings} disconnect={disconnect} logout={() => void logout()} openQr={openQr} refresh={() => void refreshPrivate()} volume={playback.volume} setVolume={setVolume} canInstall={pwa.canInstall} install={pwa.install} updateReady={pwa.updateReady} previewVoice={previewVoice} stopPreview={stopPreview} previewing={playback.phase==='preview' && playback.wantsPlayback} />}
+        </> : view === "library" ? <Library setup={setup} busy={actionBusy} now={now} enqueue={enqueue} createProgramme={createProgramme} openQr={openQr} conversation={() => setConversationOpen(true)} /> : view === "history" ? <RadioHistory createProgramme={createProgramme} busy={actionBusy} refreshKey={historyRefresh} programmeId={now?.programmeId} /> : <Settings settings={settings} setup={setup} busy={settingsBusy} save={saveSettings} disconnect={disconnect} logout={() => void logout()} openQr={openQr} refresh={() => void refreshPrivate()} volume={playback.volume} setVolume={setVolume} canInstall={pwa.canInstall} install={pwa.install} updateReady={pwa.updateReady} previewVoice={previewVoice} stopPreview={stopPreview} previewing={playback.phase==='preview' && playback.wantsPlayback} />}
       </main>
       <footer className="page-footer"><span>YOUR MUSIC. A LITTLE COMPANY.</span></footer>
       {view !== "listen" && now?.track && <aside className="mini-player" data-playing={playback.status === "playing"} aria-label="正在收听"><button className="mini-track" onClick={() => navigate("listen")}><Cover title={now.track.title} url={now.track.coverUrl} /><span><b>{now.track.title}</b><small>{playback.phase === "dj" ? "Emily" : now.track.artist}</small></span></button><button className="icon-button" aria-label={playback.wantsPlayback ? "暂停" : "播放"} onClick={playback.wantsPlayback ? transportPause : transportPlay}>{playback.wantsPlayback ? <Pause size={21} fill="currentColor" /> : <Play size={21} fill="currentColor" />}</button><button className="icon-button" aria-label="下一首（不作为不喜欢反馈）" disabled={actionBusy} onClick={next}><SkipForward size={20} /></button></aside>}
       <nav className="mobile-nav" aria-label="电台导航">{tabs.map(({ id, name, icon: Icon }) => <button key={id} aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}><Icon size={20} strokeWidth={view === id ? 2.3 : 1.6} /><span>{name}</span>{id === "listen" && playback.status === "playing" && <i />}</button>)}</nav>
-      {conversationOpen && <ListeningDialog close={() => setConversationOpen(false)} setup={setup} busy={actionBusy} now={now} turns={conversationTurns} setTurns={setConversationTurns} enqueue={enqueue} createProgramme={createProgramme} />}
+      {conversationOpen && <ListeningDialog close={() => setConversationOpen(false)} setup={setup} busy={actionBusy} now={now} turns={conversationTurns} setTurns={setConversationTurns} draft={conversationDraft} setDraft={setConversationDraft} enqueue={enqueue} createProgramme={createProgramme} />}
       {qrOpen && <MusicQrDialog close={() => setQrOpen(false)} connected={() => { void refreshPrivate(); }} />}
     </div>}
   </>;

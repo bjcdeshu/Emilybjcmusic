@@ -61,8 +61,9 @@ type TextProps = {
   trackId?: string | undefined; speech?: string | undefined; language: string;
   playback: PlaybackSnapshot; quiet: boolean; covered: boolean;
   hosting: () => void; lyrics: (data: LyricsResponse) => void;
+  result: ReturnType<typeof useLyrics>;
 };
-export function ListeningText({ trackId, speech, language, playback, quiet, covered, hosting, lyrics }: TextProps) {
+export function useLyrics(trackId?: string) {
   const [result, setResult] = useState<{ id: string; data?: LyricsResponse; failed?: boolean } | null>(null);
   const cache = useRef(new Map<string, LyricsResponse>());
   useEffect(() => {
@@ -79,7 +80,10 @@ export function ListeningText({ trackId, speech, language, playback, quiet, cove
     }).catch(() => { if (!cancel.signal.aborted) setResult({ id: trackId, failed: true }); });
     return () => cancel.abort();
   }, [trackId]);
-  const data = result && result.id === trackId ? result.data : undefined;
+  return result && result.id === trackId ? result : null;
+}
+export function ListeningText({ speech, language, playback, quiet, covered, hosting, lyrics, result }: TextProps) {
+  const data = result?.data;
   if (playback.phase === "dj" && !quiet && speech) return <HostingPreview text={speech} language={language} active={playback.status === "playing" && !covered} read={hosting} />;
   const index = data?.status === "synced" ? lyricIndex(data.lines, playback.phase === "song" ? playback.time : 0) : -1;
   return <div className="song-text">
@@ -88,7 +92,7 @@ export function ListeningText({ trackId, speech, language, playback, quiet, cove
       <span className="lyric-current">{data.lines[index]?.text || "\u00a0"}</span>
       <span className="lyric-neighbour">{data.lines[index + 1]?.text || "\u00a0"}</span>
     </button> : data?.status === "plain" ? <button className="hosting-link" onClick={() => lyrics(data)}>阅读歌词 · 无同步时间</button>
-      : <span className="lyrics-note">{result && result.id === trackId && result.failed ? "歌词暂不可用" : data?.status === "instrumental" ? "纯音乐" : data?.status === "missing" ? "暂无歌词" : ""}</span>}
+      : <span className="lyrics-note">{result?.failed ? "歌词暂不可用" : data?.status === "instrumental" ? "纯音乐" : data?.status === "missing" ? "暂无歌词" : ""}</span>}
     {speech && <button className="hosting-link hosting-history-link" aria-label="阅读主持全文" onClick={hosting}>主持文案</button>}
   </div>;
 }

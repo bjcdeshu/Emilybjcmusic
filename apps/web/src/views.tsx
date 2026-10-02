@@ -1,18 +1,34 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Headphones, History, ListMusic, LogOut, Moon, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Smartphone, Sparkles, Unplug, Volume2 } from "lucide-react";
-import type { HistoryResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track } from "@emily/shared";
+import type { HistoryResponse, NowPlayingState, QueueAddResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track } from "@emily/shared";
 import { FEMALE_VOICES, MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import { api, errorMessage } from "./api";
 import { Cover, Empty, PageHeading, Spinner } from "./components";
+import { ProgrammeConfirm } from './ProgrammeConfirm';
 
 const programmes = [
-  { name: "Soft Focus", tag: "沉下来，慢一点", prompt: "A warm, unhurried programme for focused work. Gentle textures and calm, restrained hosting in the chosen host language. Keep the hosting concise.", icon: Headphones },
-  { name: "After Hours", tag: "给夜晚一点留白", prompt: "An intimate late-night radio programme with mellow music and short, thoughtful hosting in the chosen host language. No fabricated artist stories.", icon: Moon },
-  { name: "Open Window", tag: "让熟悉与新鲜相遇", prompt: "A bright but relaxed personal radio programme. Find a thoughtful flow from my selected music, with concise hosting in the chosen host language.", icon: Sparkles }
+  { name: "Soft Focus", tag: "沉下来，慢一点", prompt: "A warm, unhurried programme for focused work. Gentle textures and calm, restrained hosting in the chosen host language. Let Emily offer a grounded personal perspective with naturally varied hosting length.", icon: Headphones },
+  { name: "After Hours", tag: "给夜晚一点留白", prompt: "An intimate late-night radio programme with mellow music and thoughtful, naturally varied hosting in the chosen host language. No fabricated artist stories.", icon: Moon },
+  { name: "Open Window", tag: "让熟悉与新鲜相遇", prompt: "A bright but relaxed personal radio programme. Find a thoughtful flow from my selected music, with contextual hosting in the chosen host language.", icon: Sparkles }
 ];
 
-type LibraryProps = { setup: SetupStatus | null; busy: boolean; createProgramme: (request: ProgrammeRequest) => void; playTrack: (id: string) => void; openQr: () => void; conversation: () => void };
-export function Library({ setup, busy, createProgramme, playTrack, openQr, conversation }: LibraryProps) {
+type LibraryProps = { setup: SetupStatus | null; busy: boolean; now: NowPlayingState | null; enqueue: (id: string, programmeId: string) => Promise<QueueAddResponse>; createProgramme: (request: ProgrammeRequest) => Promise<boolean>; openQr: () => void; conversation: () => void };
+export function Library({ setup, busy, now, enqueue, createProgramme, openQr, conversation }: LibraryProps) {
+  const [pending, setPending] = useState<{request: ProgrammeRequest; scope: string | undefined} | null>(null);
+  const [adding, setAdding] = useState(''), [addMessage, setAddMessage] = useState('');
+  const mounted = useRef(true);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+  function launch(request: ProgrammeRequest) {
+    if (busy || adding) return;
+    if (now?.track) setPending({request,scope:now.programmeId}); else void createProgramme(request);
+  }
+  async function add(id: string) {
+    if (!now?.programmeId || adding || busy) return;
+    setAdding(id);setSearchError('');setAddMessage('');
+    try {const result=await enqueue(id,now.programmeId);if(mounted.current)setAddMessage(result.message);}
+    catch(e){if(mounted.current)setSearchError(errorMessage(e));}
+    finally{if(mounted.current)setAdding('');}
+  }
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [playlistId, setPlaylistId] = useState("");
   const [showAllPlaylists, setShowAllPlaylists] = useState(false);
@@ -55,9 +71,10 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr, conve
     }
   }
   function generate() {
-    createProgramme({ ...(selection.length ? { trackIds: selection } : { playlistId }), prompt: prompt.trim() || programmes[selectedProgramme]!.prompt, limit: MAX_PROGRAMME_TRACKS, roaming: !selection.length && roaming });
+    launch({ ...(selection.length ? { trackIds: selection } : { playlistId }), prompt: prompt.trim() || programmes[selectedProgramme]!.prompt, limit: MAX_PROGRAMME_TRACKS, roaming: !selection.length && roaming });
   }
   return <section className="view-panel" aria-labelledby="library-title">
+    {pending&&<ProgrammeConfirm close={()=>setPending(null)} confirm={()=>{const request=pending.request;if(pending.scope!==now?.programmeId){setPending(null);setSearchError('节目已改变，请重新确认更换。');return;}setPending(null);void createProgramme(request);}} />}
     <PageHeading id="library-title" section="节目" title="今天，想听些什么？">选一个歌单，让 Emily 串起这一段音乐。</PageHeading>
     {!setup?.music.connected ? <Empty title={setup?.music.configured ? "先连接你的音乐" : "音乐服务还没配置"} action={setup?.music.configured && <button className="primary-button" onClick={openQr}>连接网易云<ArrowUpRight size={17} /></button>}>{setup?.music.configured ? "用本人的网易云账号扫码。你的会员权限仍属于你。" : "请由服务端配置授权的网易云适配器。这里不会用示例歌曲代替真实音乐。"}</Empty> : <>
       <button className="conversation-invitation" onClick={conversation}><Sparkles size={20}/><span><b>和 Emily 聊聊</b><small>说说想听的音乐，也可以点一首歌。</small></span><ArrowRight size={18}/></button>
@@ -69,23 +86,26 @@ export function Library({ setup, busy, createProgramme, playTrack, openQr, conve
       <section><div className="section-heading"><div><h2>我的歌单</h2></div><button className="icon-button" aria-label="刷新歌单" disabled={loading} onClick={() => setRefresh((v) => v + 1)}><RefreshCw size={19} className={loading ? "spin" : ""} /></button></div>
         {loading && <Spinner label="正在读取真实歌单" />}{error && <p className="inline-error" role="alert">{error}</p>}
         {!loading && !error && !playlists.length && <p className="muted">当前账号没有返回歌单。可以重试，或在下方搜索音乐来编排。</p>}
-        <div className="programme-launch"><div><b>{selection.length ? `已选 ${selection.length} 首搜索结果` : playlists.find((p) => p.id === playlistId)?.name || "选一个歌单，开启这档节目"}</b><p>{setup.model.configured ? "Emily 会为你选曲，并准备简短串场。" : "按歌单顺序编排，模型选曲暂不可用。"}</p></div><button className="primary-button" disabled={busy || (!playlistId && !selection.length)} onClick={generate}>{busy ? <Spinner label="准备节目" /> : <>开始这档节目<ArrowRight size={18} /></>}</button></div>
+        <div className="programme-launch"><div><b>{selection.length ? `已选 ${selection.length} 首搜索结果` : playlists.find((p) => p.id === playlistId)?.name || "选一个歌单，开启这档节目"}</b><p>{setup.model.configured ? "Emily 会为你选曲，并准备有上下文的串场。" : "按歌单顺序编排，模型选曲暂不可用。"}</p></div><button className="primary-button" disabled={busy || !!adding || (!playlistId && !selection.length)} onClick={generate}>{busy ? <Spinner label="准备节目" /> : <>开始这档节目<ArrowRight size={18} /></>}</button></div>
         <label className="checkbox-field"><input type="checkbox" checked={roaming} disabled={!!selection.length} onChange={e=>setRoaming(e.target.checked)} /><span><b>原歌单自动漫游</b><small>每批最多12首，快到末尾自动续选；本轮不重复，不跳到其他歌单。歌曲耗尽后停止。</small></span></label>
         <div className="playlist-grid">{(showAllPlaylists ? playlists : playlists.slice(0, 8)).map((playlist) => <button key={playlist.id} className={`playlist-card ${playlistId === playlist.id && !selection.length ? "selected" : ""}`} aria-pressed={playlistId === playlist.id && !selection.length} onClick={() => { setPlaylistId(playlist.id); setSelection([]); }}><Cover url={playlist.coverUrl} title={playlist.name} /><span><b>{playlist.name}</b><small>{playlist.trackCount !== undefined ? `${playlist.trackCount} 首` : "网易云歌单"}</small></span>{playlistId === playlist.id && !selection.length ? <Check size={18} /> : <ChevronRight size={17} />}</button>)}</div>
         {playlists.length > 8 && <button className="text-button collection-more" aria-expanded={showAllPlaylists} onClick={() => setShowAllPlaylists(v => !v)}>{showAllPlaylists ? "收起歌单" : `查看全部 ${playlists.length} 个歌单`}<ChevronRight size={16} /></button>}
       </section>
       <section className="search-section"><div className="section-heading"><div><h2>搜索音乐</h2></div><Search size={21} aria-hidden="true" /></div><form className="search-form" onSubmit={(e) => void search(e)}><label htmlFor="music-query" className="sr-only">歌曲或歌手</label><input id="music-query" type="search" value={query} maxLength={100} onChange={(e) => setQuery(e.target.value)} placeholder="歌曲、歌手、专辑…" /><button className="primary-button" disabled={searching || !query.trim()} type="submit">{searching ? <LoaderLabel /> : "搜索"}</button></form>
         <p className="muted tiny">曲目能否完整播放，以你本人的账号权限和音源返回为准。最多选 30 首参与编排。</p>
+        {addMessage&&<p className="inline-good" role="status">{addMessage}</p>}
         {searchError && <p className="inline-error" role="alert">{searchError}</p>}{results && !results.length && <p className="muted">没有找到相关音乐，试试其他关键词。</p>}
-        <div className="track-list">{results?.map((track) => <div className="track-row" key={track.id}><label className="select-track"><input type="checkbox" aria-label={`选择 ${track.title} 参与节目`} checked={selection.includes(track.id)} disabled={!selection.includes(track.id) && selection.length >= 30} onChange={(e) => setSelection((old) => e.target.checked ? [...old, track.id] : old.filter((id) => id !== track.id))} /><Cover title={track.title} url={track.coverUrl} /></label><span className="track-row-copy"><b>{track.title}</b><small>{track.artist}{track.album ? ` · ${track.album}` : ""}</small></span><button className="icon-button" disabled={busy} aria-label={`播放 ${track.title}`} onClick={() => playTrack(track.id)}><ArrowUpRight size={20} /></button></div>)}</div>
-        {!!selection.length && <button className="secondary-button selection-action" disabled={busy} onClick={generate}><ListMusic size={18} />用这 {selection.length} 首编排节目<ArrowRight size={17} /></button>}
+        <div className="track-list">{results?.map((track) => <div className="track-row" key={track.id}><label className="select-track"><input type="checkbox" aria-label={`选择 ${track.title} 参与节目`} checked={selection.includes(track.id)} disabled={!selection.includes(track.id) && selection.length >= 30} onChange={(e) => setSelection((old) => e.target.checked ? [...old, track.id] : old.filter((id) => id !== track.id))} /><Cover title={track.title} url={track.coverUrl} /></label><span className="track-row-copy"><b>{track.title}</b><small>{track.artist}{track.album ? ` · ${track.album}` : ""}</small></span><button className="secondary-button search-add" disabled={busy||!!adding} aria-label={now?.track?`加入待播：${track.title} · ${track.artist}`:`从这首开始：${track.title}`} onClick={() => now?.track?void add(track.id):launch({trackIds:[track.id],limit:1,ordered:true})}>{adding===track.id?'加入中':now?.track?'加入待播':'从这首开始'}</button></div>)}</div>
+        {!!selection.length && <button className="secondary-button selection-action" disabled={busy||!!adding} onClick={generate}><ListMusic size={18} />用这 {selection.length} 首编排节目<ArrowRight size={17} /></button>}
       </section>
     </>}
   </section>;
 }
 function LoaderLabel() { return <Spinner label="搜索中" />; }
 
-export function RadioHistory({ createProgramme, busy, refreshKey }: { createProgramme: (request: ProgrammeRequest) => void; busy: boolean; refreshKey: number }) {
+export function RadioHistory({ createProgramme, busy, refreshKey, programmeId }: { createProgramme: (request: ProgrammeRequest) => void; busy: boolean; refreshKey: number; programmeId?: string | undefined }) {
+  const [pending,setPending]=useState<{request:ProgrammeRequest;scope:string}|null>(null);
+  function revisit(request:ProgrammeRequest){if(programmeId)setPending({request,scope:programmeId});else createProgramme(request);}
   const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -99,8 +119,8 @@ export function RadioHistory({ createProgramme, busy, refreshKey }: { createProg
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [refreshKey, retry]);
-  return <section className="view-panel" aria-labelledby="history-title"><PageHeading id="history-title" section="历史" title="听过的时光">回到一档听过的节目，或者让熟悉的音乐重新排列。</PageHeading><div className="section-heading"><h2>节目历史</h2><button className="icon-button" aria-label="刷新历史" disabled={loading} onClick={() => setRetry((v) => v + 1)}><RefreshCw size={19} className={loading ? "spin" : ""} /></button></div>{loading && <Spinner />}{error && <p className="inline-error" role="alert">{error}</p>}{!loading && !error && !history?.items.length && <Empty title="第一档节目，留给现在。">开始听歌后，节目记录会出现在这里。</Empty>}
-    <div className="history-list">{history?.items.map((entry) => <article className="history-card" key={entry.id}><div className="section-heading"><span className="muted tiny">{entry.tracks.length} 首音乐</span><time dateTime={entry.createdAt}>{dateLabel(entry.createdAt)}</time></div><h3>{entry.title}</h3><div className="history-tracks">{entry.tracks.map((track, index) => <span key={`${track.id}-${index}`}><b>{track.title}</b><small>{track.artist}</small></span>)}</div><button className="secondary-button" disabled={busy || !entry.tracks.length} onClick={() => createProgramme({ trackIds: entry.tracks.map((track) => track.id).slice(0, 30), prompt: `Revisit this personal programme: ${entry.title}. Concise English hosting.`, limit: Math.min(entry.tracks.length, MAX_PROGRAMME_TRACKS) })}>重新编排<ArrowUpRight size={17} /></button></article>)}</div>
+  return <section className="view-panel" aria-labelledby="history-title">{pending&&<ProgrammeConfirm close={()=>setPending(null)} confirm={()=>{const proposal=pending;setPending(null);if(!busy&&proposal.scope===programmeId)createProgramme(proposal.request);}} />}<PageHeading id="history-title" section="历史" title="听过的时光">回到一档听过的节目，或者让熟悉的音乐重新排列。</PageHeading><div className="section-heading"><h2>节目历史</h2><button className="icon-button" aria-label="刷新历史" disabled={loading} onClick={() => setRetry((v) => v + 1)}><RefreshCw size={19} className={loading ? "spin" : ""} /></button></div>{loading && <Spinner />}{error && <p className="inline-error" role="alert">{error}</p>}{!loading && !error && !history?.items.length && <Empty title="第一档节目，留给现在。">开始听歌后，节目记录会出现在这里。</Empty>}
+    <div className="history-list">{history?.items.map((entry) => <article className="history-card" key={entry.id}><div className="section-heading"><span className="muted tiny">{entry.tracks.length} 首音乐</span><time dateTime={entry.createdAt}>{dateLabel(entry.createdAt)}</time></div><h3>{entry.title}</h3><div className="history-tracks">{entry.tracks.map((track, index) => <span key={`${track.id}-${index}`}><b>{track.title}</b><small>{track.artist}</small></span>)}</div><button className="secondary-button" disabled={busy || !entry.tracks.length} onClick={() => revisit({ trackIds: entry.tracks.map((track) => track.id).slice(0, 30), prompt: `Revisit this personal programme: ${entry.title}. Use the chosen host language and contextual hosting with naturally varied length.`, limit: Math.min(entry.tracks.length, MAX_PROGRAMME_TRACKS) })}>重新编排<ArrowUpRight size={17} /></button></article>)}</div>
   </section>;
 }
 function voiceLabel(id: string) {
