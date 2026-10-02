@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, Check, ChevronRight, CircleAlert, History as HistoryIcon, ListMusic, LockKeyhole, Pause, Play, Radio, RefreshCw, Settings2, ShieldCheck, SkipForward, WifiOff, X } from "lucide-react";
-import type { AuthSession, FeedbackRequest, NowPlayingState, PlayerActionResponse, ProgrammeRequest, ProgrammeResponse, QueueAddResponse, QueueItem, QueueResponse, RadioSettings, SetupStatus, VoicePreviewResponse } from "@emily/shared";
+import type { AuthSession, FeedbackRequest, NowPlayingState, PlayerActionResponse, ProgrammeRequest, ProgrammeResponse, QueueAddResponse, QueueItem, QueueResponse, RadioSettings, SetupStatus, VoicePreviewResponse, VoicePreviewSample } from "@emily/shared";
 import { api, errorMessage, post } from "./api";
 import { Cover, MusicQrDialog, Spinner, StationIdentity } from "./components";
 import { useMediaSession, usePwa, useRadioAudio } from "./hooks";
@@ -178,12 +178,12 @@ export function App() {
       return result;
     } finally { queueAdding.current = false; }
   }
-  async function previewVoice(voice: string): Promise<void> {
+  async function previewVoice(voice: string, sample: VoicePreviewSample): Promise<void> {
     const player = playerRef.current, currentEpoch = epoch.current;
     if (!player) throw new Error("播放器尚未就绪。");
     player.endPreview(); transportPause();
     const revision = ++previewRevision.current;
-    const result = await post<VoicePreviewResponse>("/api/tts/preview",{voice});
+    const result = await post<VoicePreviewResponse>("/api/tts/preview",{voice,sample});
     if (revision !== previewRevision.current || currentEpoch !== epoch.current || !sessionRef.current?.authenticated) throw new Error("已取消试听。");
     if (player.snapshot.wantsPlayback) throw new Error("音乐已恢复播放，本次试听取消。");
     await player.preview(result.segment.audioUrl!);

@@ -29,6 +29,16 @@ function setup(advance = async () => fixture("test-song-2")) {
 }
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
+test("audition and hosting use identical gain, including live volume changes and paused restoration", async () => {
+  const { player, audio } = setup(); player.setVolume(.6); player.restore(fixture());
+  const hostingVolume=audio.volume;assert.equal(hostingVolume,.6*.9);
+  audio.currentTime=3;await player.preview('/test-only/preview.wav');assert.equal(audio.volume,hostingVolume);
+  player.setVolume(.4);assert.equal(audio.volume,.4*.9);player.endPreview();audio.dispatchEvent(new Event('loadedmetadata'));
+  assert.equal(audio.volume,.4*.9);assert.equal(audio.currentTime,3);assert.equal(audio.paused,true);
+  player.setDjEnabled(false);assert.equal(audio.volume,.4);assert.equal(player.snapshot.phase,'song');
+  await player.preview('/test-only/preview.wav');player.setVolume(0);assert.equal(audio.volume,0);player.endPreview();assert.equal(audio.volume,0);
+});
+
 test("restored server playing is metadata only, never autoplay", () => {
   const { player, audio } = setup(); player.restore(fixture());
   assert.equal(audio.played.length, 0); assert.equal(player.snapshot.status, "paused"); assert.equal(player.snapshot.wantsPlayback, false);

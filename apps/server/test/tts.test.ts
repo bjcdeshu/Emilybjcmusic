@@ -30,7 +30,8 @@ const fixtureExecutor: TtsExecutor = (command, args, options, callback) => {
 test("Edge CLI uses argument arrays, allowlisted female metadata, cache and no application secrets in child env", async () => {
   const directory = await temporaryDirectory(); const command = join(directory, "edge-tts");
   await writeFile(command, CLI_FIXTURE); await chmod(command, 0o700);
-  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command }), Date.now, fixtureExecutor);
+  // This explicit CLI fixture is not decodable; real decoder tests are separate.
+  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command }), Date.now, fixtureExecutor, async () => true);
   try {
     assert.equal(await tts.available("en-US-EmmaMultilingualNeural"), true);
     assert.equal(await tts.available("en-US-GuyNeural"), false);
@@ -63,7 +64,7 @@ test("Edge CLI uses argument arrays, allowlisted female metadata, cache and no a
 test("Edge timeout fails honestly with text, never fake audio or escaped subprocess errors", async () => {
   const directory = await temporaryDirectory(); const command = join(directory, "edge-tts");
   await writeFile(command, CLI_FIXTURE); await chmod(command, 0o700);
-  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command, EMILY_TTS_TIMEOUT_MS: "1000" }), Date.now, fixtureExecutor);
+  const tts = new EdgeTts(loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: command, EMILY_TTS_TIMEOUT_MS: "1000" }), Date.now, fixtureExecutor, async () => true);
   try {
     const segment = await tts.segment("TIMEOUT", "en-US-EmmaMultilingualNeural");
     assert.equal(segment.status, "tts_failed"); assert.equal(segment.audioUrl, undefined); assert.equal(segment.text, "TIMEOUT");

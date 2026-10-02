@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import fastify, { type FastifyInstance } from "fastify";
-import { MAX_PROGRAMME_TRACKS } from "@emily/shared";
+import { MAX_PROGRAMME_TRACKS, VOICE_PREVIEW_SAMPLES, voiceLanguage, type VoicePreviewSample } from "@emily/shared";
 import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, QueueAddRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
 import { loadConfig, FEMALE_VOICES, type AppConfig } from "./config.js";
@@ -11,6 +11,7 @@ import { ProgrammeSelector } from "./model.js";
 import { ListeningConversation } from "./conversation.js";
 import { EdgeTts, type TtsPort } from "./tts.js";
 import { Radio } from "./radio.js";
+import { VOICE_SAMPLES } from "./tts-samples.js";
 import { AppError, fail } from "./errors.js";
 import { openProviderMedia, providerMediaUrl, sendLocalAudio, validateRange, type MediaOpener } from "./media.js";
 import { registerFrontend } from "./static.js";
@@ -93,9 +94,9 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
       djEnabled: { type: "boolean" }, discovery: { type: "boolean" }, mood: textSchema(160), volume: { type: "number", minimum: 0, maximum: 1 }
     }), minProperties: 1 }, querystring: emptyQuery }
   }, async request => success(radio.updateSettings(request.body)));
-  app.post<{ Body: { voice: string } }>("/api/tts/preview", { schema: { body: objectSchema({ voice: { type: "string", enum: [...FEMALE_VOICES] } }, ["voice"]), querystring: emptyQuery } }, async request => {
+  app.post<{ Body: { voice: string; sample?: VoicePreviewSample } }>("/api/tts/preview", { schema: { body: objectSchema({ voice: { type: "string", enum: [...FEMALE_VOICES] }, sample: { type: "string", enum: [...VOICE_PREVIEW_SAMPLES] } }, ["voice"]), querystring: emptyQuery } }, async request => {
     // Fixed neutral sample only: not an unrestricted synthesis/public proxy.
-    const text = request.body.voice.startsWith("zh-") ? "好，那就听这一首。听完以后，我们再接着选。" : "Here is the next song. Take your time; the music can wait.";
+    const text = VOICE_SAMPLES[voiceLanguage(request.body.voice)][request.body.sample || "transition"];
     const segment = await tts.segment(text, request.body.voice);
     if (segment.status !== "tts_ready") throw new AppError(503, "TTS_UNAVAILABLE", "声线试听暂不可用，当前列表未改变。");
     return success({ segment });

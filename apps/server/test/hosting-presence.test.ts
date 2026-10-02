@@ -10,6 +10,7 @@ const hostCalls = (p: HttpFixture) => p.requests.filter(r=>r.path==='/v1/chat/co
 test('Emily policy allows emotional paragraphs with bounded factual and listener boundaries, not one-sentence reporting', () => {
   assert.match(EMILY_MANDARIN_HOST,/60–140/); assert.match(EMILY_MANDARIN_HOST,/好奇/); assert.match(EMILY_MANDARIN_HOST,/不重复近期/);
   assert.match(EMILY_MANDARIN_HOST,/不能编造/); assert.match(EMILY_MANDARIN_HOST,/不替用户判断/);
+  assert.match(EMILY_MANDARIN_HOST,/气口/);assert.match(EMILY_MANDARIN_HOST,/不删掉完整想法和情感/);assert.match(EMILY_MANDARIN_HOST,/不输出笑声/);
   assert(!EMILY_MANDARIN_HOST.includes('12-45')); assert.match(EMILY_MANDARIN_HOST,/没有听过/);
 });
 
@@ -43,11 +44,11 @@ test('ordered confirmation writes hosting without reselecting; pending manual ad
  }finally{await cleanup(app,dir);await p.close();}
 });
 
-test('restart retires old short Chinese DJ lazily while preserving queue, original roaming, history and quiet; current version reused',async()=>{
+test('restart retires prior Chinese writing version lazily while preserving queue, original roaming, history and quiet; current version reused',async()=>{
  const dir=await temporaryDirectory(),p=new HttpFixture();await p.start();let app=fixtureApp(dir,env(p),{tts:new FixtureTts(dir,true)});
  try {
   app.services.radio.updateSettings({djEnabled:false});await app.services.radio.programme({playlistId:'700',limit:2,roaming:false});
-  const state=app.services.store.get<any>('radio');for(const item of state.items){delete item.hostingVersion;item.hosting='下一首，听测试歌。';item.dj={voice:'zh-CN-XiaoxiaoNeural',language:'zh',text:item.hosting,status:'tts_ready'};}app.services.store.set('radio',state);
+  const state=app.services.store.get<any>('radio');for(const item of state.items){item.hostingVersion=HOSTING_VERSION-1;item.hosting='这是上一版保留的测试段落。下一首，听测试歌。';item.dj={voice:'zh-CN-XiaoxiaoNeural',language:'zh',text:item.hosting,status:'tts_ready'};}app.services.store.set('radio',state);
   const history=app.services.store.history();await app.close();const count=hostCalls(p).length;
   app=fixtureApp(dir,env(p),{tts:new FixtureTts(dir,true)});
   assert.equal(hostCalls(p).length,count);assert.equal(app.services.radio.settings().djEnabled,false);assert.equal(app.services.radio.now().dj,undefined);

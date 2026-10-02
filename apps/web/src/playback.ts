@@ -12,6 +12,8 @@ export type PlaybackSnapshot = {
   message?: string | undefined;
   warning?: string | undefined;
 };
+// Auditions must use the exact same speech gain as real hosting.
+const phaseGain = (phase: AudioPhase) => phase === "dj" || phase === "preview" ? 0.9 : 1;
 export const initialPlayback: PlaybackSnapshot = {
   phase: "idle", status: "idle", time: 0, duration: 0, volume: 0.55, wantsPlayback: false
 };
@@ -110,7 +112,7 @@ export class RadioAudio {
     const volume = Math.min(1, Math.max(0, value));
     this.emit({ volume });
     // A small difference, never a second overlapping source or a loud transition.
-    this.audio.volume = volume * (this.state.phase === "dj" ? 0.9 : 1);
+    this.audio.volume = volume * phaseGain(this.state.phase);
   }
 
   setDjEnabled(enabled: boolean) {
@@ -153,7 +155,7 @@ export class RadioAudio {
     if (restore.url) this.audio.src = restore.url;
     else this.audio.removeAttribute("src");
     this.audio.load();
-    this.audio.volume = volume * (restore.snapshot.phase === "dj" ? .9 : 1);
+    this.audio.volume = volume * phaseGain(restore.snapshot.phase);
     const restoreTime = () => {
       this.clearPositionRestore();
       if (this.audio.src !== restore.url || this.previewRestore || this.destroyed) return;
@@ -233,7 +235,7 @@ export class RadioAudio {
     this.audio.pause();
     this.emit({ phase, status: this.state.wantsPlayback ? "loading" : "paused", time: 0, duration: 0, message: undefined });
     this.audio.src = safe;
-    this.audio.volume = this.state.volume * (phase === "dj" ? 0.9 : 1);
+    this.audio.volume = this.state.volume * phaseGain(phase);
     this.audio.load();
     if (this.state.wantsPlayback) void this.play();
     else this.switching = false;

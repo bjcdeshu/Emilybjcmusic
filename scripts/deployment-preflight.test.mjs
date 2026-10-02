@@ -70,6 +70,12 @@ test('restored database and audio directory must also be protected', () => fixtu
   assert(failed(result).includes('existing_audio_private'));
 }));
 
+test('missing local TTS decoder fails offline preflight', () => fixture(async ({ config, options }) => {
+  const path = process.env.PATH;
+  try { process.env.PATH = ''; const result = await deploymentPreflight(config, options); assert(failed(result).includes('tts_decoder_present')); }
+  finally { if(path === undefined) delete process.env.PATH; else process.env.PATH=path; }
+}));
+
 test('broad POSIX permissions are not mistaken for privacy', () => fixture(async ({ config, options, data, envFile }) => {
   await chmod(data, 0o755);
   await chmod(envFile, 0o644);

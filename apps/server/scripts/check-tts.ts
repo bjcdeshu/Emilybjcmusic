@@ -5,13 +5,14 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { loadConfig } from "../src/config.js";
 import { EdgeTts } from "../src/tts.js";
+import { VOICE_SAMPLES } from "../src/tts-samples.js";
 
 const directory = await mkdtemp(join(process.env.TMPDIR || tmpdir(), "emily-real-edge-check-"));
 try {
   const config = loadConfig({ EMILY_DATA_DIR: directory, EMILY_TTS_COMMAND: process.env.EMILY_TTS_COMMAND || "uvx", EMILY_TTS_VOICE: process.env.EMILY_TTS_VOICE, EMILY_TTS_TIMEOUT_MS: "60000" });
   const tts = new EdgeTts(config);
   assert.equal(await tts.available(config.voice), true, "Selected female voice was not found in real Edge metadata");
-  const text = config.voice.startsWith("zh-") ? "好，那就听这一首。听完以后，我们再接着选。" : "You're listening to Emily. Take a breath, settle in, and let the music find its pace.";
+  const text = VOICE_SAMPLES[config.voice.startsWith("zh-") ? "zh" : "en"].reflective;
   const segment = await tts.segment(text, config.voice);
   assert.equal(segment.status, "tts_ready", "Real Edge synthesis failed");
   const file = join(tts.audioDir, `${segment.id}.mp3`);

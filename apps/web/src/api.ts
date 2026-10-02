@@ -18,7 +18,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const timeout = new AbortController();
   // Programme preparation is bounded by provider selection plus first TTS.
   // Ordinary controls stay short; do not abort a valid preparation at 45 seconds.
-  const timer = setTimeout(() => timeout.abort(), path === "/api/programme" || path === "/api/conversation" || path === "/api/queue/add" || path.startsWith("/api/player/") ? 135_000 : path === "/api/tts/preview" ? 75_000 : 45_000);
+  const timer = setTimeout(() => timeout.abort(), path === "/api/programme" || path === "/api/conversation" || path === "/api/queue/add" || path.startsWith("/api/player/") ? 135_000 : path === "/api/tts/preview" ? 85_000 : 45_000);
   const signal = init.signal ? AbortSignal.any([init.signal, timeout.signal]) : timeout.signal;
   try {
     const response = await fetch(path, {

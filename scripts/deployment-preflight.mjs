@@ -70,6 +70,16 @@ export async function deploymentPreflight(config, { envFile, repoDir = repositor
     } catch { /* No executable path or filesystem errors are printed. */ }
   }
   check('tts_executable_present', executable);
+  // Production synthesis now requires a bounded local decode before publishing.
+  let decoder = false;
+  for (const directory of (process.env.PATH || '').split(delimiter).filter(Boolean)) {
+    try {
+      const file = join(directory, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+      if (!(await lstat(file)).isFile()) continue;
+      await access(file, constants.X_OK); decoder = true; break;
+    } catch { /* Do not print operator paths. */ }
+  }
+  check('tts_decoder_present', decoder);
   return { ok: checks.every(item => item.ok), checks, limitations: ['Offline configuration check only; adapter unlock policy, provider calls, DNS/TLS, proxy rules and physical phone playback still require verification.'] };
 }
 

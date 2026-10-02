@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Headphones, History, ListMusic, LogOut, Moon, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Smartphone, Sparkles, Unplug, Volume2 } from "lucide-react";
-import type { HistoryResponse, NowPlayingState, QueueAddResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track } from "@emily/shared";
+import type { HistoryResponse, NowPlayingState, QueueAddResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track, VoicePreviewSample } from "@emily/shared";
 import { FEMALE_VOICES, MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import { api, errorMessage } from "./api";
 import { Cover, Empty, PageHeading, Spinner } from "./components";
@@ -134,11 +134,12 @@ type SettingsProps = {
   save: (patch: Partial<RadioSettings>) => Promise<boolean>; disconnect: () => Promise<void>;
   logout: () => void; openQr: () => void; refresh: () => void; volume: number; setVolume: (value: number) => void;
   canInstall: boolean; install: () => Promise<void>; updateReady: boolean;
-  previewVoice: (voice: string) => Promise<void>; stopPreview: () => void; previewing: boolean;
+  previewVoice: (voice: string, sample: VoicePreviewSample) => Promise<void>; stopPreview: () => void; previewing: boolean;
 };
 export function Settings(props: SettingsProps) {
   const { settings, setup, busy, save } = props;
   const [voice, setVoice] = useState(settings?.voice || "");
+  const [sample, setSample] = useState<VoicePreviewSample>("transition");
   const [mood, setMood] = useState(settings?.mood || "");
   const [discovery, setDiscovery] = useState(settings?.discovery ?? false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
@@ -146,18 +147,19 @@ export function Settings(props: SettingsProps) {
   const [previewLoading,setPreviewLoading] = useState(false), [previewError,setPreviewError] = useState('');
   const stop = useRef(props.stopPreview); stop.current = props.stopPreview;
   useEffect(()=>()=>stop.current(),[]);
-  async function audition() { setPreviewLoading(true); setPreviewError(''); try { await props.previewVoice(voice); } catch(e) { setPreviewError(errorMessage(e)); } finally { setPreviewLoading(false); } }
+  async function audition() { setPreviewLoading(true); setPreviewError(''); try { await props.previewVoice(voice, sample); } catch(e) { setPreviewError(errorMessage(e)); } finally { setPreviewLoading(false); } }
   useEffect(() => { setVoice(settings?.voice || ""); setMood(settings?.mood || ""); setDiscovery(settings?.discovery ?? false); }, [settings?.voice, settings?.mood, settings?.discovery]);
   async function submit(e: FormEvent) { e.preventDefault(); setSaved(false); setSaved(await save({ voice: voice.trim(), mood: mood.trim(), discovery })); }
   return <section className="view-panel" aria-labelledby="settings-title"><PageHeading id="settings-title" section="设置" title="按你的方式听。">调整主持声音、选曲偏好和你的音乐连接。</PageHeading>
     <section className="settings-card"><div className="heading-icon"><Headphones size={22} /><h2>听感</h2></div><div className="service-row"><span><b>安静模式</b><small>跳过语音串场，继续听歌；可随时关闭。</small></span><button className={`switch ${settings && !settings.djEnabled ? "on" : ""}`} role="switch" aria-checked={settings ? !settings.djEnabled : false} aria-label="安静模式" disabled={!settings || busy} onClick={() => { void save({ djEnabled: !settings?.djEnabled }); }}><span /></button></div><label className="volume-setting"><Volume2 size={19} /><span>播放器音量</span><input type="range" min="0" max="1" step="0.01" aria-label="播放器音量" value={props.volume} onChange={(e) => props.setVolume(Number(e.target.value))} /><output>{Math.round(props.volume * 100)}%</output></label>
       <p className="muted tiny">Android 的系统媒体音量仍由手机音量键控制。</p>
     </section>
-    <form className="settings-card settings-form" onSubmit={(e) => void submit(e)}><div className="heading-icon"><SlidersHorizontal size={22} /><h2>主持与选曲</h2></div><div className="service-row"><span><b>主持语言</b><small>随所选声线切换；默认中文，简短自然。</small></span><span className="pill">{voice.startsWith("zh-") ? "中文" : "English"}</span></div>
-      <label className="field-label" htmlFor="voice-id">主持女声</label><select id="voice-id" value={voice} required disabled={!settings} onChange={(e) => { setVoice(e.target.value); setSaved(false); }}>{FEMALE_VOICES.map(id => <option key={id} value={id}>{voiceLabel(id)}</option>)}</select>
-      <div className="voice-audition"><button type="button" className="secondary-button" disabled={!settings||busy||previewLoading} onClick={()=>{if(props.previewing)props.stopPreview();else void audition();}}>{previewLoading?<Spinner label="准备试听"/>:props.previewing?'停止试听':'试听这条声线'}<Volume2 size={16}/></button><small>试听会暂停音乐，结束后仍暂停。未保存前不更换主持声线。</small></div>
+    <form className="settings-card settings-form" onSubmit={(e) => void submit(e)}><div className="heading-icon"><SlidersHorizontal size={22} /><h2>主持与选曲</h2></div><div className="service-row"><span><b>主持语言</b><small>随所选声线切换；有上下文、有长短变化的自然表达。</small></span><span className="pill">{voice.startsWith("zh-") ? "中文" : "English"}</span></div>
+      <label className="field-label" htmlFor="voice-id">主持女声</label><select id="voice-id" value={voice} required disabled={!settings} onChange={(e) => { props.stopPreview(); setVoice(e.target.value); setSaved(false); }} >{FEMALE_VOICES.map(id => <option key={id} value={id}>{voiceLabel(id)}</option>)}</select>
+      <label className="field-label" htmlFor="voice-sample">试听段落</label><select id="voice-sample" value={sample} disabled={previewLoading} onChange={e=>{props.stopPreview();setSample(e.target.value as VoicePreviewSample);}}><option value="transition">自然过渡</option><option value="bright">轻快回应</option><option value="reflective">稍长表达</option></select>
+      <div className="voice-audition"><button type="button" className="secondary-button" disabled={!settings||busy||previewLoading} onClick={()=>{if(props.previewing)props.stopPreview();else void audition();}}>{previewLoading?<Spinner label="准备试听"/>:props.previewing?'停止试听':'试听这条声线'}<Volume2 size={16}/></button><small>固定示例，和正式主持使用相同音量处理。试听会暂停音乐，结束后仍暂停；未保存前不更换声线。</small></div>
       {previewError&&<p className="inline-error" role="alert">{previewError}</p>}
-      <p className="muted tiny">中文串场缩为一两句，语速轻缓，不强加抒情套话。可比较普通话与台湾国语；这不是自然听感的保证，请按实际听感选择。保存后在下一段主持生效。</p>
+      <p className="muted tiny">可用同一段文字比较普通话与台湾国语，再换一段听听长句与停顿。段落名称表示文稿语气，不是引擎情绪模式；不加配乐或混响。自然度请按实际听感判断，保存后在下一段主持生效。</p>
       <label className="field-label" htmlFor="default-mood">默认节目心情</label><input id="default-mood" value={mood} maxLength={120} disabled={!settings} onChange={(e) => { setMood(e.target.value); setSaved(false); }} placeholder="calm, warm, thoughtful" />
       <label className="checkbox-field"><input type="checkbox" checked={discovery} disabled={!settings} onChange={(e) => { setDiscovery(e.target.checked); setSaved(false); }} /><span><b>允许更多探索</b><small>在可播放的真实候选中，给不常听的音乐一点空间。</small></span></label>
       <div className="button-row"><button className="primary-button" type="submit" disabled={!settings || busy}>保存偏好<Check size={17} /></button>{saved && <span className="inline-good" role="status"><Check size={16} />已保存</span>}</div>

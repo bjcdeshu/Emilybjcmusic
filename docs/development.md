@@ -1,6 +1,12 @@
 # Emily Development Guide
 
-## 当前阶段：收听体验一致性优化已发布536815c（2026-10-02）
+## 当前阶段：TTS口语表达与可靠性优化进行中（2026-10-02）
+
+David明确『你来优化吧』。Pi从clean ec19847继续同一独立分支单写入，已核RN current=536815c/两units active。范围：现有Edge TTS/专用Gemini内改善口语写稿、固定真实试听与正式响度一致、合成质量验证，先测量原始参数/首尾静音与响度再决定调整；不擅改用户声线/节目/原音源，不加付费服务/混响/配乐/逐句拼接。保留单audio与试听恢复暂停、pause/quiet/队列竞态。测试与实际测量不是人工自然度验收。完成后按既有窄授权仅发布Emily，保留536815c回滚。
+
+本机实现完成待发布：hosting v4增加口语气口/语义落句/不加填充词，保留完整情感段落和事实边界；三个固定非私人样稿transition/bright/reflective，未提供任意text/引擎情绪模式；试听/正式DJ统一0.9 gain，包括调音量和恢复暂停。合成后ffmpeg限定MP3/local protocols/10s/4MB PCM验证实际解码、0.25–<120s与非近静音，cache按文件签名每进程验证、有界128；并发≤2去重包含验证，profile与CLI单源，metadata/synthesis共享deadline，preview85s。已有中文参数/声线不变，不裁静音/归一化/混音/新服务。Windows typecheck/testtypecheck/build/server55/web38/browser5/deployment8/built通过0skip；固定decoder后窄测试及真实晓伊69字14.88s/解码/cache通过。四中文声线同稿current/native共8段测量：时长12.552–17.232s、RMS约-23.6至-20.5dBFS、首尾空白约0.17–0.20/0.55–0.86s；不是LUFS/人工自然度，不足以选择新调音。真实Gemini两轮各3稿，最终66/70/73字13.464/13.8/14.976s，3固定晓伊样文全通过。首轮发现泛化/心理扩大，补约束后二轮仍有泛化推测，不能把解码或prompt当情感质量保证。未写生产列表/历史。
+
+## 上轮：收听体验一致性优化已发布536815c（2026-10-02）
 
 David认可源码审阅清单并明确『可以啊，你规划推进』。Pi从干净7e725bc/已同步独立分支继续单写入；生产起点a11d094。计划按安全点歌→阅读连续性→拖动手感推进：搜索单曲默认metadata-only加入，替换明确确认；聊天仅页面内存草稿/不抢回看；真实LRC全文定位/跟随/手动暂停/切歌更新；队列首次定位当前和当前行无损；拖动预览松手提交，键盘保留；清理短英文旧提示。保持现有布局/律动/单audio/声线/原节目边界。已发布536815c：搜索现节目默认加入，空节目显式单首开始；Library新节目/history重编排native确认和scope guard；草稿App内存/clear/logout/disconnect清理，近底跟随/新回复按钮；useLyrics共用12项volatile cache，全文真实当前行/初始定位/手动暂停/回到当前/切歌更新；队列初始定位和当前行不重载；SeekControl pointer预览/release提交/Escape和cancel丢弃/track-phase guard，键盘即时；旧短英文提示和歧义欢迎示例清理。visualViewport适配输入区域，400px高模拟通过，不冒充真机软键盘验证。
 
