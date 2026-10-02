@@ -1,10 +1,14 @@
 # Emily Development Guide
 
-## 当前阶段：TTS口语表达与可靠性优化进行中（2026-10-02）
+## 当前阶段：TTS口语表达与可靠性优化已发布2e993d4（2026-10-02）
 
 David明确『你来优化吧』。Pi从clean ec19847继续同一独立分支单写入，已核RN current=536815c/两units active。范围：现有Edge TTS/专用Gemini内改善口语写稿、固定真实试听与正式响度一致、合成质量验证，先测量原始参数/首尾静音与响度再决定调整；不擅改用户声线/节目/原音源，不加付费服务/混响/配乐/逐句拼接。保留单audio与试听恢复暂停、pause/quiet/队列竞态。测试与实际测量不是人工自然度验收。完成后按既有窄授权仅发布Emily，保留536815c回滚。
 
-本机实现完成待发布：hosting v4增加口语气口/语义落句/不加填充词，保留完整情感段落和事实边界；三个固定非私人样稿transition/bright/reflective，未提供任意text/引擎情绪模式；试听/正式DJ统一0.9 gain，包括调音量和恢复暂停。合成后ffmpeg限定MP3/local protocols/10s/4MB PCM验证实际解码、0.25–<120s与非近静音，cache按文件签名每进程验证、有界128；并发≤2去重包含验证，profile与CLI单源，metadata/synthesis共享deadline，preview85s。已有中文参数/声线不变，不裁静音/归一化/混音/新服务。Windows typecheck/testtypecheck/build/server55/web38/browser5/deployment8/built通过0skip；固定decoder后窄测试及真实晓伊69字14.88s/解码/cache通过。四中文声线同稿current/native共8段测量：时长12.552–17.232s、RMS约-23.6至-20.5dBFS、首尾空白约0.17–0.20/0.55–0.86s；不是LUFS/人工自然度，不足以选择新调音。真实Gemini两轮各3稿，最终66/70/73字13.464/13.8/14.976s，3固定晓伊样文全通过。首轮发现泛化/心理扩大，补约束后二轮仍有泛化推测，不能把解码或prompt当情感质量保证。未写生产列表/历史。
+功能546b66f、测试时序修正2e993d4已发布：hosting v4增加口语气口/语义落句/不加填充词，保留完整情感段落和事实边界；三个固定非私人样稿transition/bright/reflective，未提供任意text/引擎情绪模式；试听/正式DJ统一0.9 gain，包括调音量和恢复暂停。合成后ffmpeg限定MP3/local protocols/10s/4MB PCM验证实际解码、0.25–<120s与非近静音，cache按文件签名每进程验证、有界128；并发≤2去重包含验证，profile与CLI单源，metadata/synthesis共享deadline，preview85s。已有中文参数/声线不变，不裁静音/归一化/混音/新服务。Windows typecheck/testtypecheck/build/server55/web38/browser5/deployment8/built通过0skip；固定decoder后窄测试及真实晓伊69字14.88s/解码/cache通过。四中文声线同稿current/native共8段测量：时长12.552–17.232s、RMS约-23.6至-20.5dBFS、首尾空白约0.17–0.20/0.55–0.86s；不是LUFS/人工自然度，不足以选择新调音。真实Gemini两轮各3稿，最终66/70/73字13.464/13.8/14.976s，3固定晓伊样文全通过。首轮发现泛化/心理扩大，补约束后二轮仍有泛化推测，不能把解码或prompt当情感质量保证。未写生产列表/历史。
+
+RN首次候选546b66f在发布前server测试发现hostingVersion断言仍可能早于写入完成（已发请求不等于完成，undefined≠4）；未停止生产/未切current，仍536815c。2e993d4测试等待实际持久化版本而不删除断言，Windows server55、RN build/testtypecheck/server55/web38完整重跑通过0skip。RN专用用户真实晓伊长样文14.832s/解码/cache通过。随后停Emily后root-only pre-2e993d4 SQLite+env/key/cmp，current=/opt/emily/releases/2e993d4；旧536815c保留，identity/preflight（含ffmpeg）/health/units active/NRestarts0，adapter PID不变。无依赖版本/schema/env/Node/DNS/其他业务修改，使用既有ffmpeg。
+
+线上第一次检查完成主持→歌曲/三样试听/四视口后末尾状态请求出现Error，未确定网络层根因；健康active/0restart，未伪称第一次全部通过。有界第二次复跑completed=true/pageErrors[]：本次现场6首（不是上一轮8首，不推断历史变化原因），78字晓伊14.88s主持自然ended→原网易歌，3固定样文11.472/12.888/14.64s，正式与试听gain均0.9；各次自然结束恢复同源同位置paused，单audio，四手机视口无横溢出。原6首顺序/programme/roaming/settings/history保持，无新增歌曲/节目/网易写入，最终paused/logout。已读截图，未人工音色/外文发音/长期播放验收。私有证据work/.tmp/emily-browser-tools/design-tts[-live]及tts-*.log，assets index-Yl2ZXD1U.css / index-BJnyt9Vq.js；运维changes/2026-10-02-emily-tts-delivery.md。
 
 ## 上轮：收听体验一致性优化已发布536815c（2026-10-02）
 

@@ -1,5 +1,13 @@
 {
   "date": "2026-09-30",
+  "ttsDelivery": {
+    "date":"2026-10-02","release":"2e993d4","feature":"546b66f",
+    "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":55,"web":38,"browser":5,"deployment":8,"built":true,"skipped":0},
+    "rn":{"build":true,"testTypecheck":true,"server":55,"web":38,"realXiaoyiSeconds":14.832,"decoderPreflightHealth":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-2e993d4","priorRelease":"536815c"},
+    "live":{"completed":true,"initialQueue":6,"finalQueue":6,"queueProgrammeRoamingSettingsHistoryPreserved":true,"hostChars":78,"hostSeconds":14.88,"voice":"zh-CN-XiaoyiNeural","auditionSeconds":[11.472,12.888,14.64],"equalHostPreviewGain":0.9,"singleAudio":true,"allAuditionsRestorePausedSourcePosition":true,"fourViewports":true,"finalPausedLogout":true,"pageErrors":[]},
+    "boundaries":["RN first candidate server test observed request before persist; production untouched, retained assertion and waited actual version; full rerun passed","First live run failed in final state reading after audio checks, root cause undetermined; bounded rerun passed","Real model samples still include generalized assumptions; no subjective naturalness/pronunciation approval","Same-text eight audio measurements not LUFS nor proof native delivery better; existing voice parameters unchanged","No normalization, trimming, mixing, new provider, programme or song additions"],
+    "assets":["index-Yl2ZXD1U.css","index-BJnyt9Vq.js"]
+  },
   "uxContinuity": {
     "date":"2026-10-02","release":"536815c","local":{"typecheck":true,"build":true,"web":37,"browser":5,"skipped":0},
     "fixtureCoverage":["library new add and duplicate preserve source/time/programme/history","replacement and history cancel","draft reopen and clear","queue current positioning and no reload","real lyrics initial/current/manual/reduce/track change","chat unread no scroll theft","drag preview/release/Escape and keyboard","400px simulated keyboard viewport"],

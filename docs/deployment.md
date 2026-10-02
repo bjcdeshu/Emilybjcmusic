@@ -1,8 +1,12 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
-## 最新窄发布：536815c（2026-10-02）
+## 最新窄发布：2e993d4（2026-10-02）
+
+current=/opt/emily/releases/2e993d4，功能546b66f，旧536815c保留代码回滚。第一候选发布前RN server时序断言失败，没有停生产；测试等实际persist后完整RN server55/web38/build/testtypecheck通过。既有ffmpeg用于合成完整性检查，无系统安装。专用用户真实晓伊14.832s/解码/cache通过。停Emily后root-only pre-2e993d4 SQLite+env/key/cmp，owner preflight新增decoder存在检查、health/unitsactive/NRestarts0，adapterPID不变，无schema/env/依赖版本/Node/DNS/其他业务改动。Windows typecheck/testtypecheck/build/server55/web38/browser5/deployment8/built通过。线上首次末尾状态读取失败，健康正常；有界复跑原6首/节目/漫游/声线/history保留，78字14.88s晓伊→原歌曲，3固定样文11.472/12.888/14.64s且同gain0.9/同audio/自然ended恢复paused位置，4视口/pageErrors[]/logout通过，无新节目/歌曲/网易写入。不是人工自然度验收。assets index-Yl2ZXD1U.css / index-BJnyt9Vq.js。运维changes/2026-10-02-emily-tts-delivery.md。
+
+## 上轮窄发布：536815c（2026-10-02）
 
 current=/opt/emily/releases/536815c，旧a11d094保留代码回滚。停Emily后root-only pre-536815c SQLite+env/key/cmp，服务用户preflight/health/unitsactive/NRestarts0，adapter PID未变。RN build/web37，本机typecheck/build/web37/browser5通过。无依赖版本/schema/env/Node/DNS/其他业务变化。最终真实8首/原曲/漫游/settings/history保留，seek preview/release106s/歌词/取消更换/草稿/4视口通过，最后paused/logout。早期真实检查9→8队列变化原因未确定，不声称全程队列未变化；metadata等待/对象状态比较和slider.fill步长问题见development.md。运维changes/2026-10-02-emily-ux-continuity.md。
 
