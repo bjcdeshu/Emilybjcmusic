@@ -1,12 +1,16 @@
 # Emily Development Guide
 
-## 当前阶段：按David明确要求交付线上正式Gemini主持（2026-10-03，进行中）
+## 当前阶段：正式Gemini主持已上线759f482，线上真实串场→歌曲通过（2026-10-03）
 
 David本轮明确『我就要可用的线上 Gemini 主持，推进』，取代此前只做试听/不更换正式声线的阶段边界。Pi仍唯一写入者，从f88676b和本端上轮六份未提交收尾文档继续并保留；目标为解决真实生成路径、正式串场、必要配置和Emily窄发布/线上验证，不以只有样音收尾。专用项目Free Tier已由David确认；不充值/付费中转/无限重试。只把必要最终朗读稿及固定风格交给Google，原聊天/凭据/完整目录不发送；免费服务数据政策不被store=false覆盖。保留原歌曲、programme/queue/漫游/history和OAPI写稿，同audio与pause优先不改。优先核官方另一受支持API/限额免费模型路径，以真实成功和时延选择，而非继续等3.8 Interactions。
 
 进展：RN官方3.1 generateContent单次探测503/50.3s，未作为运行路径。官方3.8 Flash-Lite＋短固定style＋默认WAV的Interactions连续两次真实成功：transition5.469s准备/12.7655s语音、reflective37.114s/16.1655s。据此固定Flash-Lite，未声称定位了旧模型超时根因。实现内部TtsPort/显式Sulafat正式voice/独立hosting enable；OAPI写稿不改，仅最终中文稿≤280发送；原聊天/目录对象/凭据不传。Voice→provider显式分流，无Edge自动回退；host+preview共享2/min60/day上限和cache、当前＋一首lookahead≤2jobs，provider/model/style/version缓存身份与旧DJ引用双重失效。UI正式声线与试听统一，披露免费输入输出政策。新增3后端回归及1正式主持浏览器联合回归；首次浏览器抓到『未播放状态切voice后客户端继续旧text-only曲源』，在初始time0重备新声线，保留中途切voice不打断当前音源。
 
-Windows最终typecheck/testtypecheck/build/server65/web38/browser7/deployment9/built全部通过0skip；新增3项server+1项formal browser保留原全部断言。下一步候选先在RN build/65/38/隔离deployment9及真实内部TtsPort样稿检查，再停Emily做SQLite+env一致性备份、安装专用Key/hosting开关、切current；正式voice由owner设置切换，不启动时无条件迁移。只对现有节目验证真实Gemini→原网易歌，不新建programme。
+Windows最终typecheck/testtypecheck/build/server65/web38/browser7/deployment9/built全部通过0skip；新增3项server+1项formal browser保留原全部断言。RN候选759f482 build/testtypecheck/server65/web38/隔离deployment9/built通过；专用用户通过正式内部TtsPort真实bright样文7.887s准备/16.248s语音/cache无再请求。仅停Emily、root-only pre-759f482 SQLite+旧env配对备份/cmp，再私有加入Gemini专用key/free确认/hosting开关、切current759f482并重启Emily；旧2e993d4保留。身份/preflight/health200/两unitsactive/NRestarts0/adapter PID1964070未变，临时Key输入已删除，无Node/DNS/proxy/其他服务变化。
+
+线上真实Chrome154 completed=true/pageErrors[]：现场17首，按David新授权从晓伊显式保存gemini:Sulafat/zh，74字串场9.274s准备、17.84s语音/gain0.9、自然ended→原网易歌；受保护Range206/no-store、单audio、4手机视口、原programme/queue17→17/漫游/history保留，settings仅voice/hostLanguage改变，最终paused/logout。只读生产DB确认当前＋下一首都Gemini tts_ready；未新建programme/加歌或写网易。截图已读，非人工情感/停顿/全文ASR认可；长期/全目录未本轮验收。
+
+收尾发现服务摘要在本页保存Gemini后仍显示旧setup.voice『晓伊』，实际音频和持久设置已经Gemini。窄修摘要读已保存settings.voice，新增浏览器断言不刷新即可显示Gemini；Windows typecheck/build/web38/专项formal browser1通过，未冒称重跑完整server/browser7。此修正不改TTS/transport/配置/歌曲。
 
 ### 上轮结果：首段真实样音成功，后续生成超时，未发布
 
