@@ -14,7 +14,7 @@ export function useAudioAnalysis(audioRef: RefObject<HTMLAudioElement | null>) {
         if (!graph.current) {
           const context = new AudioContext();
           const analyser = context.createAnalyser();
-          analyser.fftSize = 256; analyser.smoothingTimeConstant = .75;
+          analyser.fftSize = 2048; analyser.smoothingTimeConstant = .25;
           source = context.createMediaElementSource(audio!);
           source.connect(analyser); analyser.connect(context.destination);
           graph.current = { context, analyser };

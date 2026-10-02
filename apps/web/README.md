@@ -17,7 +17,13 @@ Development and preview bind `127.0.0.1`. Development `/api` proxies to the loop
 
 The 27 automated tests are **explicitly test-only fixtures**, not real provider acceptance. They cover audio sequencing, pause/async-operation races, stale play promises, actual-property progress/seek, autoplay rejection, audio/TTS failure, empty queues, logout cleanup, API envelopes/401, URL boundaries, and static-only service-worker caching. `FakeAudio` is never imported by the application. The root `npm run test:browser` also inspects login/listen/library/history/settings/QR and empty archive at360/393/768/1360px, shared control typography and44px primary controls, using explicitly browser-only collection/cover fixtures. It now exercises actual Chrome decoding, DJ/song/next sequencing, pause/seek/quiet mode, feedback/history/voice selection/logout and static-only offline PWA against explicit local HTTP/tone-MP3 fixtures. Real account audio, human listening and physical Xiaomi background playback remain unverified.
 
-## Latest correction: calm response / one-song queue add (Pi / 2026-10-01)
+## Restrained measured rhythm (Pi / 2026-10-02)
+
+David accepts the hosting/Japanese-reference approach but wants more refined, restrained rhythm, not random jumps. One existing graph now fft2048/smoothing.25, nonoverlapping60Hz–10kHz grouped bins≤24 (no repeated bass/mirror). Bars85ms rise/330ms fall, narrow strokes/edge fade; slow900/1600ms body envelope drives low-saturation room light. Measured low-band rise over650ms floor gives capped.65 accent/240ms decay; not BPM/beat prediction. Main button stays fixed, only thin outer rim expands≤3.6%; voice mode attenuates accent and uses the host dot. Silence/pause/hidden/offscreen/reduce reset immediately, source changes reset envelopes. No timed room/stage drift. Any native dialog attenuates background response, sheet opens opaque with translation only and darker blurred backdrop. Typography weight softened, text/transport positions remain fixed.
+
+Unit tests cover bin ownership/steady tone/no invented pulse/time-based envelopes/gates. Actual decoded bass-burst Chrome fixture checks accent/attenuation/pause; all existing playback/queue/lyrics/PWA/sheet/short-screen regressions retained. This is not subjective visual approval or precise beat detection. Legacy RMS helper tests stay as historical algorithm regressions; runtime uses signal-rhythm.ts.
+
+## Prior correction: calm response / one-song queue add (Pi / 2026-10-01)
 
 David rejects 54b04f1's noisy RMS jump and mechanical Xiaoxiao experience; the earlier comfortable verdict belongs to the e3328e8 layout only. Keep that layout. Bars now≤40/10px with seven-neighbour weighted RMS and frame-independent280ms rise/650ms fall, lower amplitude/contrast; actual silence/gates immediately flat and ambient motion stops on missing/quiet analysis. No synthetic peaks/new graph/audio EQ.
 

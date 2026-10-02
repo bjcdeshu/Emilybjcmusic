@@ -75,6 +75,25 @@ test("real browser: Mandarin hosting reading scroll, pause/reduce/modal gates an
   } finally {if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
 });
 
+test('real browser: measured bass bursts drive bounded accents, modal attenuation and zero pause', {timeout:45_000},async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'emily-rhythm-browser-')),provider=new HttpFixture();await provider.start();
+ const file=join(directory,'TEST_ONLY_BASS_BURSTS.mp3');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','aevalsrc=0.45*sin(2*PI*90*t)*if(lt(mod(t\\,0.8)\\,0.13)\\,1\\,0.06):s=48000:d=12','-codec:a','libmp3lame',file],{timeout:15000});
+ const bytes=await readFile(file),config=loadConfig({EMILY_DATA_DIR:directory,EMILY_OWNER_PASSWORD:OWNER_PASSWORD,EMILY_CREDENTIAL_KEY:'0f'.repeat(32),EMILY_NETEASE_API_BASE:provider.base,EMILY_NETEASE_COOKIE:COOKIE_SENTINEL,EMILY_WEB_DIST_DIR:join(root,'apps/web/dist')});
+ const app=buildApp({config,tts:new BrowserTts(directory,bytes),mediaOpener:async()=>({status:200,headers:{'content-type':'audio/mpeg','content-length':String(bytes.length)},stream:Readable.from(bytes)})});let browser;
+ try{
+  const origin=await app.listen({host:'127.0.0.1',port:0});config.publicOrigin=origin;app.services.radio.updateSettings({djEnabled:false});await app.services.radio.programme({limit:1});
+  browser=await chromium.launch({headless:true,...(process.env.EMILY_BROWSER_EXECUTABLE?{executablePath:process.env.EMILY_BROWSER_EXECUTABLE}:{channel:'chrome'})});const page=await browser.newPage({viewport:{width:393,height:740}});
+  await page.goto(origin);await page.getByLabel('个人登录口令').fill(OWNER_PASSWORD);await page.getByRole('button',{name:'进入电台'}).click();await page.locator('.main-play').waitFor();await page.getByRole('button',{name:'播放',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('audio')!.paused&&document.querySelector('audio')!.currentTime>.5);
+  const values:number[]=[];for(let i=0;i<35;i++){values.push(await page.locator('.radio-device').evaluate(el=>Number((el as HTMLElement).style.getPropertyValue('--signal-accent'))));await page.waitForTimeout(80);}
+  assert(Math.max(...values)>.08,'actual bass attacks must register');assert(Math.max(...values)<=.65);assert(Math.max(...values)-Math.min(...values)>.05);
+  await page.getByRole('button',{name:'听感与节目',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.radio-device')?.getAttribute('data-covered')==='true');
+  assert.equal(await page.locator('.radio-sheet').evaluate(el=>getComputedStyle(el).opacity),'1');await page.waitForTimeout(100);assert(await page.locator('.radio-device').evaluate(el=>Number((el as HTMLElement).style.getPropertyValue('--signal-accent'))<=.143));
+  await page.keyboard.press('Escape');await page.getByRole('button',{name:'暂停',exact:true}).click();assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-accent')),'0.000');
+  if(process.env.EMILY_BROWSER_EVIDENCE_DIR)await writeFile(join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'rhythm-fixture-result.json'),JSON.stringify({fixture:true,actualDecodedBassBursts:true,samples:values,accentCap:.65,modalAttenuates:true,pauseZero:true}));
+ }finally{if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
+});
+
 test('real browser: exact ONE-song enqueue, continuing chat, no audio/time/pause/roaming replacement; same-element voice preview', {timeout:90_000},async()=>{
  const directory=await mkdtemp(join(process.env.TMPDIR||tmpdir(),'emily-enqueue-browser-')),provider=new HttpFixture();await provider.start();
  const song={id:303,name:'匆匆',ar:[{name:'李建清'}],al:{name:'TEST exact song album',picUrl:'http://p1.music.126.net/test'},dt:120000};
@@ -282,8 +301,16 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     await page.waitForFunction(()=>Number((document.querySelector('.radio-device') as HTMLElement)!.style.getPropertyValue('--signal-energy'))>0);
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'live');
     assert(await page.locator('.host-light').evaluate(el=>Number(getComputedStyle(el).opacity)>0),'surround light follows actual audio energy');
-    assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'running');
-    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+    assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationName),'none','no autonomous room drift');
+    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationName),'none','light is driven only by measured envelope');
+    const stableTitle=await page.locator('.current-track').boundingBox();
+    await page.waitForTimeout(120);assert.deepEqual(await page.locator('.current-track').boundingBox(),stableTitle,'audio motion never moves the reading anchor');
+    await page.getByRole('button',{name:'阅读主持全文'}).click();
+    await page.waitForFunction(()=>document.querySelector('.radio-device')?.getAttribute('data-covered')==='true');
+    assert.equal(await page.locator('.radio-sheet').evaluate(el=>getComputedStyle(el).opacity),'1','opening sheet never crossfades text over the player');
+    assert.equal(await page.evaluate(()=>document.querySelector('audio')!.paused),false);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(()=>document.querySelector('.radio-device')?.getAttribute('data-covered')==='false');
     assert(await page.locator('.player-paper').evaluate(el=>Number(getComputedStyle(el,'::before').opacity)>0),'light extends into lower playback area');
     await page.setViewportSize({width:1360,height:1000});
     await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();
@@ -304,8 +331,9 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     assert(Math.abs(await page.evaluate(() => document.querySelector("audio")!.currentTime) - stopped) < 0.1);
     assert.equal(await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL()), pausedSignal);
     assert.equal(await page.locator('.radio-device').getAttribute('data-motion'),'still');
-    assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationPlayState),'paused');
-    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
+    assert.equal(await page.locator('.listen-column').evaluate(el=>getComputedStyle(el,'::before').animationName),'none');
+    assert.equal(await page.locator('.listening-light').evaluate(el=>getComputedStyle(el).animationName),'none');
+    assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-accent')),'0.000');
     assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-energy')),'0.000');
     await page.setViewportSize({width:1360,height:1000});
     await page.getByRole('button',{name:'进入沉浸模式',exact:true}).click();

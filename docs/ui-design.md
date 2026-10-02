@@ -2,6 +2,10 @@
 
 2026-10-01 / Pi. David rejected the inconsistency of 4c70e9f. On e4e1b01 he liked the audio bars and improved atmosphere, but requested better lower-region integration. This is partial positive feedback, not whole-product approval.
 
+## Current refinement — restrained rhythm (2026-10-02)
+
+David approved proceeding after finding the current finish insufficiently refined. Preserve the comfortable full-screen structure, dot identity, stable text/transport. Actual nonoverlapping frequency groups≤24 replace short-window RMS fence; fft2048 improves bass-bin resolution without changing the single audio graph. Bars attack85ms/release330ms, low-height/low-contrast strokes with edge fade. Low-frequency energy rise relative to its recent650ms floor drives a capped accent, not periodic/BPM animation. The rim moves≤3.6%, not the button. Slow900/1600ms body light follows musical energy, no fixed room/stage drift; voice accents weaker and host-dot prominent only in speech. Dialog-open suppresses background response, opaque sheet translates without opacity crossfade and uses a dark blurred backdrop. Text weight/green light reduced, no new decorative objects. Pause/silence/hidden/offscreen/reduced-motion flatten motion; track/DJ source changes clear history. Historical drift/RMS descriptions below document earlier releases, not current runtime.
+
 ## Direction
 
 A private radio desk, extending mmguo's dark dot-matrix identity across the whole product. Earlier releases used an overlapping white programme; David's latest 2026-10-01 correction explicitly requests the listening controls and motion to feel like ONE continuous space. The player now has a continuous graphite surface; collection/archive/preferences/dialog retain reading paper. No vinyl metaphor, marketing landing page, unrelated pastel moods or admin-dashboard sections. Catalogue artwork is genuine content, not wallpaper. Dot-matrix station lettering is the signature; speech and tracks still use actual APIs/audio.
