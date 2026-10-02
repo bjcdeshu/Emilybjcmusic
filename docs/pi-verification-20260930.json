@@ -1,5 +1,13 @@
 {
   "date": "2026-09-30",
+  "listeningDetails": {
+    "date":"2026-10-02","release":"a11d094","local":{"typecheck":true,"build":true,"web":37,"browser":4,"skipped":0},
+    "rn":{"build":true,"web":37,"identityPreflightHealth":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-a11d094","priorRelease":"69e7c08"},
+    "live":{"completed":true,"initialQueue":11,"voiceFrames":20,"voiceResponsiveStable":true,"sheetFrames":30,"sheetMeasuredVariesStable":true,"sameAudio":true,"fourMobileViewports":true,"reducePauseStatic":true,"queueProgrammeRoamingSettingsHistoryPreserved":true,"finalPausedLogout":true,"pageErrors":[]},
+    "handledTestFailures":["wait for sheet entry to finish before comparing footprint","wait for actual analyser envelope before sampling bars","scope pause/resume to modal instead of duplicate background control"],
+    "boundaries":["No subjective acceptance","Frontend-only; previous backend/deployment results not rerun","No new programme/song/voice/hosting change"],
+    "assets":["index-DDNwBc7q.css","index-BSziHJfN.js"]
+  },
   "restrainedRhythm": {
     "date":"2026-10-02","release":"69e7c08","local":{"typecheck":true,"build":true,"web":36,"browser":4,"skipped":0,"decodedBassBurstFixture":true},
     "rn":{"build":true,"web":36,"identityPreflightHealth":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-69e7c08","priorRelease":"7d2c642"},

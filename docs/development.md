@@ -1,8 +1,12 @@
 # Emily Development Guide
 
-## 当前阶段：细节与律动第二轮实施中（2026-10-02）
+## 当前阶段：细节与律动第二轮已发布a11d094（2026-10-02）
 
-David要求继续研究可优化细节和律动位置，明确研究后直接做。Pi在干净7ba008d同名已同步分支单写入；生产起点69e7c08。范围：主持字标以真实中频强弱微亮、面板内常驻轻量真实三频提示（背景仍衰减）、切歌不位移及队列阅读细节；不添加伪节拍/歌词跳动/全屏特效，不改变transport/声线/账户或节目。完成前不记上线或主观验收。
+David要求继续研究可优化细节和律动位置，明确研究后直接做。Pi在干净7ba008d同名已同步分支单写入；生产起点69e7c08。范围：主持字标以真实中频强弱微亮、面板内常驻轻量真实三频提示（背景仍衰减）、切歌不位移及队列阅读细节；不添加伪节拍/歌词跳动/全屏特效，不改变transport/声线/账户或节目。已完成窄发布，不记David主观验收。真实中频包络驱动主持字标opacity .88–1/微光，面板16×18px固定三频提示110/320ms，背景仍衰减；无新graph/RAF/transport。切歌opacity-only，队列aria-current/低对比当前背景/中性副文案最多两行，按下图标微反馈，无持续心形/歌词/进度跳动。
+
+本机typecheck/build/web37/browser4通过0skip，RN build/web37通过。早期浏览器断言采样在面板入场/分析包络前及暂停按钮未限定面板而失败，修等待/selector保留断言后完整重跑通过。本轮前端范围未重跑后端/部署fixture。RN current=/opt/emily/releases/a11d094，旧69e7c08保留，停Emily后root-only pre-a11d094 SQLite+env/key/cmp、identity/preflight/health、两unitsactive/NRestarts0、adapter PID未变。无依赖/schema/env/Node/DNS/其他业务变更。
+
+真实Chrome：既有中文DJ→原网易歌；主持20帧字标响应但位置稳定、面板30帧三频响应/固定占位/同audio、4手机视口、reduce/面板暂停静止通过。原11首/programme/漫游/settings/history不变，无新programme/歌曲/网易写入，最后paused/logout/pageErrors[]/completed=true。实际截图已审阅；不代表自然听感/主观设计或精确节拍验收。私有证据work/.tmp/emily-browser-tools/design-detail[-live]，assets index-DDNwBc7q.css / index-BSziHJfN.js。运维changes/2026-10-02-emily-listening-details.md；代码及收尾文档同步既有独立开发分支。
 
 ## 上轮：克制节奏响应与视觉细节已发布69e7c08（2026-10-02）
 
