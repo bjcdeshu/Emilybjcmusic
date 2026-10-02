@@ -20,6 +20,7 @@ export async function deploymentPreflight(config, { envFile, repoDir = repositor
   check('private_music_adapter_configured', Boolean(config.neteaseBase));
   check('application_model_configured', Boolean(config.modelBase && config.modelKey && config.modelName));
   check('english_tts_enabled', config.ttsEnabled);
+  check('gemini_preview_key_when_confirmed', !config.geminiTtsFreeTierConfirmed || Boolean(config.geminiTtsKey));
   const root = await realpath(repoDir);
   const paths = {};
   for (const [id, path, directory] of [['private_environment', envFile, false], ['private_data', config.dataDir, true]]) {

@@ -76,6 +76,15 @@ test('missing local TTS decoder fails offline preflight', () => fixture(async ({
   finally { if(path === undefined) delete process.env.PATH; else process.env.PATH=path; }
 }));
 
+test('Gemini opt-in fails without dedicated key and never leaks it or verifies billing through offline checks', () => fixture(async ({ config, options }) => {
+  const missing = await deploymentPreflight({ ...config, geminiTtsFreeTierConfirmed: true }, options);
+  assert(failed(missing).includes('gemini_preview_key_when_confirmed'));
+  const key = 'TEST_ONLY_GEMINI_NOT_A_CREDENTIAL';
+  const present = await deploymentPreflight({ ...config, geminiTtsFreeTierConfirmed: true, geminiTtsKey: key }, options);
+  assert(!failed(present).includes('gemini_preview_key_when_confirmed'));
+  assert(!JSON.stringify(present).includes(key));
+}));
+
 test('broad POSIX permissions are not mistaken for privacy', () => fixture(async ({ config, options, data, envFile }) => {
   await chmod(data, 0o755);
   await chmod(envFile, 0o644);

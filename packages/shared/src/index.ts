@@ -28,6 +28,9 @@ export type DjSegment = {
   createdAt: string;
   language?: "en" | "zh";
   voice?: string;
+  provider?: "gemini";
+  model?: string;
+  deliveryVersion?: number;
 };
 export type NowPlayingState = {
   status: "idle" | "playing" | "paused" | "loading" | "error";
@@ -52,13 +55,16 @@ export type QueueAddResponse = PlayerActionResponse & { track: Track; outcome: "
 export const VOICE_PREVIEW_SAMPLES = ["transition", "bright", "reflective"] as const;
 export type VoicePreviewSample = typeof VOICE_PREVIEW_SAMPLES[number];
 export type VoicePreviewResponse = { segment: DjSegment };
+// Audition-only identities. Never silently map saved Edge voices to these voices.
+export const GEMINI_PREVIEW_VOICES = ["gemini:Sulafat", "gemini:Aoede", "gemini:Kore"] as const;
+export type GeminiPreviewVoice = typeof GEMINI_PREVIEW_VOICES[number];
 
 export type AuthSession = { authenticated: boolean; configured: boolean };
 export type MusicIdentity = { id: string; name: string; avatarUrl?: string };
 export type SetupStatus = {
   music: { configured: boolean; connected: boolean; user?: MusicIdentity; message?: string };
   model: { configured: boolean };
-  tts: { available: boolean; voice: string; language: "en" | "zh" };
+  tts: { available: boolean; voice: string; language: "en" | "zh"; geminiPreview?: { ready: boolean; model: string } };
 };
 export const ENGLISH_FEMALE_VOICES = [
   "en-US-EmmaMultilingualNeural", "en-US-EmmaNeural", "en-US-JennyNeural",

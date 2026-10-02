@@ -18,7 +18,7 @@ export function deliveryProfile(voice: string) {
     ? { v: 2, rate: "-2%", volume: "-12%", pitch: "-2Hz" }
     : { v: 1, rate: "-4%", volume: "-10%" };
 }
-function childEnvironment(): NodeJS.ProcessEnv {
+export function childEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const name of ["PATH", "Path", "HOME", "USERPROFILE", "SYSTEMROOT", "SystemRoot", "TEMP", "TMP", "LANG", "LC_ALL", "TMPDIR", "UV_CACHE_DIR", "SSL_CERT_FILE", "SSL_CERT_DIR", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]) {
     if (process.env[name] !== undefined) env[name] = process.env[name];

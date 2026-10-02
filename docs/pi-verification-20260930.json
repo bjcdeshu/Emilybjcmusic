@@ -1,5 +1,13 @@
 {
   "date": "2026-09-30",
+  "geminiAuditionLocal": {
+    "date":"2026-10-02","baseline":"ba27ff3","productionUnchanged":"2e993d4","deployed":false,
+    "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":62,"web":38,"browser":6,"deployment":9,"built":true,"skipped":0},
+    "provider":{"officialModelsList":200,"modelListed":"gemini-3.8-flash-tts","synthesisRequests":0,"freeTierConfirmed":false,"realVoiceListening":false},
+    "fixtureCoverage":["no-network missing-key/free-tier gate","fixed samples and header-only key/stateless Interactions","strict unary WAV chunk parse and real ffmpeg MP3 conversion","private validation/cache/dedup/single-flight","429 cooldown/local rate reservation/no auto retry","malformed/oversize/timeout/no publication","close drains and rejects late result","owner-only/no arbitrary text/voice cannot be saved","single audio/gain0.9/natural end and stop restore paused","late audition cancellation/four mobile sizes/logout"],
+    "review":{"twoIndependentPiProcesses":true,"noToolsNoSecrets":true,"completed":true,"mainWriterOnly":true,"noGlobalPiChanges":true},
+    "boundaries":["Initial new fixture payload/DOM types failed typecheck; corrected without removing assertions, complete reruns passed","Only synthetic HTTP/WAV/tone fixtures; no real Gemini synthesis or subjective quality approval","Free-tier flag is operator attestation, not actual billing proof","Fixed non-private auditions only; Edge hosting/OAPI/radio/queue/history remain unchanged","No RN config, restart, new provider payment or deployment"]
+  },
   "ttsDelivery": {
     "date":"2026-10-02","release":"2e993d4","feature":"546b66f",
     "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":55,"web":38,"browser":5,"deployment":8,"built":true,"skipped":0},

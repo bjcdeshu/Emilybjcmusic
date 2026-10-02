@@ -1,6 +1,20 @@
 # Emily Development Guide
 
-## 当前阶段：TTS口语表达与可靠性优化已发布2e993d4（2026-10-02）
+## 当前阶段：Gemini TTS 免费试听接入已完成本地回归（2026-10-02，尚未发布）
+
+David已选定Google官方Gemini TTS并安全提供专用Key，明确要求高效直接推进；子代理只是可选提效手段，不为配置多代理延误主线。Pi继续唯一源码写入者/原任务，从clean ba27ff3开始；当前生产仍为2e993d4的Edge。官方models.list认证HTTP200并列出gemini-3.8-flash-tts，未发送合成请求；该接口不能确认Free Tier，需要项目层级确认，不开通付费/自动付费回退。
+
+本阶段先交付独立、可关闭的官方Gemini固定样文试听通道：中文女声、三段非私人样文、同audio/同gain/结束恢复暂停；不默默把晓伊映射成其他声线，不自动改变settings/queue/history，不向免费API发送私人上下文或派生串场。先真实样音、听感选择再决定正式主持切换，避免再以解码通过冒充情绪和停顿改善。官方3.8的Interactions协议与旧generateContent分开核验；store=false、固定官方origin、限长/超时/限流/私有MP3验证缓存。两个无工具Pi子进程仅审阅提供的公开文档/源码，未获得Key或生产访问权；不安装插件、不改Pi全局设置。免费状态未确认前不执行真实生成或配置上线。
+
+已完成：新增gemini-tts.ts独立固定样文适配器（不实现任意text的TtsPort），官方Interactions/store=false/固定style metadata/unary WAV24k；严格RIFF chunks/格式/时长/8MBJSON/3MBWAV，既有ffmpeg转MP3后decoder验证和原子发布；无自动重试或供应商回退。单job/同key去重，model+voice+style+text+encoding版本cache、signature map12；本地durable2次/min、12次/24h仅计算cache miss，provider429冷却。ready是独立key＋人工确认配置，不冒称API已确认计费。现有preview85秒内总预算80秒，网络最多60秒，转换8秒/decoder10秒，close排空且不发布迟到结果。
+
+Settings按服务端ready显示独立试听引擎与Sulafat/Aoede/Kore，三种固定样文；保存偏好不会将Gemini试听声线设置成正式主持。现有Radio/model/playback源码不变，同audio/0.9gain/自然结束或停止恢复同源同位置paused，切引擎/声线丢弃迟到响应；免费TTS不接收私人聊天、目录、个性化派生稿。共享DjSegment扩展可选provider/model/deliveryVersion，旧Edge接口兼容。默认门禁关闭，新密钥尚未配置到线上。
+
+Windows typecheck/testtypecheck/build、server62/web38/browser6/deployment9/built全部通过0skip。新增七项Gemini单测、一项真实Chrome但使用明确HTTP/WAV音调fixture的联合检查；涵盖门禁零请求/严格协议/实际转码解码/cache/429/超限/timeout/close/owner/禁任意text/不可保存Gemini、单audio/暂停恢复/取消/4手机宽高/logout。初次新增fixture payload unknown与DOM类型断言触发typecheck失败，修精确类型后保留断言完整重跑通过。私有证据../.tmp/emily-deployment-review/gemini-*.log、../.tmp/emily-browser-tools/design-gemini；截图已读，非用户听感认可。两个无工具子进程已结束；其建议由主Pi核原文取舍，未照搬过时2.5候选或把不完整资料当完整API证据。
+
+尚待：David确认Key所属项目Free Tier后，执行有界真实固定样音请求，核真实返回/延迟/中文音色与语义停顿；不得把models.list或fixture作为合成成功。正式个性化主持需先明确免费服务的数据使用边界；本阶段不偷换为固定罐头串场。未访问或改动RN配置/服务，生产仍2e993d4，未生成真实Gemini音频、付费或上线切换。
+
+## 上轮：TTS口语表达与可靠性优化已发布2e993d4（2026-10-02）
 
 David明确『你来优化吧』。Pi从clean ec19847继续同一独立分支单写入，已核RN current=536815c/两units active。范围：现有Edge TTS/专用Gemini内改善口语写稿、固定真实试听与正式响度一致、合成质量验证，先测量原始参数/首尾静音与响度再决定调整；不擅改用户声线/节目/原音源，不加付费服务/混响/配乐/逐句拼接。保留单audio与试听恢复暂停、pause/quiet/队列竞态。测试与实际测量不是人工自然度验收。完成后按既有窄授权仅发布Emily，保留536815c回滚。
 

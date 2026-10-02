@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, ArrowUpRight, Check, ChevronRight, Headphones, History, ListMusic, LogOut, Moon, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Smartphone, Sparkles, Unplug, Volume2 } from "lucide-react";
 import type { HistoryResponse, NowPlayingState, QueueAddResponse, MusicSearchResponse, PlaylistResponse, PlaylistSummary, ProgrammeRequest, RadioSettings, SetupStatus, Track, VoicePreviewSample } from "@emily/shared";
-import { FEMALE_VOICES, MAX_PROGRAMME_TRACKS } from "@emily/shared";
+import { FEMALE_VOICES, GEMINI_PREVIEW_VOICES, MAX_PROGRAMME_TRACKS } from "@emily/shared";
 import { api, errorMessage } from "./api";
 import { Cover, Empty, PageHeading, Spinner } from "./components";
 import { ProgrammeConfirm } from './ProgrammeConfirm';
@@ -140,6 +140,8 @@ export function Settings(props: SettingsProps) {
   const { settings, setup, busy, save } = props;
   const [voice, setVoice] = useState(settings?.voice || "");
   const [sample, setSample] = useState<VoicePreviewSample>("transition");
+  const [auditionEngine, setAuditionEngine] = useState<"edge" | "gemini">("edge");
+  const [geminiVoice, setGeminiVoice] = useState<string>(GEMINI_PREVIEW_VOICES[0]);
   const [mood, setMood] = useState(settings?.mood || "");
   const [discovery, setDiscovery] = useState(settings?.discovery ?? false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
@@ -147,7 +149,7 @@ export function Settings(props: SettingsProps) {
   const [previewLoading,setPreviewLoading] = useState(false), [previewError,setPreviewError] = useState('');
   const stop = useRef(props.stopPreview); stop.current = props.stopPreview;
   useEffect(()=>()=>stop.current(),[]);
-  async function audition() { setPreviewLoading(true); setPreviewError(''); try { await props.previewVoice(voice, sample); } catch(e) { setPreviewError(errorMessage(e)); } finally { setPreviewLoading(false); } }
+  async function audition() { setPreviewLoading(true); setPreviewError(''); try { await props.previewVoice(auditionEngine === "gemini" ? geminiVoice : voice, sample); } catch(e) { setPreviewError(errorMessage(e)); } finally { setPreviewLoading(false); } }
   useEffect(() => { setVoice(settings?.voice || ""); setMood(settings?.mood || ""); setDiscovery(settings?.discovery ?? false); }, [settings?.voice, settings?.mood, settings?.discovery]);
   async function submit(e: FormEvent) { e.preventDefault(); setSaved(false); setSaved(await save({ voice: voice.trim(), mood: mood.trim(), discovery })); }
   return <section className="view-panel" aria-labelledby="settings-title"><PageHeading id="settings-title" section="设置" title="按你的方式听。">调整主持声音、选曲偏好和你的音乐连接。</PageHeading>
@@ -156,10 +158,11 @@ export function Settings(props: SettingsProps) {
     </section>
     <form className="settings-card settings-form" onSubmit={(e) => void submit(e)}><div className="heading-icon"><SlidersHorizontal size={22} /><h2>主持与选曲</h2></div><div className="service-row"><span><b>主持语言</b><small>随所选声线切换；有上下文、有长短变化的自然表达。</small></span><span className="pill">{voice.startsWith("zh-") ? "中文" : "English"}</span></div>
       <label className="field-label" htmlFor="voice-id">主持女声</label><select id="voice-id" value={voice} required disabled={!settings} onChange={(e) => { props.stopPreview(); setVoice(e.target.value); setSaved(false); }} >{FEMALE_VOICES.map(id => <option key={id} value={id}>{voiceLabel(id)}</option>)}</select>
+      {setup?.tts.geminiPreview?.ready && <><label className="field-label" htmlFor="audition-engine">试听引擎</label><select id="audition-engine" value={auditionEngine} onChange={e=>{props.stopPreview();setAuditionEngine(e.target.value as "edge" | "gemini");setPreviewError('');}}><option value="edge">当前主持 · Edge</option><option value="gemini">Gemini · 仅试听，不替换主持</option></select>{auditionEngine === 'gemini' && <><label className="field-label" htmlFor="gemini-preview-voice">Gemini 试听声线</label><select id="gemini-preview-voice" value={geminiVoice} onChange={e=>{props.stopPreview();setGeminiVoice(e.target.value);setPreviewError('');}}>{GEMINI_PREVIEW_VOICES.map(id=><option key={id} value={id}>{id.slice(7)} · 中文试听</option>)}</select><p className="muted tiny">{setup.tts.geminiPreview.model} · 只发送固定非私人样文，不发送聊天或个性化串场。免费服务的数据使用政策与当前渠道不同；先听停顿和表达，再决定是否采用。保存偏好不会把这条试听声线设为主持。</p></>}</>}
       <label className="field-label" htmlFor="voice-sample">试听段落</label><select id="voice-sample" value={sample} disabled={previewLoading} onChange={e=>{props.stopPreview();setSample(e.target.value as VoicePreviewSample);}}><option value="transition">自然过渡</option><option value="bright">轻快回应</option><option value="reflective">稍长表达</option></select>
       <div className="voice-audition"><button type="button" className="secondary-button" disabled={!settings||busy||previewLoading} onClick={()=>{if(props.previewing)props.stopPreview();else void audition();}}>{previewLoading?<Spinner label="准备试听"/>:props.previewing?'停止试听':'试听这条声线'}<Volume2 size={16}/></button><small>固定示例，和正式主持使用相同音量处理。试听会暂停音乐，结束后仍暂停；未保存前不更换声线。</small></div>
       {previewError&&<p className="inline-error" role="alert">{previewError}</p>}
-      <p className="muted tiny">可用同一段文字比较普通话与台湾国语，再换一段听听长句与停顿。段落名称表示文稿语气，不是引擎情绪模式；不加配乐或混响。自然度请按实际听感判断，保存后在下一段主持生效。</p>
+      <p className="muted tiny">可用同一段文字比较声线，再换一段听长句与停顿。段落名称表示文稿语气；不加配乐或混响。Gemini 试听使用独立的自然朗读指示；自然度按实际听感判断。当前主持声线保存后在下一段生效，Gemini 暂不参与正式串场。</p>
       <label className="field-label" htmlFor="default-mood">默认节目心情</label><input id="default-mood" value={mood} maxLength={120} disabled={!settings} onChange={(e) => { setMood(e.target.value); setSaved(false); }} placeholder="calm, warm, thoughtful" />
       <label className="checkbox-field"><input type="checkbox" checked={discovery} disabled={!settings} onChange={(e) => { setDiscovery(e.target.checked); setSaved(false); }} /><span><b>允许更多探索</b><small>在可播放的真实候选中，给不常听的音乐一点空间。</small></span></label>
       <div className="button-row"><button className="primary-button" type="submit" disabled={!settings || busy}>保存偏好<Check size={17} /></button>{saved && <span className="inline-good" role="status"><Check size={16} />已保存</span>}</div>

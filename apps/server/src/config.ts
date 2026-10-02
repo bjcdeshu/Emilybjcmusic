@@ -20,6 +20,8 @@ export type AppConfig = {
   ttsEnabled: boolean;
   ttsCommand: string;
   ttsTimeoutMs: number;
+  geminiTtsKey: string | undefined;
+  geminiTtsFreeTierConfirmed: boolean;
   voice: string;
   webDir: string | undefined;
   port: number;
@@ -71,6 +73,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("EMILY_TTS_COMMAND must be uvx, edge-tts, or their absolute executable path.");
   }
   if (env.EMILY_TTS_ENABLED && !["true", "false"].includes(env.EMILY_TTS_ENABLED)) throw new Error("Invalid EMILY_TTS_ENABLED.");
+  if (env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED && !["true", "false"].includes(env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED)) throw new Error("Invalid EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED.");
+  const geminiTtsKey = env.EMILY_GEMINI_TTS_API_KEY || undefined;
+  if (geminiTtsKey && !/^[A-Za-z0-9_-]{20,200}$/.test(geminiTtsKey)) throw new Error("Invalid EMILY_GEMINI_TTS_API_KEY.");
   const defaultData = resolve(dirname(fileURLToPath(import.meta.url)), "../data");
   return {
     dataDir: resolve(env.EMILY_DATA_DIR || defaultData), ownerPassword: password,
@@ -83,6 +88,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     httpTimeoutMs: numberEnv(env, "EMILY_HTTP_TIMEOUT_MS", 12_000, 100, 60_000),
     ttsEnabled: env.EMILY_TTS_ENABLED !== "false", ttsCommand,
     ttsTimeoutMs: numberEnv(env, "EMILY_TTS_TIMEOUT_MS", 25_000, 100, 120_000), voice,
+    geminiTtsKey, geminiTtsFreeTierConfirmed: env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED === "true",
     webDir: env.EMILY_WEB_DIST_DIR ? resolve(env.EMILY_WEB_DIST_DIR) : undefined,
     port: numberEnv(env, "EMILY_PORT", 3000, 0, 65_535), host: env.EMILY_HOST || "127.0.0.1"
   };

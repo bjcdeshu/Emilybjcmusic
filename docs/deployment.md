@@ -18,6 +18,10 @@ current=/opt/emily/releases/a11d094；仅Emily app重启，adapter PID未变，�
 
 current=/opt/emily/releases/69e7c08；仅Emily app重启，adapter PID未变，两unitsactive/NRestarts0。停应用后root-only pre-69e7c08 SQLite+env/key备份/cmp，保留7d2c642可代码回滚，不覆盖新用户数据。RN identity/preflight/health/build/web36通过。无新env/schema/依赖/Node/DNS/反代变更。线上原11首/漫游/settings/history不变，真实DJ→歌曲100帧响应/4视口/sheet/reduce/pause通过；最后paused/logout。运维记录changes/2026-10-02-emily-restrained-rhythm.md，更多见development.md顶部。
 
+## Gemini试听接入候选（2026-10-02，未发布）
+
+本地实现了默认关闭的官方Gemini3.8固定样文试听。新变量仅为`EMILY_GEMINI_TTS_API_KEY`与`EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED`；后者是操作者对当前key/project/model免费层的确认记录，不是Google计费开关或自动证明。尚未确认层级、未发送真实合成请求，未配置RN密钥/重启服务；当前仍2e993d4。仅固定非私人样文/无私人派生稿，旧Edge主持/用户声线不改。离线预检新增确认=true时必须存在独立key，不调用Google；其他私有权限/ffmpeg要求保持。下一阶段真实固定样音成功后再按Emily窄发布权限处理，不能把本机fixture结果冒充RN或线上验证。详见development.md与后端README。
+
 ## 当前适合的部署方式
 
 保持现有同域全栈应用：专用 Node 服务运行在服务器回环端口，Cloudflare 负责域名/DNS及合适的HTTPS入口。前端构建由同一应用提供，`/api/*`、主持音频和歌曲Range请求同域。
