@@ -1,8 +1,8 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新7280ba1（功能759f482）正式Gemini Flash-Lite/Sulafat主持已发布并完成真实串场→原曲验证；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
-## 最新窄发布：2e993d4（2026-10-02）
+## 历史窄发布：2e993d4（2026-10-02）
 
 current=/opt/emily/releases/2e993d4，功能546b66f，旧536815c保留代码回滚。第一候选发布前RN server时序断言失败，没有停生产；测试等实际persist后完整RN server55/web38/build/testtypecheck通过。既有ffmpeg用于合成完整性检查，无系统安装。专用用户真实晓伊14.832s/解码/cache通过。停Emily后root-only pre-2e993d4 SQLite+env/key/cmp，owner preflight新增decoder存在检查、health/unitsactive/NRestarts0，adapterPID不变，无schema/env/依赖版本/Node/DNS/其他业务改动。Windows typecheck/testtypecheck/build/server55/web38/browser5/deployment8/built通过。线上首次末尾状态读取失败，健康正常；有界复跑原6首/节目/漫游/声线/history保留，78字14.88s晓伊→原歌曲，3固定样文11.472/12.888/14.64s且同gain0.9/同audio/自然ended恢复paused位置，4视口/pageErrors[]/logout通过，无新节目/歌曲/网易写入。不是人工自然度验收。assets index-Yl2ZXD1U.css / index-BJnyt9Vq.js。运维changes/2026-10-02-emily-tts-delivery.md。
 
@@ -18,13 +18,23 @@ current=/opt/emily/releases/a11d094；仅Emily app重启，adapter PID未变，�
 
 current=/opt/emily/releases/69e7c08；仅Emily app重启，adapter PID未变，两unitsactive/NRestarts0。停应用后root-only pre-69e7c08 SQLite+env/key备份/cmp，保留7d2c642可代码回滚，不覆盖新用户数据。RN identity/preflight/health/build/web36通过。无新env/schema/依赖/Node/DNS/反代变更。线上原11首/漫游/settings/history不变，真实DJ→歌曲100帧响应/4视口/sheet/reduce/pause通过；最后paused/logout。运维记录changes/2026-10-02-emily-restrained-rhythm.md，更多见development.md顶部。
 
-## Gemini试听候选f88676b（2026-10-03，真实生成超时，未发布）
+## 正式Gemini主持7280ba1 / 功能759f482（2026-10-03，已发布）
+
+David明确要求线上可用Gemini主持，已确认专用项目Free Tier。官方Flash-Lite在RN三次样稿成功，正式代码759f482已通过Windows65/38/browser7/deployment9/类型/构建/built、RN65/38/隔离deployment9/测试类型/构建/built。模型固定gemini-3.8-flash-lite-tts，当前saved voice=gemini:Sulafat/zh；最终中文稿≤280+固定style，写稿OAPI不改，no Edge/paid自动回退，shared2/min60/day本地生成上限，缓存和lookahead保留。
+
+生产私有env新增独立key/free确认/hosting enable，原env项目保留；先停Emily，root-only pre-759f482一致性SQLite+env/cmp，再切current/服务用户preflight后启动。仅Emily重启，adapter PID1964070保持、health200/两unitsactive/NRestarts0；无Node/DNS/proxy/主站/其他业务修改。临时Key输入已删除。真实Chrome显式保存Gemini后74字/准备9.274s/语音17.84s/自然ended→原网易歌、单audio/gain0.9/Range206/private-no-store/四视口通过，原17首/programme/漫游/history保留，settings只改voice，最终paused/logout。只读DB current+next都Gemini ready。
+
+7280ba1窄修设置页残留旧voice摘要，Windows类型/构建/web38/专项browser1、RN构建/web38通过；停Emily做pre-7280ba1配对SQLite/env备份/cmp，再切current7280ba1，预检/健康/adapter保持，env不改。最后真实只读Chrome0生成请求、17首/Gemini ready/摘要一致通过。当前assets index-Yl2ZXD1U.css/index-n2wJRwpO.js；更详细状态和证据见development.md。运维changes/2026-10-03-emily-gemini-hosting.md。
+
+回滚：显示修正可仅切759f482代码、保留当前DB/env。若回2e993d4旧Edge代码，先用当前API显式保存Edge voice（原晓伊zh-CN-XiaoyiNeural），确认停止Gemini准备后窄回滚；必要时从pre-759f482恢复仅env以移除新key，但不得盲目还原旧SQLite覆盖后续账号/曲目。旧f88676b候选并未上线。未将听感/长期稳定性或免费无限量记为通过。
+
+## 历史Gemini试听候选f88676b（2026-10-03，当时真实生成超时，未发布）
 
 David已确认专用项目Free Tier；两个新变量`EMILY_GEMINI_TTS_API_KEY`与`EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED`尚未加入生产env。后者是操作者确认，不是Google计费开关/硬零费用证明。仅固定非私人样文/无私人派生稿，旧Edge主持/用户声线与OAPI不改。
 
 Windows实际3次生成：Sulafat transition HTTP200/45.867s、MP3音频12.48s通过；Aoede/Kore各60s超时。RN候选/opt/emily/releases/f88676b隔离构建、testtypecheck/server62/web38/built通过；deployment首次固定3101与运行中的adapter冲突，停在发布前，改用一次性unshare --net/loopback完整9项通过，不动宿主网络或adapter。RN专用emily用户只用隔离/var/lib/emily/gemini-check-20261003调用Sulafat reflective，60s以及唯一一次120s诊断都超时。RN只读models.get HTTP200/187ms，基础连通不代表生成稳定；尚无根因/429证据。
 
-未停服务、未切current、未打开生产SQLite或改env；安全传输的临时Key输入已删除并验证。最终current仍2e993d4，health200/两unitsactive/NRestarts0/adapter PID1964070未变；候选保留不启用，无必要生产备份。实际生成可用性及主观听感未过，不用fixture、模型列表或本地单次成功宣称生产接入完成。运维记录changes/2026-10-03-emily-gemini-candidate.md；详情见development.md。
+未停服务、未切current、未打开生产SQLite或改env；安全传输的临时Key输入已删除并验证。最终current仍2e993d4，health200/两unitsactive/NRestarts0/adapter PID1964070未变；候选保留不启用，无必要生产备份。实际生成可用性及主观听感未过，不用fixture、模型列表或本地单次成功宣称生产接入完成。本阶段未发布的经过合并记于changes/2026-10-03-emily-gemini-hosting.md，不另建candidate记录；详情见development.md。
 
 ## 当前适合的部署方式
 

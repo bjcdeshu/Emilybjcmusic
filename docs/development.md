@@ -1,6 +1,6 @@
 # Emily Development Guide
 
-## 当前阶段：正式Gemini主持已上线759f482，线上真实串场→歌曲通过（2026-10-03）
+## 当前阶段：正式Gemini主持已上线7280ba1（功能759f482），线上真实串场→歌曲通过（2026-10-03）
 
 David本轮明确『我就要可用的线上 Gemini 主持，推进』，取代此前只做试听/不更换正式声线的阶段边界。Pi仍唯一写入者，从f88676b和本端上轮六份未提交收尾文档继续并保留；目标为解决真实生成路径、正式串场、必要配置和Emily窄发布/线上验证，不以只有样音收尾。专用项目Free Tier已由David确认；不充值/付费中转/无限重试。只把必要最终朗读稿及固定风格交给Google，原聊天/凭据/完整目录不发送；免费服务数据政策不被store=false覆盖。保留原歌曲、programme/queue/漫游/history和OAPI写稿，同audio与pause优先不改。优先核官方另一受支持API/限额免费模型路径，以真实成功和时延选择，而非继续等3.8 Interactions。
 
@@ -10,7 +10,7 @@ Windows最终typecheck/testtypecheck/build/server65/web38/browser7/deployment9/b
 
 线上真实Chrome154 completed=true/pageErrors[]：现场17首，按David新授权从晓伊显式保存gemini:Sulafat/zh，74字串场9.274s准备、17.84s语音/gain0.9、自然ended→原网易歌；受保护Range206/no-store、单audio、4手机视口、原programme/queue17→17/漫游/history保留，settings仅voice/hostLanguage改变，最终paused/logout。只读生产DB确认当前＋下一首都Gemini tts_ready；未新建programme/加歌或写网易。截图已读，非人工情感/停顿/全文ASR认可；长期/全目录未本轮验收。
 
-收尾发现服务摘要在本页保存Gemini后仍显示旧setup.voice『晓伊』，实际音频和持久设置已经Gemini。窄修摘要读已保存settings.voice，新增浏览器断言不刷新即可显示Gemini；Windows typecheck/build/web38/专项formal browser1通过，未冒称重跑完整server/browser7。此修正不改TTS/transport/配置/歌曲。
+收尾发现服务摘要在本页保存Gemini后仍显示旧setup.voice『晓伊』，实际音频和持久设置已经Gemini。窄修摘要读已保存settings.voice，新增浏览器断言不刷新即可显示Gemini；Windows typecheck/build/web38/专项formal browser1通过，未冒称重跑完整server/browser7。此修正不改TTS/transport/配置/歌曲。7280ba1已窄发布：RN build/web38、停Emily后root-only pre-7280ba1配对备份/cmp、preflight/health/units/NRestarts0/adapter不变；原Gemini配置保持。最后真实Chrome只读检查0生成请求、17首、Gemini current tts_ready、设置摘要Sulafat即时一致、completed=true；截图已看。current=/opt/emily/releases/7280ba1，assets index-Yl2ZXD1U.css/index-n2wJRwpO.js；代码级回滚759f482不需要恢复DB/env。回到旧Edge版本2e993d4时需先显式将saved voice改回允许的Edge声线，不能直接用旧DB覆盖新增用户数据。运维changes/2026-10-03-emily-gemini-hosting.md，私有证据../.tmp/emily-browser-tools/design-gemini-host-live及gemini-host/gemini-label日志。
 
 ### 上轮结果：首段真实样音成功，后续生成超时，未发布
 

@@ -1,5 +1,14 @@
 {
   "date": "2026-09-30",
+  "geminiHostingLive": {
+    "date":"2026-10-03","feature":"759f482","release":"7280ba1","deployed":true,"model":"gemini-3.8-flash-lite-tts","voice":"gemini:Sulafat",
+    "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":65,"web":38,"browser":7,"deployment":9,"built":true,"skipped":0},
+    "rn":{"build":true,"testTypecheck":true,"server":65,"web":38,"deployment":9,"networkIsolatedDeploymentTest":true,"built":true,"skipped":0,"samplePrepSeconds":[5.469,37.114,7.887],"sampleAudioSeconds":[12.7655,16.1655,16.248],"cacheNoRequest":true,"preflight":true,"health":200,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"restarts":0,"backup":["pre-759f482","pre-7280ba1"],"temporaryKeyInputRemoved":true},
+    "live":{"completed":true,"initialQueue":17,"finalQueue":17,"hostChars":74,"prepareMs":9274,"hostSeconds":17.84,"naturalEndedToOriginalSong":true,"currentAndNextGeminiReady":true,"gain":0.9,"singleAudio":true,"range206PrivateNoStore":true,"fourMobileViewports":true,"programmeQueueRoamingHistoryPreserved":true,"settingsOnlyVoiceChanged":true,"finalPausedLogout":true,"pageErrors":[]},
+    "labelFix":{"localTypecheckBuild":true,"localWeb":38,"localFocusedBrowser":1,"rnBuild":true,"rnWeb":38,"realReadOnlyFinalCheck":true,"finalCheckGenerationRequests":0,"hostLabelConsistent":true},
+    "boundaries":["First formal browser caught stale initial text-only source after voice selection; retained assertions and re-prepared at unplayed time0, no mid-song transport reset","3.1 generateContent bounded probe503; earlier3.8 Flash timeouts retained as history, cause not established","Free Tier confirmed by David, local2/min60/day is not actual Google quota or billing proof; no paid/Edge automatic fallback","Only final script and fixed style sent; no raw chat, cookies, whole catalogue; free data-use policy disclosed","No subjective emotion/pause/transcript-ASR acceptance or full-catalogue/long-running guarantee","No new programme/song/provider writes; current queue17 is a dated observation, not historical6"],
+    "assets":["index-Yl2ZXD1U.css","index-n2wJRwpO.js"]
+  },
   "geminiRealCandidate": {
     "date":"2026-10-03","dateBasis":"Windows local; requests logged UTC 2026-10-02","candidate":"f88676b","feature":"6e97529","deployed":false,"productionUnchanged":"2e993d4",
     "freeTier":{"confirmedBy":"David","billingApiProof":false,"paidFallback":false},
