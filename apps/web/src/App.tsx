@@ -202,7 +202,7 @@ export function App() {
     if (!player || !sessionRef.current?.authenticated) return;
     previewRevision.current++;
     if (player.snapshot.phase === "preview") { player.endPreview(); return; }
-    if (playback.status === "error" || !now?.track || playback.phase === "idle" || playback.status === "ended" || (settings?.djEnabled && !now.dj && playback.time === 0)) {
+    if (playback.status === "error" || !now?.track || playback.phase === "idle" || playback.status === "ended" || (settings?.djEnabled && (!now.dj || now.dj.voice !== settings.voice) && playback.time === 0)) {
       void perform(async () => (await post<PlayerActionResponse>("/api/player/play", now?.track ? { trackId: now.track.id } : {})).now);
     } else {
       // Resume synchronously in the gesture; never replay a DJ intro on a pause/resume.

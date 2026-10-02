@@ -1,5 +1,14 @@
 {
   "date": "2026-09-30",
+  "geminiRealCandidate": {
+    "date":"2026-10-03","dateBasis":"Windows local; requests logged UTC 2026-10-02","candidate":"f88676b","feature":"6e97529","deployed":false,"productionUnchanged":"2e993d4",
+    "freeTier":{"confirmedBy":"David","billingApiProof":false,"paidFallback":false},
+    "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":62,"web":38,"browser":6,"deployment":9,"built":true,"skipped":0},
+    "rn":{"identity":true,"build":true,"testTypecheck":true,"server":62,"web":38,"deployment":9,"deploymentIsolatedNetworkNamespace":true,"built":true,"skipped":0,"health":200,"unitsActive":true,"restarts":0,"adapterPidUnchanged":true,"productionEnvChanged":false,"restarted":false,"temporaryKeyInputRemoved":true},
+    "actualSynthesis":{"attempts":5,"windowsAttempts":3,"rnAttempts":2,"successes":1,"timeouts":4,"automaticRetries":0,"success":{"voice":"Sulafat","sample":"transition","status":200,"elapsedMs":45867,"audioSeconds":12.48,"mp3Bytes":150668,"decode":true,"cacheNoRequest":true,"realChromeEnded":true,"gain":0.9},"failed":[{"host":"Windows","voice":"Aoede","sample":"transition","timeoutSeconds":60},{"host":"Windows","voice":"Kore","sample":"transition","timeoutSeconds":60},{"host":"RN","voice":"Sulafat","sample":"reflective","timeoutSeconds":60},{"host":"RN","voice":"Sulafat","sample":"reflective","timeoutSeconds":120,"operatorDiagnosticOnly":true}]},
+    "rnReadOnlyModelMetadata":{"status":200,"elapsedMs":187,"generationRequests":0},
+    "boundaries":["RN first deployment fixture collided with live adapter fixed port3101; stopped before production change. Full isolated-network rerun passed without changing adapter or host network","No new production programme/song/settings/history calls; current queue count not rechecked","No real-provider quota429 observed; timeout cause unconfirmed, not proof of exhausted free tier","No full-transcript ASR or human listening approval; successful Chrome single-file playback is not live full-app acceptance","120s diagnostic is one bounded operator request, not an increased application/client timeout","Candidate not released; no production key installation, env change or service restart"]
+  },
   "geminiAuditionLocal": {
     "date":"2026-10-02","baseline":"ba27ff3","productionUnchanged":"2e993d4","deployed":false,
     "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":62,"web":38,"browser":6,"deployment":9,"built":true,"skipped":0},

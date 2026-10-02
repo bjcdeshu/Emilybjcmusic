@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import fastify, { type FastifyInstance } from "fastify";
-import { GEMINI_PREVIEW_VOICES, MAX_PROGRAMME_TRACKS, VOICE_PREVIEW_SAMPLES, voiceLanguage, type VoicePreviewSample } from "@emily/shared";
+import { GEMINI_HOST_VOICES, GEMINI_PREVIEW_VOICES, MAX_PROGRAMME_TRACKS, VOICE_PREVIEW_SAMPLES, voiceLanguage, type VoicePreviewSample } from "@emily/shared";
 import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, QueueAddRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
 import { loadConfig, FEMALE_VOICES, type AppConfig } from "./config.js";
@@ -12,6 +12,7 @@ import { ListeningConversation } from "./conversation.js";
 import { EdgeTts, type TtsPort } from "./tts.js";
 import { GeminiTtsPreview, GEMINI_TTS_MODEL, type GeminiPreviewPort } from "./gemini-tts.js";
 import { Radio } from "./radio.js";
+import { HostingTts } from "./hosting-tts.js";
 import { VOICE_SAMPLES } from "./tts-samples.js";
 import { AppError, fail } from "./errors.js";
 import { openProviderMedia, providerMediaUrl, sendLocalAudio, validateRange, type MediaOpener } from "./media.js";
@@ -50,12 +51,13 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   const music = new NeteaseAdapter(config, store, clock);
   const selector = new ProgrammeSelector(config);
   const conversation = new ListeningConversation(config, music, store);
-  const tts = options.tts || new EdgeTts(config, clock);
-  const geminiPreview = options.geminiPreview || new GeminiTtsPreview(config, () => store.takeRate("gemini-preview-minute", 2, 60_000, clock()) && store.takeRate("gemini-preview-day", 12, 86_400_000, clock()), clock);
+  const gemini = new GeminiTtsPreview(config, () => store.takeRate("gemini-tts-minute", 2, 60_000, clock()) && store.takeRate("gemini-tts-day", 60, 86_400_000, clock()), clock);
+  const tts = options.tts || new HostingTts(new EdgeTts(config, clock), gemini);
+  const geminiPreview = options.geminiPreview || gemini;
   const radio = new Radio(config, store, music, selector, tts, clock);
   const mediaOpener = options.mediaOpener || openProviderMedia;
   app.decorate("services", { store, auth, music, radio });
-  app.addHook("onClose", async () => { await conversation.close(); await radio.close(); await geminiPreview.close(); store.close(); });
+  app.addHook("onClose", async () => { await conversation.close(); await radio.close(); await geminiPreview.close(); await gemini.close(); store.close(); });
   app.addHook("preValidation", async request => {
     // Empty action bodies are optional in the wire contract; explicit null/non-object bodies still fail.
     if (["POST", "PATCH"].includes(request.method) && request.body === undefined) request.body = {};
@@ -83,7 +85,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   });
   const setup = async (): Promise<SetupStatus> => {
     const [musicStatus, available] = await Promise.all([music.status(), tts.available(radio.settings().voice)]);
-    return { music: musicStatus, model: { configured: selector.configured }, tts: { available, voice: radio.settings().voice, language: radio.settings().hostLanguage, geminiPreview: { ready: geminiPreview.ready, model: GEMINI_TTS_MODEL } } };
+    return { music: musicStatus, model: { configured: selector.configured }, tts: { available, voice: radio.settings().voice, language: radio.settings().hostLanguage, geminiPreview: { ready: geminiPreview.ready, model: GEMINI_TTS_MODEL, hostingReady: gemini.hostingReady } } };
   };
   app.get("/api/health", { schema: { querystring: emptyQuery } }, async () => success({ status: "ok" as const, version: EMILY_VERSION }));
   app.get("/api/session", { schema: { querystring: emptyQuery } }, async request => success(auth.session(request)));
@@ -93,10 +95,13 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   app.get("/api/settings", { schema: { querystring: emptyQuery } }, async () => success(radio.settings()));
   app.patch<{ Body: Partial<RadioSettings> }>("/api/settings", {
     schema: { body: { ...objectSchema({
-      hostLanguage: { enum: ["en", "zh"], type: "string" }, voice: { type: "string", enum: [...FEMALE_VOICES] },
+      hostLanguage: { enum: ["en", "zh"], type: "string" }, voice: { type: "string", enum: [...FEMALE_VOICES, ...GEMINI_HOST_VOICES] },
       djEnabled: { type: "boolean" }, discovery: { type: "boolean" }, mood: textSchema(160), volume: { type: "number", minimum: 0, maximum: 1 }
     }), minProperties: 1 }, querystring: emptyQuery }
-  }, async request => success(radio.updateSettings(request.body)));
+  }, async request => {
+    if (request.body.voice?.startsWith("gemini:") && !gemini.hostingReady) throw new AppError(409, "GEMINI_HOSTING_NOT_READY", "Gemini 正式主持尚未启用，原声线没有改变。");
+    return success(radio.updateSettings(request.body));
+  });
   app.post<{ Body: { voice: string; sample?: VoicePreviewSample } }>("/api/tts/preview", { schema: { body: objectSchema({ voice: { type: "string", enum: [...FEMALE_VOICES, ...GEMINI_PREVIEW_VOICES] },  sample: { type: "string", enum: [...VOICE_PREVIEW_SAMPLES] } }, ["voice"]), querystring: emptyQuery } }, async request => {
     // Fixed neutral sample only: not an unrestricted synthesis/public proxy.
     const sample = request.body.sample || "transition";

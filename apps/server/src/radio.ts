@@ -57,7 +57,7 @@ export class Radio {
         if (hasKana(item.hosting)) item.hosting = hostingLine(item.track, undefined, language);
         delete item.dj; delete item.hostingVersion; repaired = true;
       }
-      if (migrate || (language === "zh" && item.hostingVersion !== HOSTING_VERSION) || !isHosting(item.hosting, language) || (item.dj && (!isHosting(item.dj.text, language) || item.dj.text !== item.hosting || item.dj.language !== language))) {
+      if (migrate || (language === "zh" && item.hostingVersion !== HOSTING_VERSION) || !isHosting(item.hosting, language) || (item.dj && (!isHosting(item.dj.text, language) || item.dj.text !== item.hosting || item.dj.language !== language || !this.matchesVoice(item.dj, this.settings().voice)))) {
         if (migrate || !isHosting(item.hosting, language) || (item.dj && item.dj.language !== language)) { item.hosting = hostingLine(item.track, undefined, language); delete item.hostingVersion; }
         delete item.dj; repaired = true;
       }
@@ -71,6 +71,7 @@ export class Radio {
     if (repaired) this.persist();
   }
   private iso(): string { return new Date(this.clock()).toISOString(); }
+  private matchesVoice(segment: DjSegment | undefined, voice: string): boolean { return !!segment && segment.voice === voice && (!this.tts.matches || this.tts.matches(segment, voice)); }
   settings(): RadioSettings { return this.store.settings(this.defaults); }
   updateSettings(patch: Partial<RadioSettings>): RadioSettings {
     const previous = this.settings();
@@ -96,7 +97,7 @@ export class Radio {
     return {
       status: this.state.status,
       ...(current ? { track: { ...current.track, audioUrl: `/api/media/track/${current.track.id}` } } : {}),
-      ...(current?.dj && settings.djEnabled && current.dj.voice === settings.voice ? { dj: current.dj } : {}),
+      ...(current?.dj && settings.djEnabled && this.matchesVoice(current.dj, settings.voice) ? { dj: current.dj } : {}),
       queue: this.state.items.map(({ hosting: _hosting, dj: _dj, hostingVersion: _version, hostingWarning: _warning, ...item }) => ({ ...item, track: { ...item.track, ...(item.status !== "failed" ? { audioUrl: `/api/media/track/${item.track.id}` } : {}) } })),
       updatedAt: this.state.updatedAt,
       ...(this.state.roam ? { roaming: { enabled: this.state.roam.enabled, scope: "playlist" as const, preparing: this.state.roam.enabled && !!this.refill && this.refillRevision === this.roamRevision, ...(this.state.roam.message ? { message: this.state.roam.message } : {}) } } : {}),
@@ -152,7 +153,7 @@ export class Radio {
       delete item.dj; delete item.hostingVersion;
     }
     const needsWriting = settings.hostLanguage === "zh" && item.hostingVersion !== HOSTING_VERSION;
-    if (!needsWriting && item.dj?.voice === settings.voice && item.dj.text === item.hosting && isHosting(item.dj.text, settings.hostLanguage) && item.dj.status !== "tts_failed") return;
+    if (!needsWriting && item.dj && this.matchesVoice(item.dj, settings.voice) && item.dj.text === item.hosting && isHosting(item.dj.text, settings.hostLanguage) && item.dj.status !== "tts_failed") return;
     const key = `${revision}:${item.id}:${settings.voice}`;
     const existing = this.intros.get(key);
     if (existing) return existing;
@@ -200,7 +201,7 @@ export class Radio {
     if (this.closed || !this.settings().djEnabled || this.intros.size >= 2) return;
     // One-track lookahead, not an unbounded whole-programme synthesis fan-out.
     const next = this.state.items[this.state.index + 1];
-    if (!next || (next.dj?.voice === this.settings().voice && (this.settings().hostLanguage !== "zh" || next.hostingVersion === HOSTING_VERSION))) return;
+    if (!next || (this.matchesVoice(next.dj, this.settings().voice) && (this.settings().hostLanguage !== "zh" || next.hostingVersion === HOSTING_VERSION))) return;
     void this.intro(next).catch(() => undefined);
   }
   private refillSoon(): void {
@@ -368,7 +369,7 @@ export class Radio {
     await this.intro(current);
     if (!this.state.items.includes(current)) throw new AppError(409, "QUEUE_CHANGED", "节目已更换，旧串场没有继续播放。");
     // A voice change during synthesis invalidates the old result; prepare the current voice.
-    while (!this.closed && this.settings().djEnabled && current.dj?.voice !== this.settings().voice) {
+    while (!this.closed && this.settings().djEnabled && !this.matchesVoice(current.dj, this.settings().voice)) {
       await this.intro(current);
       if (!this.state.items.includes(current)) throw new AppError(409, "QUEUE_CHANGED", "节目已更换，旧串场没有继续播放。");
     }

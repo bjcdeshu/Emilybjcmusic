@@ -35,7 +35,13 @@ Local implementation/testing is authorized. Do not push, publish, modify DNS, re
 - `GET /api/history` → `HistoryResponse`, protected.
 - `GET /api/audio/:id` streams cached generated DJ audio; strict identifier/path handling and authentication. Track audio URLs may be safely proxied to the same origin if needed; never accept arbitrary user-supplied proxy URLs.
 
-### Gemini audition extension (2026-10-02, local; not live)
+### Gemini formal-host extension (2026-10-03)
+
+With server `EMILY_GEMINI_TTS_HOSTING_ENABLED=true`, dedicated Key and confirmed Free Tier, settings additionally accept `voice:"gemini:Sulafat"` (Chinese). Disabled formal hosting gives409/GEMINI_HOSTING_NOT_READY, without changing preferences. Other Gemini candidate voices remain unavailable as saved hosts. Setup `tts.geminiPreview.hostingReady` is local readiness; not a guarantee of available Google quota. Explicit setting is necessary: environment opt-in does not overwrite a saved voice.
+
+Actual runtime uses official `gemini-3.8-flash-lite-tts`, final validated Chinese script≤280, fixed speech_metadata style, deliveryVersion2, store=false, bounded unary WAV. Hosted DjSegment includes provider/model/version; Radio must reject stale persisted provider/model/version even with the same voice string. Shared local ceiling2 new generations/minute,60/day across host+preview; one-lookahead/two internal jobs, no automatic provider switching. Generation timeout returns504 for preview; formal hosting returns text/song degradation with a visible warning, never a false tts_ready. Existing programme/queue/pause/owner/85s-preview135s-player boundaries unchanged.
+
+### Prior Gemini audition-only extension (2026-10-02; superseded model/hosting limit above)
 
 `POST /api/tts/preview` additionally accepts audition-only `voice:gemini:Sulafat|gemini:Aoede|gemini:Kore` with the existing fixed sample enum. Gemini response adds `provider:gemini`, `model:gemini-3.8-flash-tts`, `deliveryVersion:1`, `language:zh`; actual sample text is returned. These IDs are NOT accepted by `PATCH /api/settings` or formal Radio hosting. No migration, automatic switch, private-context forwarding or model-channel change. The existing Edge allowlist and selection remain untouched.
 

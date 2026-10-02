@@ -1,23 +1,26 @@
 import { createHash, randomBytes } from "node:crypto";
 import { execFile } from "node:child_process";
-import { chmod, lstat, rename, unlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { GEMINI_PREVIEW_VOICES, VOICE_PREVIEW_SAMPLES, type DjSegment, type VoicePreviewSample } from "@emily/shared";
+import { GEMINI_HOST_VOICES, GEMINI_PREVIEW_VOICES, VOICE_PREVIEW_SAMPLES, type DjSegment, type VoicePreviewSample } from "@emily/shared";
 import type { AppConfig } from "./config.js";
 import { AppError, asArray, asRecord } from "./errors.js";
 import { privateDirectory } from "./store.js";
 import { childEnvironment } from "./tts.js";
 import { validateTtsAudio } from "./tts-audio.js";
 import { VOICE_SAMPLES } from "./tts-samples.js";
+import { isHosting } from "./hosting-language.js";
+import type { TtsPort } from "./tts.js";
 
-export const GEMINI_TTS_MODEL = "gemini-3.8-flash-tts";
+export const GEMINI_TTS_MODEL = "gemini-3.8-flash-lite-tts";
 export const GEMINI_TTS_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
-const VERSION = 1;
-const STYLE = "Speak in natural Mandarin as a warm, curious and understated female radio host. Address one listener, not an audience. Let complete thoughts breathe: a brief pause at clauses, a clear pause at full stops and a little more space before a turn in thought. Use gentle, varied emphasis and natural sentence endings, not a uniform recitation. Keep a conversational pace, neither rushed nor artificially slow. Read only the transcript, without adding words, laughter, sighs or other vocal sounds.";
+const VERSION = 2;
+const STYLE = "Warm, natural conversational Mandarin. Clear pauses at sentence boundaries, gentle varied emphasis.";
 const MAX_JSON_BYTES = 8_000_000;
 const MAX_WAV_BYTES = 3_000_000;
 export type GeminiPreviewPort = {
   readonly ready: boolean;
+  readonly hostingReady?: boolean;
   preview(voice: string, sample: VoicePreviewSample): Promise<DjSegment>;
   close(): Promise<void>;
 };
@@ -49,9 +52,9 @@ export function wavToMp3(input: string, output: string, timeout: number): Promis
   });
 }
 
-/** Audition-only by construction: no arbitrary text, catalogue or listener input. Not a TtsPort. */
-export class GeminiTtsPreview implements GeminiPreviewPort {
-  private readonly audioDir: string;
+/** Fixed public auditions; bounded final scripts only through the internal TtsPort. */
+export class GeminiTtsPreview implements GeminiPreviewPort, TtsPort {
+  readonly audioDir: string;
   private readonly pending = new Map<string, Promise<DjSegment>>();
   private readonly verified = new Map<string, string>();
   private closed = false;
@@ -61,15 +64,27 @@ export class GeminiTtsPreview implements GeminiPreviewPort {
     privateDirectory(this.audioDir);
   }
   get ready(): boolean { return !this.closed && this.config.ttsEnabled && !!this.config.geminiTtsKey && this.config.geminiTtsFreeTierConfirmed; }
+  get hostingReady(): boolean { return this.ready && this.config.geminiTtsHostingEnabled; }
+  async available(voice: string): Promise<boolean> { return this.hostingReady && (GEMINI_HOST_VOICES as readonly string[]).includes(voice); }
+  matches(segment: DjSegment, voice: string): boolean { return segment.voice === voice && segment.provider === "gemini" && segment.model === GEMINI_TTS_MODEL && segment.deliveryVersion === VERSION; }
   async close(): Promise<void> { this.closed = true; await Promise.allSettled(this.pending.values()); }
+  async segment(text: string, voice: string): Promise<DjSegment> {
+    if (!(GEMINI_HOST_VOICES as readonly string[]).includes(voice) || !isHosting(text, "zh") || text.length > 280) throw new AppError(400, "INVALID_TTS_INPUT", "Gemini 主持只接收有界中文朗读稿和已启用的声线。");
+    if (!this.hostingReady) return { id: createHash("sha256").update(text + voice).digest("hex"), text, voice, language: "zh", provider: "gemini", model: GEMINI_TTS_MODEL, deliveryVersion: VERSION, status: "text_only", createdAt: new Date(this.clock()).toISOString() };
+    try { return await this.synthesize(text, voice, false); }
+    catch { return { id: this.identity(text, voice), text, voice, language: "zh", provider: "gemini", model: GEMINI_TTS_MODEL, deliveryVersion: VERSION, status: "tts_failed", createdAt: new Date(this.clock()).toISOString() }; }
+  }
+  private identity(text: string, voice: string): string { return createHash("sha256").update(JSON.stringify({ provider: "gemini", model: GEMINI_TTS_MODEL, voice: voice.slice(7), language: "zh", style: STYLE, version: VERSION, text, encoding: "wav-pcm24k-mono-to-mp3-96k-v1" })).digest("hex"); }
   async preview(voice: string, sample: VoicePreviewSample): Promise<DjSegment> {
     if (!(GEMINI_PREVIEW_VOICES as readonly string[]).includes(voice) || !(VOICE_PREVIEW_SAMPLES as readonly string[]).includes(sample)) throw new AppError(400, "INVALID_TTS_INPUT", "请选择已有的 Gemini 声线与固定试听段落。");
     if (!this.ready) throw new AppError(503, "GEMINI_TTS_NOT_READY", "Gemini 试听尚未启用：需先确认该项目的免费层。现有主持与歌曲未改变。");
-    const text = VOICE_SAMPLES.zh[sample], nativeVoice = voice.slice("gemini:".length);
-    const id = createHash("sha256").update(JSON.stringify({ provider: "gemini", model: GEMINI_TTS_MODEL, voice: nativeVoice, language: "zh", style: STYLE, version: VERSION, text, encoding: "wav-pcm24k-mono-to-mp3-96k-v1" })).digest("hex");
+    return this.synthesize(VOICE_SAMPLES.zh[sample], voice, true);
+  }
+  private async synthesize(text: string, voice: string, audition: boolean): Promise<DjSegment> {
+    const nativeVoice = voice.slice(7), id = this.identity(text, voice);
     const existing = this.pending.get(id);
     if (existing) return existing;
-    if (this.pending.size) throw new AppError(429, "GEMINI_TTS_BUSY", "请等上一段 Gemini 试听准备完成。");
+    if (this.pending.size >= (audition ? 1 : 2)) throw new AppError(429, "GEMINI_TTS_BUSY", "请等上一段 Gemini 试听准备完成。");
     const segment: DjSegment = { id, text, voice, language: "zh", provider: "gemini", model: GEMINI_TTS_MODEL, deliveryVersion: VERSION, status: "tts_ready", audioUrl: `/api/audio/${id}`, createdAt: new Date(this.clock()).toISOString() };
     const work = this.prepare(segment, nativeVoice).finally(() => { this.pending.delete(id); });
     this.pending.set(id, work);
@@ -82,10 +97,20 @@ export class GeminiTtsPreview implements GeminiPreviewPort {
       const signature = `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
       if (this.verified.get(id) === signature) return true;
       if (!await (this.dependencies.validate || validateTtsAudio)(file, childEnvironment())) return false;
-      if (this.verified.size >= 12) this.verified.delete(this.verified.keys().next().value!);
+      if (this.verified.size >= 128) this.verified.delete(this.verified.keys().next().value!);
       this.verified.set(id, signature);
       return true;
     } catch { return false; }
+  }
+  private async prune(): Promise<void> {
+    const records: { file: string; size: number; time: number }[] = [];
+    for (const name of await readdir(this.audioDir)) {
+      if (!/^[a-f0-9]{64}\.mp3$/.test(name)) continue;
+      const file = join(this.audioDir, name), stat = await lstat(file).catch(() => undefined);
+      if (stat?.isFile() && !stat.isSymbolicLink() && !this.pending.has(name.slice(0,64))) records.push({ file, size: stat.size, time: stat.mtimeMs });
+    }
+    records.sort((a,b) => b.time-a.time); let bytes = 0;
+    for (const [index, record] of records.entries()) { bytes += record.size; if (index >= 120 || bytes > 250_000_000 || this.clock()-record.time > 30*86_400_000) await unlink(record.file).catch(() => undefined); }
   }
   private async prepare(segment: DjSegment, nativeVoice: string): Promise<DjSegment> {
     const deadline = Date.now() + 80_000;
@@ -94,6 +119,7 @@ export class GeminiTtsPreview implements GeminiPreviewPort {
       if (await this.cached(segment.id)) return segment;
       if (!this.ready) throw new Error();
       if (this.clock() < this.cooldownUntil || !this.takeRequest()) throw new AppError(429, "GEMINI_TTS_LIMIT", "本机 Gemini 试听额度暂已用完，请稍后再试；不会切换付费服务。");
+      await this.prune();
       const timeout = Math.min(this.config.ttsTimeoutMs, 60_000, deadline - Date.now() - 18_000);
       if (timeout <= 0) throw new Error();
       const audio = await this.request(segment.text, nativeVoice, timeout);
@@ -121,7 +147,7 @@ export class GeminiTtsPreview implements GeminiPreviewPort {
       response = await (this.dependencies.fetch || fetch)(GEMINI_TTS_ENDPOINT, {
         method: "POST", redirect: "error", signal: controller.signal,
         headers: { "x-goog-api-key": this.config.geminiTtsKey!, "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ model: GEMINI_TTS_MODEL, store: false, stream: false, input: [{ type: "user_input", content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style: STYLE }] }] }], response_format: { type: "audio", mime_type: "audio/wav", sample_rate: 24000 }, generation_config: { speech_config: [{ voice }] } })
+        body: JSON.stringify({ model: GEMINI_TTS_MODEL, store: false, stream: false, input: [{ type: "user_input", content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style: STYLE }] }] }], response_format: { type: "audio" }, generation_config: { speech_config: [{ voice }] } })
       });
       if (response.status === 429) {
         const seconds = Number(response.headers.get("retry-after"));

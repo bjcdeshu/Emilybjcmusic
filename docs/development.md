@@ -1,8 +1,22 @@
 # Emily Development Guide
 
-## 当前阶段：Gemini TTS 免费层已获本人确认，进行真实固定样音验证（2026-10-03，尚未发布）
+## 当前阶段：按David明确要求交付线上正式Gemini主持（2026-10-03，进行中）
 
-2026-10-03（本机日期）：David直接确认此Key所属AI Studio项目『是免费层』。Pi从clean已同步6e97529继续；先单次真实固定中文样文请求，成功才在本地限额内比较候选，不自动重试/付费回退。该确认不是模型列表的计费证明，也不把免费服务store=false当作禁止训练。Key仅私有读取，音频/诊断私有保存，不改线上节目/声线/OAPI。Windows实际3次请求：Sulafat/transition HTTP200、端到端45.867s，12.480s/150668B MP324k单声道、严格WAV/转码/decoder/cache复用通过；随后Aoede/transition与Kore/transition各60s超时，未拿到HTTP响应、未发布partial、没有自动重试。不能据此说三声线稳定或已改善自然度。新增明确504/GEMINI_TTS_TIMEOUT与页面首次等待/缓存文案，预算仍原85s内有界。已重新核RN身份/current=2e993d4/两unitsactive/NRestarts0/adapter PID1964070；准备隔离候选并从RN做一次Sulafat长句固定样文，成功后仅Emily窄发布试听，不切正式主持。下面2026-10-02的『免费层待确认』与请求0为当时历史状态。
+David本轮明确『我就要可用的线上 Gemini 主持，推进』，取代此前只做试听/不更换正式声线的阶段边界。Pi仍唯一写入者，从f88676b和本端上轮六份未提交收尾文档继续并保留；目标为解决真实生成路径、正式串场、必要配置和Emily窄发布/线上验证，不以只有样音收尾。专用项目Free Tier已由David确认；不充值/付费中转/无限重试。只把必要最终朗读稿及固定风格交给Google，原聊天/凭据/完整目录不发送；免费服务数据政策不被store=false覆盖。保留原歌曲、programme/queue/漫游/history和OAPI写稿，同audio与pause优先不改。优先核官方另一受支持API/限额免费模型路径，以真实成功和时延选择，而非继续等3.8 Interactions。
+
+进展：RN官方3.1 generateContent单次探测503/50.3s，未作为运行路径。官方3.8 Flash-Lite＋短固定style＋默认WAV的Interactions连续两次真实成功：transition5.469s准备/12.7655s语音、reflective37.114s/16.1655s。据此固定Flash-Lite，未声称定位了旧模型超时根因。实现内部TtsPort/显式Sulafat正式voice/独立hosting enable；OAPI写稿不改，仅最终中文稿≤280发送；原聊天/目录对象/凭据不传。Voice→provider显式分流，无Edge自动回退；host+preview共享2/min60/day上限和cache、当前＋一首lookahead≤2jobs，provider/model/style/version缓存身份与旧DJ引用双重失效。UI正式声线与试听统一，披露免费输入输出政策。新增3后端回归及1正式主持浏览器联合回归；首次浏览器抓到『未播放状态切voice后客户端继续旧text-only曲源』，在初始time0重备新声线，保留中途切voice不打断当前音源。
+
+Windows最终typecheck/testtypecheck/build/server65/web38/browser7/deployment9/built全部通过0skip；新增3项server+1项formal browser保留原全部断言。下一步候选先在RN build/65/38/隔离deployment9及真实内部TtsPort样稿检查，再停Emily做SQLite+env一致性备份、安装专用Key/hosting开关、切current；正式voice由owner设置切换，不启动时无条件迁移。只对现有节目验证真实Gemini→原网易歌，不新建programme。
+
+### 上轮结果：首段真实样音成功，后续生成超时，未发布
+
+2026-10-03（本机日期）：David直接确认此Key所属AI Studio项目『是免费层』。Pi从clean已同步6e97529继续；先单次真实固定中文样文请求，成功才在本地限额内比较候选，不自动重试/付费回退。该确认不是模型列表的计费证明，也不把免费服务store=false当作禁止训练。Key仅私有读取，音频/诊断私有保存，不改线上节目/声线/OAPI。Windows实际3次请求：Sulafat/transition HTTP200、端到端45.867s，12.480s/150668B MP324k单声道、严格WAV/转码/decoder/cache复用通过；随后Aoede/transition与Kore/transition各60s超时，未拿到HTTP响应、未发布partial、没有自动重试。不能据此说三声线稳定或已改善自然度。新增明确504/GEMINI_TTS_TIMEOUT与页面首次等待/缓存文案，预算仍原85s内有界。已重新核RN身份/current=2e993d4/两unitsactive/NRestarts0/adapter PID1964070。下面2026-10-02的『免费层待确认』与请求0为当时历史状态。
+
+本轮结论：共5次真实生成调用（Windows3、RN2），1次成功、4次超时。RN专用emily用户/隔离数据调用Sulafat reflective在60s超时；额外一次明确有界120s诊断仍超时，未把预算扩大写入生产代码，没有自动重试或改用付费渠道。随后RN只读models.get HTTP200/187ms，说明当次基础连通和鉴权可用，不能确定语音请求超时根因，也不能说免费额度已耗尽（未收到429）。实际Gemini MP3在Chrome154自然播至ended、12.48s/gain0.9/单audio通过；这是本地单文件技术播放，不是全应用线上验收、全文ASR或中文情感/停顿认可。样音与安全诊断保存在本机ACL保护的Emily-private/gemini-audition-20261003；便于本人播放的文件名Sulafat-transition.mp3。
+
+代码f88676b已push同名独立分支：明确504/GEMINI_TTS_TIMEOUT和等待/缓存文案，三声线仍只是候选，正式主持不改。Windows重新typecheck/testtypecheck/build/server62/web38/browser6/deployment9/built通过0skip；实际读取新增fixture截图，不是线上截图。RN候选/opt/emily/releases/f88676b build/testtypecheck/server62/web38/built通过；首轮部署fixture固定3101与正在运行的adapter冲突，停止在发布前，未动adapter。随后使用一次性unshare --net只启loopback完整deployment9通过0skip，未删除/弱化断言或改变宿主网络。日志../.tmp/emily-deployment-review/gemini-real-*.log、gemini-rn-{candidate,isolated-check,diagnostic}.log。
+
+发布决定：真实RN语音路径未达可用条件，候选不切current、不修改生产env/SQLite/队列/settings/OAPI、不重启任何服务。用于隔离检查的专用Key临时输入已删除并确认不存在；没有把Key装入生产配置。最终current仍2e993d4、health200/两unitsactive/NRestarts0、adapter PID未变；不冒称本轮读取/验证了原节目数量。保留f88676b候选便于后续，未创建无必要的生产备份。下一步先让David听已成功的真实样音，另择一次有界检查定位生成可用性，不能把升到付费或无限等待当默认解决办法。正式个性化Gemini主持还需明确免费服务数据使用及听感接受。
 
 ### 前一阶段本地实现（2026-10-02）
 

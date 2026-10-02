@@ -18,9 +18,13 @@ current=/opt/emily/releases/a11d094；仅Emily app重启，adapter PID未变，�
 
 current=/opt/emily/releases/69e7c08；仅Emily app重启，adapter PID未变，两unitsactive/NRestarts0。停应用后root-only pre-69e7c08 SQLite+env/key备份/cmp，保留7d2c642可代码回滚，不覆盖新用户数据。RN identity/preflight/health/build/web36通过。无新env/schema/依赖/Node/DNS/反代变更。线上原11首/漫游/settings/history不变，真实DJ→歌曲100帧响应/4视口/sheet/reduce/pause通过；最后paused/logout。运维记录changes/2026-10-02-emily-restrained-rhythm.md，更多见development.md顶部。
 
-## Gemini试听接入候选（2026-10-02，未发布）
+## Gemini试听候选f88676b（2026-10-03，真实生成超时，未发布）
 
-本地实现了默认关闭的官方Gemini3.8固定样文试听。新变量仅为`EMILY_GEMINI_TTS_API_KEY`与`EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED`；后者是操作者对当前key/project/model免费层的确认记录，不是Google计费开关或自动证明。尚未确认层级、未发送真实合成请求，未配置RN密钥/重启服务；当前仍2e993d4。仅固定非私人样文/无私人派生稿，旧Edge主持/用户声线不改。离线预检新增确认=true时必须存在独立key，不调用Google；其他私有权限/ffmpeg要求保持。下一阶段真实固定样音成功后再按Emily窄发布权限处理，不能把本机fixture结果冒充RN或线上验证。详见development.md与后端README。
+David已确认专用项目Free Tier；两个新变量`EMILY_GEMINI_TTS_API_KEY`与`EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED`尚未加入生产env。后者是操作者确认，不是Google计费开关/硬零费用证明。仅固定非私人样文/无私人派生稿，旧Edge主持/用户声线与OAPI不改。
+
+Windows实际3次生成：Sulafat transition HTTP200/45.867s、MP3音频12.48s通过；Aoede/Kore各60s超时。RN候选/opt/emily/releases/f88676b隔离构建、testtypecheck/server62/web38/built通过；deployment首次固定3101与运行中的adapter冲突，停在发布前，改用一次性unshare --net/loopback完整9项通过，不动宿主网络或adapter。RN专用emily用户只用隔离/var/lib/emily/gemini-check-20261003调用Sulafat reflective，60s以及唯一一次120s诊断都超时。RN只读models.get HTTP200/187ms，基础连通不代表生成稳定；尚无根因/429证据。
+
+未停服务、未切current、未打开生产SQLite或改env；安全传输的临时Key输入已删除并验证。最终current仍2e993d4，health200/两unitsactive/NRestarts0/adapter PID1964070未变；候选保留不启用，无必要生产备份。实际生成可用性及主观听感未过，不用fixture、模型列表或本地单次成功宣称生产接入完成。运维记录changes/2026-10-03-emily-gemini-candidate.md；详情见development.md。
 
 ## 当前适合的部署方式
 

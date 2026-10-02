@@ -53,7 +53,7 @@ test("Gemini fixed samples use official stateless Interactions, separate deliver
     assert.deepEqual(captured!.headers, { "x-goog-api-key": KEY, "Content-Type": "application/json", Accept: "application/json" });
     const body = JSON.parse(String(captured!.body));
     assert.equal(body.store, false); assert.equal(body.stream, false); assert.equal(body.model, GEMINI_TTS_MODEL);
-    assert.deepEqual(body.response_format, { type: "audio", mime_type: "audio/wav", sample_rate: 24000 });
+    assert.deepEqual(body.response_format, { type: "audio" });
     assert.deepEqual(body.generation_config, { speech_config: [{ voice: "Sulafat" }] });
     assert.equal(body.input[0].content[0].text, VOICE_SAMPLES.zh.reflective);
     assert.equal(body.input[0].content[0].annotations[0].type, "speech_metadata");
@@ -125,7 +125,7 @@ test("Gemini single-flight rejects another voice, close drains but never publish
   } finally { release(); await client.close(); await rm(dir, { recursive: true, force: true }); }
 });
 
-test("Gemini owner audition route is fixed-only, no settings migration or programme/hosting access, and opt-in capability is honest", async () => {
+test("Gemini owner audition route is fixed-only, no settings migration and formal hosting requires a separate opt-in", async () => {
   const dir = await directory(); let calls = 0;
   const tts = new FixtureTts(dir, true);
   const app = buildApp({ env: { EMILY_DATA_DIR: dir, EMILY_OWNER_PASSWORD: OWNER_PASSWORD, EMILY_PUBLIC_ORIGIN: ORIGIN }, tts,
@@ -138,7 +138,7 @@ test("Gemini owner audition route is fixed-only, no settings migration or progra
     assert.equal((await app.inject({ method: "POST", url: "/api/tts/preview", headers: { origin: ORIGIN }, payload: { voice: "gemini:Sulafat" } })).statusCode, 401);
     for (const bad of [{ voice: "gemini:Sulafat", text: "TEST_ONLY_PRIVATE_LISTENER_CONTEXT" }, { voice: "gemini:Sulafat", style: "private" }, { voice: "gemini:Unknown" }]) assert.equal((await send(bad)).statusCode, 400);
     const result = await send({ voice: "gemini:Sulafat", sample: "reflective" }); assert.equal(result.statusCode, 200); assert.equal(result.headers["cache-control"], "private, no-store"); assert.equal(result.json().data.segment.text, VOICE_SAMPLES.zh.reflective); assert.equal(calls, 1);
-    assert.equal((await app.inject({ method: "PATCH", url: "/api/settings", headers: headers(cookie), payload: { voice: "gemini:Sulafat" } })).statusCode, 400, "audition-only voice cannot become formal hosting");
+    assert.equal((await app.inject({ method: "PATCH", url: "/api/settings", headers: headers(cookie), payload: { voice: "gemini:Sulafat" } })).statusCode, 409, "hosting requires separate server enablement");
     assert.deepEqual(app.services.radio.now(), before); assert.deepEqual(app.services.radio.settings(), settings); assert.equal(app.services.store.history().length, 0);
   } finally { await app.close(); await rm(dir, { recursive: true, force: true }); }
 });

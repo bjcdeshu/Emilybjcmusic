@@ -55,7 +55,8 @@ export type QueueAddResponse = PlayerActionResponse & { track: Track; outcome: "
 export const VOICE_PREVIEW_SAMPLES = ["transition", "bright", "reflective"] as const;
 export type VoicePreviewSample = typeof VOICE_PREVIEW_SAMPLES[number];
 export type VoicePreviewResponse = { segment: DjSegment };
-// Audition-only identities. Never silently map saved Edge voices to these voices.
+// Explicit identities: only the server-enabled host subset may be saved.
+export const GEMINI_HOST_VOICES = ["gemini:Sulafat"] as const;
 export const GEMINI_PREVIEW_VOICES = ["gemini:Sulafat", "gemini:Aoede", "gemini:Kore"] as const;
 export type GeminiPreviewVoice = typeof GEMINI_PREVIEW_VOICES[number];
 
@@ -64,7 +65,7 @@ export type MusicIdentity = { id: string; name: string; avatarUrl?: string };
 export type SetupStatus = {
   music: { configured: boolean; connected: boolean; user?: MusicIdentity; message?: string };
   model: { configured: boolean };
-  tts: { available: boolean; voice: string; language: "en" | "zh"; geminiPreview?: { ready: boolean; model: string } };
+  tts: { available: boolean; voice: string; language: "en" | "zh"; geminiPreview?: { ready: boolean; model: string; hostingReady?: boolean } };
 };
 export const ENGLISH_FEMALE_VOICES = [
   "en-US-EmmaMultilingualNeural", "en-US-EmmaNeural", "en-US-JennyNeural",
@@ -72,7 +73,7 @@ export const ENGLISH_FEMALE_VOICES = [
 ] as const;
 export const CHINESE_FEMALE_VOICES = ["zh-CN-XiaoxiaoNeural", "zh-CN-XiaoyiNeural", "zh-TW-HsiaoChenNeural", "zh-TW-HsiaoYuNeural"] as const;
 export const FEMALE_VOICES = [...CHINESE_FEMALE_VOICES, ...ENGLISH_FEMALE_VOICES] as const;
-export function voiceLanguage(voice: string): "zh" | "en" { return voice.startsWith("zh-") ? "zh" : "en"; }
+export function voiceLanguage(voice: string): "zh" | "en" { return voice.startsWith("zh-") || voice.startsWith("gemini:") ? "zh" : "en"; }
 export type LyricsResponse = { trackId: string; status: "synced" | "plain" | "instrumental" | "missing"; lines: { timeMs: number; text: string }[]; text?: string };
 export type RadioSettings = {
   hostLanguage: "en" | "zh";

@@ -1,7 +1,7 @@
 import { resolve, dirname, basename, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { FEMALE_VOICES, CHINESE_FEMALE_VOICES } from "@emily/shared";
+import { FEMALE_VOICES, CHINESE_FEMALE_VOICES, GEMINI_HOST_VOICES } from "@emily/shared";
 export { ENGLISH_FEMALE_VOICES, FEMALE_VOICES } from "@emily/shared";
 export const DEFAULT_VOICE = CHINESE_FEMALE_VOICES[0];
 export type AppConfig = {
@@ -22,6 +22,7 @@ export type AppConfig = {
   ttsTimeoutMs: number;
   geminiTtsKey: string | undefined;
   geminiTtsFreeTierConfirmed: boolean;
+  geminiTtsHostingEnabled: boolean;
   voice: string;
   webDir: string | undefined;
   port: number;
@@ -64,7 +65,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     credentialKey = Buffer.from(env.EMILY_CREDENTIAL_KEY, "hex");
   }
   const voice = env.EMILY_TTS_VOICE || DEFAULT_VOICE;
-  if (!(FEMALE_VOICES as readonly string[]).includes(voice)) throw new Error("EMILY_TTS_VOICE is not an allowlisted female voice.");
+  if (!([...FEMALE_VOICES, ...GEMINI_HOST_VOICES] as readonly string[]).includes(voice)) throw new Error("EMILY_TTS_VOICE is not an allowlisted female voice.");
   const ttsCommand = env.EMILY_TTS_COMMAND || "uvx";
   const executableName = basename(ttsCommand).toLowerCase();
   const absoluteExecutable = isAbsolute(ttsCommand) && !/[\0\r\n]/.test(ttsCommand) &&
@@ -74,7 +75,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
   if (env.EMILY_TTS_ENABLED && !["true", "false"].includes(env.EMILY_TTS_ENABLED)) throw new Error("Invalid EMILY_TTS_ENABLED.");
   if (env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED && !["true", "false"].includes(env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED)) throw new Error("Invalid EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED.");
+  if (env.EMILY_GEMINI_TTS_HOSTING_ENABLED && !["true", "false"].includes(env.EMILY_GEMINI_TTS_HOSTING_ENABLED)) throw new Error("Invalid EMILY_GEMINI_TTS_HOSTING_ENABLED.");
   const geminiTtsKey = env.EMILY_GEMINI_TTS_API_KEY || undefined;
+  const geminiTtsHostingEnabled = env.EMILY_GEMINI_TTS_HOSTING_ENABLED === "true";
+  if (geminiTtsHostingEnabled && (!geminiTtsKey || env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED !== "true")) throw new Error("Gemini hosting requires a dedicated key and confirmed free tier.");
   if (geminiTtsKey && !/^[A-Za-z0-9_-]{20,200}$/.test(geminiTtsKey)) throw new Error("Invalid EMILY_GEMINI_TTS_API_KEY.");
   const defaultData = resolve(dirname(fileURLToPath(import.meta.url)), "../data");
   return {
@@ -88,7 +92,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     httpTimeoutMs: numberEnv(env, "EMILY_HTTP_TIMEOUT_MS", 12_000, 100, 60_000),
     ttsEnabled: env.EMILY_TTS_ENABLED !== "false", ttsCommand,
     ttsTimeoutMs: numberEnv(env, "EMILY_TTS_TIMEOUT_MS", 25_000, 100, 120_000), voice,
-    geminiTtsKey, geminiTtsFreeTierConfirmed: env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED === "true",
+    geminiTtsHostingEnabled, geminiTtsKey, geminiTtsFreeTierConfirmed: env.EMILY_GEMINI_TTS_FREE_TIER_CONFIRMED === "true",
     webDir: env.EMILY_WEB_DIST_DIR ? resolve(env.EMILY_WEB_DIST_DIR) : undefined,
     port: numberEnv(env, "EMILY_PORT", 3000, 0, 65_535), host: env.EMILY_HOST || "127.0.0.1"
   };

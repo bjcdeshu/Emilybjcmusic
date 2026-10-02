@@ -17,7 +17,14 @@ Development and preview bind `127.0.0.1`. Development `/api` proxies to the loop
 
 The 27 automated tests are **explicitly test-only fixtures**, not real provider acceptance. They cover audio sequencing, pause/async-operation races, stale play promises, actual-property progress/seek, autoplay rejection, audio/TTS failure, empty queues, logout cleanup, API envelopes/401, URL boundaries, and static-only service-worker caching. `FakeAudio` is never imported by the application. The root `npm run test:browser` also inspects login/listen/library/history/settings/QR and empty archive at360/393/768/1360px, shared control typography and44px primary controls, using explicitly browser-only collection/cover fixtures. It now exercises actual Chrome decoding, DJ/song/next sequencing, pause/seek/quiet mode, feedback/history/voice selection/logout and static-only offline PWA against explicit local HTTP/tone-MP3 fixtures. Real account audio, human listening and physical Xiaomi background playback remain unverified.
 
-## Optional Gemini audition (Pi / 2026-10-02, local; not live)
+## Formal Gemini host (Pi / 2026-10-03, live delivery in progress)
+
+Latest explicit request is online Gemini hosting, not only auditions. When server hostingReady is true, the existing host selector offers Sulafat/Gemini, and the redundant audition-engine selector is hidden. Saved voice controls both formal host and fixed-sample preview; language correctly shows Chinese. Privacy copy explains final script to Google/free-service data use. Mid-song settings changes do not reload audio; a changed voice at the initial unplayed boundary re-prepares the host, fixing a real browser regression found during this work. Existing single-audio/gain0.9/paused audition restore remain. New formal-host browser fixture covers save/host→song/lookahead/paused restore/4 viewports/logout without live providers.
+
+### Previous audition-only candidate (historical)
+
+
+David confirmed the project Free Tier. Actual Windows Sulafat/transition audio succeeded and played to ended in Chrome; other60s and RN120s diagnostic generation requests timed out. f88676b adds waiting/cache explanation and explicit safe timeout messaging; no false progress. Release remains withheld, production is still2e993d4. The UI screenshot is a local fixture, not a live enabled setting, and voice quality is not approved.
 
 Only when setup declares configured Gemini audition readiness, Settings shows a separate audition-engine selector and Sulafat/Aoede/Kore candidates. Saved hosting voice stays in the original Edge field: choosing or auditioning Gemini and Save preferences never maps it onto formal hosting. Three fixed non-private samples, no private text, model/channel credentials or billing switches in browser. Wording distinguishes Free Tier data-use policy and no-personalised-hosting scope; actual Mandarin voice/emotion quality is unverified.
 

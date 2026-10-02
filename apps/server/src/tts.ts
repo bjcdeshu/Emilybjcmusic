@@ -30,6 +30,8 @@ export type TtsPort = {
   readonly audioDir: string;
   available(voice: string): Promise<boolean>;
   segment(text: string, voice: string): Promise<DjSegment>;
+  /** Reject persisted segments from a different provider/model/delivery identity. */
+  matches?(segment: DjSegment, voice: string): boolean;
 };
 export type TtsExecutor = (command: string, args: string[], options: {
   timeout: number; killSignal: "SIGKILL"; maxBuffer: number; windowsHide: boolean; env: NodeJS.ProcessEnv;
