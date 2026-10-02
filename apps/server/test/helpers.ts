@@ -90,6 +90,12 @@ export class HttpFixture {
     else if (path === "/login/qr/check") value = { code: this.qrCode, ...(this.qrCode === 803 ? { cookie: COOKIE_SENTINEL } : {}) };
     else if (path === "/v1/chat/completions") {
       const system = String((body.messages as {content:string}[] | undefined)?.[0]?.content || '');
+      if (system.includes('HOST_ONE:')) {
+        if (this.modelMode === 'unavailable') { response.writeHead(503).end(COOKIE_SENTINEL); return; }
+        const input = JSON.parse(String((body.messages as {content:string}[])[1]?.content)) as {track:{title:string;artist:string}};
+        const hosting = this.hostingText || `你选了${input.track.artist}的《${input.track.title}》，我想先给这个选择一点空间。不急着替它说些什么，等音乐开始，我们各自听听它会带来什么。`;
+        response.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({choices:[{message:{content:JSON.stringify({hosting})}}]})); return;
+      }
       if(this.dialogueMode && system.includes('ONE private radio owner')) {
         const plan={...(this.dialogueTarget?{target:this.dialogueTarget}:{}),...(this.dialogueLimit?{limit:this.dialogueLimit}:{}),reply:this.dialogueFormatting?'我理解了。\n换轻松一点的音乐。':'想听什么样的音乐？',action:this.dialogueMode==='clarify'?'clarify':'find',prompt:'柔和，但不要太伤感',queries:['Fixture artist'],...(this.dialogueFormatting?{playlistId:null}:{})};
         value={choices:[{message:{content:this.dialogueFormatting?'```json\n'+JSON.stringify(plan)+'\n```':JSON.stringify(plan)}}]};

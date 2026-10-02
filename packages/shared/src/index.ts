@@ -47,7 +47,7 @@ export type QueueResponse = { items: QueueItem[] };
 export type PlayerActionResponse = { now: NowPlayingState };
 export type PlayRequest = { trackId?: string };
 export const MAX_QUEUE_ITEMS = 48;
-export type QueueAddRequest = { trackId: string; programmeId: string };
+export type QueueAddRequest = { trackId: string; programmeId: string; /** Optional owner wording, volatile until intro preparation; never saved as chat. */ listenerNote?: string };
 export type QueueAddResponse = PlayerActionResponse & { track: Track; outcome: "added" | "already_present"; message: string };
 export type VoicePreviewResponse = { segment: DjSegment };
 

@@ -4,12 +4,13 @@ import type { AppConfig } from "./config.js";
 import { AppError } from "./errors.js";
 import { NeteaseAdapter } from "./netease.js";
 import { hostingLine, ProgrammeSelector } from "./model.js";
+import { HOSTING_VERSION } from "./hosting-editor.js";
 import { voiceLanguage, CHINESE_FEMALE_VOICES } from "@emily/shared";
-import { isHosting } from "./hosting-language.js";
+import { isHosting, hasKana, mandarinNames } from "./hosting-language.js";
 import { metadataTrack, Store } from "./store.js";
 import type { TtsPort } from "./tts.js";
 
-type PreparedItem = QueueItem & { hosting: string; dj?: DjSegment };
+type PreparedItem = QueueItem & { hosting: string; dj?: DjSegment; hostingVersion?: number; hostingWarning?: string };
 type RadioState = {
   status: NowPlayingState["status"]; items: PreparedItem[]; index: number; title?: string;
   warning?: string; startedAt?: string; updatedAt: string; programmeId?: string;
@@ -26,6 +27,9 @@ export class Radio {
   private refill: Promise<void> | undefined;
   private refillRevision: number | undefined;
   private readonly intros = new Map<string, Promise<void>>();
+  // Listener wording stays volatile; never serialize it into radio/history/logs.
+  private readonly listenerNotes = new Map<string, string>();
+  private hostingContextRevision = 0;
   private queueRevision = 0;
   private queueWork: Promise<QueueAddResponse> | undefined;
   readonly defaults: RadioSettings;
@@ -42,15 +46,19 @@ export class Radio {
       });
     }
     const language = this.settings().hostLanguage;
-    const shorten = !this.store.get<boolean>("short_hosting_v2") && language === "zh";
+    // Retire v2's forced short-copy migration. Refresh old Chinese scripts lazily
+    // in the existing bounded intro path, without generating during startup.
     this.store.set("short_hosting_v2", true);
-    // Shorten stored Chinese hosting and invalidate its old delivery cache once;
-    // do not replace settings, queue, entitlements or programme history.
     let repaired = false;
     if (this.state.items.length && !this.state.programmeId) { this.state.programmeId = randomUUID(); repaired = true; }
     for (const item of this.state.items) {
-      if (migrate || shorten || !isHosting(item.hosting, language) || (item.dj && (!isHosting(item.dj.text, language) || item.dj.text !== item.hosting || item.dj.language !== language))) {
-        if (migrate || shorten || !isHosting(item.hosting, language) || (item.dj && item.dj.language !== language)) item.hosting = hostingLine(item.track, undefined, language);
+      if (language === "zh" && hasKana(item.hosting)) {
+        item.hosting = mandarinNames(item.hosting, item.track);
+        if (hasKana(item.hosting)) item.hosting = hostingLine(item.track, undefined, language);
+        delete item.dj; delete item.hostingVersion; repaired = true;
+      }
+      if (migrate || (language === "zh" && item.hostingVersion !== HOSTING_VERSION) || !isHosting(item.hosting, language) || (item.dj && (!isHosting(item.dj.text, language) || item.dj.text !== item.hosting || item.dj.language !== language))) {
+        if (migrate || !isHosting(item.hosting, language) || (item.dj && item.dj.language !== language)) { item.hosting = hostingLine(item.track, undefined, language); delete item.hostingVersion; }
         delete item.dj; repaired = true;
       }
     }
@@ -89,16 +97,17 @@ export class Radio {
       status: this.state.status,
       ...(current ? { track: { ...current.track, audioUrl: `/api/media/track/${current.track.id}` } } : {}),
       ...(current?.dj && settings.djEnabled && current.dj.voice === settings.voice ? { dj: current.dj } : {}),
-      queue: this.state.items.map(({ hosting: _hosting, dj: _dj, ...item }) => ({ ...item, track: { ...item.track, ...(item.status !== "failed" ? { audioUrl: `/api/media/track/${item.track.id}` } : {}) } })),
+      queue: this.state.items.map(({ hosting: _hosting, dj: _dj, hostingVersion: _version, hostingWarning: _warning, ...item }) => ({ ...item, track: { ...item.track, ...(item.status !== "failed" ? { audioUrl: `/api/media/track/${item.track.id}` } : {}) } })),
       updatedAt: this.state.updatedAt,
       ...(this.state.roam ? { roaming: { enabled: this.state.roam.enabled, scope: "playlist" as const, preparing: this.state.roam.enabled && !!this.refill && this.refillRevision === this.roamRevision, ...(this.state.roam.message ? { message: this.state.roam.message } : {}) } } : {}),
       ...(this.state.startedAt ? { startedAt: this.state.startedAt } : {}),
       ...(this.state.title ? { programmeTitle: this.state.title } : {}),
       ...(this.state.programmeId ? { programmeId: this.state.programmeId } : {}),
-      ...(this.state.warning ? { warning: this.state.warning } : {})
+      ...((this.state.warning || (settings.djEnabled && current?.hostingWarning)) ? { warning: [this.state.warning, settings.djEnabled ? current?.hostingWarning : undefined].filter(Boolean).join(" ") } : {})
       // Real audio-element events own playback progress. No fabricated timer/position is sent.
     };
   }
+  clearHostingContext(): void { this.hostingContextRevision++; this.listenerNotes.clear(); }
   private persist(): void {
     this.state.updatedAt = this.iso();
     this.store.set("radio", this.state);
@@ -118,12 +127,14 @@ export class Radio {
     this.audioRevision++;
     this.pauseRevision++;
     this.restartNotice = false;
+    this.listenerNotes.clear();
     this.state = { status: "idle", items: [], index: 0, updatedAt: this.iso() };
     this.persist();
   }
   /** Drain bounded work before SQLite/private media is closed or removed. */
   async close(): Promise<void> {
     this.closed = true;
+    this.listenerNotes.clear();
     this.queueRevision++;
     this.roamRevision++;
     this.audioRevision++;
@@ -134,8 +145,14 @@ export class Radio {
   private async intro(item: PreparedItem, revision = this.audioRevision): Promise<void> {
     const settings = this.settings();
     if (this.closed || revision !== this.audioRevision || !settings.djEnabled) return;
-    if (!isHosting(item.hosting, settings.hostLanguage)) { item.hosting = hostingLine(item.track, undefined, settings.hostLanguage); delete item.dj; }
-    if (item.dj?.voice === settings.voice && item.dj.text === item.hosting && isHosting(item.dj.text, settings.hostLanguage) && item.dj.status !== "tts_failed") return;
+    if (!isHosting(item.hosting, settings.hostLanguage)) { item.hosting = hostingLine(item.track, undefined, settings.hostLanguage); delete item.dj; delete item.hostingVersion; }
+    if (settings.hostLanguage === "zh" && hasKana(item.hosting)) {
+      item.hosting = mandarinNames(item.hosting, item.track);
+      if (hasKana(item.hosting)) item.hosting = hostingLine(item.track, undefined, "zh");
+      delete item.dj; delete item.hostingVersion;
+    }
+    const needsWriting = settings.hostLanguage === "zh" && item.hostingVersion !== HOSTING_VERSION;
+    if (!needsWriting && item.dj?.voice === settings.voice && item.dj.text === item.hosting && isHosting(item.dj.text, settings.hostLanguage) && item.dj.status !== "tts_failed") return;
     const key = `${revision}:${item.id}:${settings.voice}`;
     const existing = this.intros.get(key);
     if (existing) return existing;
@@ -144,23 +161,46 @@ export class Radio {
       await Promise.race(this.intros.values()).catch(() => undefined);
       return this.intro(item, revision);
     }
-    const work = Promise.resolve().then(() => this.tts.segment(item.hosting, settings.voice)).then(segment => {
+    const work = Promise.resolve().then(async () => {
+      if (needsWriting) {
+        const index = this.state.items.indexOf(item);
+        const previous = index > 0 ? this.state.items[index - 1]?.track : undefined;
+        const contextRevision = this.hostingContextRevision;
+        const written = await this.selector.host(item.track, settings, {
+          requestedBy: item.requestedBy,
+          ...(this.listenerNotes.has(item.id) ? { listenerNote: this.listenerNotes.get(item.id)! } : {}),
+          ...(index >= 0 && item.requestedBy !== "user" && this.state.roam?.prompt ? { programmePrompt: this.state.roam.prompt } : {}),
+          ...(previous ? { previous: { title: previous.title, artist: previous.artist } } : {}),
+          recentHosting: index > 0 ? this.state.items.slice(Math.max(0, index - 3), index).map(i => i.hosting) : [],
+          position: index === 0 ? "opening" : "continuation"
+        });
+        if (this.closed || revision !== this.audioRevision) return;
+        // A clear/logout while the model is working must not publish its stale
+        // listener-derived text. Already generated scripts are not chat storage.
+        if (contextRevision !== this.hostingContextRevision) { written.text = hostingLine(item.track, undefined, settings.hostLanguage); written.warning = "对话上下文已清空，这一段使用简短报幕。"; }
+        item.hosting = written.text; item.hostingVersion = HOSTING_VERSION;
+        if (written.warning) item.hostingWarning = written.warning; else delete item.hostingWarning;
+        this.listenerNotes.delete(item.id);
+        delete item.dj;
+      }
+      if (this.closed || revision !== this.audioRevision) return;
+      const segment = await this.tts.segment(item.hosting, settings.voice);
       if (this.closed || revision !== this.audioRevision) return;
       item.dj = segment;
       if (this.state.items.includes(item)) this.persist();
     }).finally(() => {
       this.intros.delete(key);
-      if (!this.busy && (item.dj || revision !== this.audioRevision)) this.prefetch();
+      if (!this.busy && (item.dj || revision !== this.audioRevision)) this.prefetch(false);
     });
     this.intros.set(key, work);
     return work;
   }
-  private prefetch(): void {
-    this.refillSoon();
+  private prefetch(scheduleRefill = true): void {
+    if (scheduleRefill) this.refillSoon();
     if (this.closed || !this.settings().djEnabled || this.intros.size >= 2) return;
     // One-track lookahead, not an unbounded whole-programme synthesis fan-out.
     const next = this.state.items[this.state.index + 1];
-    if (!next || next.dj?.voice === this.settings().voice) return;
+    if (!next || (next.dj?.voice === this.settings().voice && (this.settings().hostLanguage !== "zh" || next.hostingVersion === HOSTING_VERSION))) return;
     void this.intro(next).catch(() => undefined);
   }
   private refillSoon(): void {
@@ -209,13 +249,16 @@ export class Radio {
       this.state.roam.message = "原歌单本轮可播放歌曲已听完；不会自动重复或切换其他音源。";
       this.persist(); return;
     }
-    const selection = await this.selector.select(permitted, { ...(source.prompt ? { prompt: source.prompt } : {}), limit: Math.min(source.limit, 1000 - seen.size) }, this.settings(), feedback, this.state.title);
-    const items: PreparedItem[] = selection.items.map(item => ({ id: randomUUID(), track: metadataTrack(item.track), reason: item.reason, requestedBy: selection.source === "model" ? "model" : "fallback", status: "resolved", hosting: item.hosting }));
-    if (items[0]) await this.intro(items[0]);
+    const selection = await this.selector.select(permitted, { ...(source.prompt ? { prompt: source.prompt } : {}), limit: Math.min(source.limit, 1000 - seen.size) }, this.settings(), feedback, this.state.title, this.state.items.slice(-3).map(i => i.hosting));
+    const items: PreparedItem[] = selection.items.map(item => ({ id: randomUUID(), track: metadataTrack(item.track), reason: item.reason, requestedBy: selection.source === "model" ? "model" : "fallback", status: "resolved", hosting: item.hosting, ...(item.hostingVersion ? { hostingVersion: item.hostingVersion } : {}) }));
+    if (items[0]) {
+      if (source.prompt) this.listenerNotes.set(items[0].id, source.prompt.slice(0, 600));
+      try { await this.intro(items[0]); } finally { this.listenerNotes.delete(items[0].id); }
+    }
     if (this.closed || revision !== this.roamRevision || !this.state.roam?.enabled) return;
     // Keep two prior tracks for Back, bounded current/upcoming items, no endless queue.
     const remove = this.busy ? 0 : Math.max(0, this.state.index - 2);
-    this.state.items.splice(0, remove); this.state.index -= remove;
+    for (const removed of this.state.items.splice(0, remove)) this.listenerNotes.delete(removed.id); this.state.index -= remove;
     // Enqueue can finish while this refill is awaiting the provider/TTS. Re-read
     // live seen/queue: never duplicate the added song or overwrite its seen entry.
     const liveSeen = new Set(this.state.roam.seen);
@@ -249,7 +292,9 @@ export class Radio {
       const present = this.state.items.slice(this.state.index).some(i => i.track.id === track.id && i.status !== "failed");
       if (present) return { now: this.now(), track: metadataTrack(track), outcome: "already_present", message: "这首歌正在播放或已在待播列表中，没有重复加入。" };
       if (this.state.items.length >= MAX_QUEUE_ITEMS || (this.state.roam && !this.state.roam.seen.includes(track.id) && this.state.roam.seen.length >= 1000)) throw new AppError(409, "QUEUE_LIMIT", "当前待播列表已到安全上限，请听完一些再加入。");
-      this.state.items.push({ id: randomUUID(), track: metadataTrack(track), requestedBy: "user", status: "resolved", reason: "你点的这首歌 · 加入队尾", hosting: hostingLine(track, undefined, this.settings().hostLanguage) });
+      const item: PreparedItem = { id: randomUUID(), track: metadataTrack(track), requestedBy: "user", status: "resolved", reason: "你点的这首歌 · 加入队尾", hosting: hostingLine(track, undefined, this.settings().hostLanguage) };
+      this.state.items.push(item);
+      if (request.listenerNote?.trim()) this.listenerNotes.set(item.id, request.listenerNote.trim().slice(0, 600));
       if (this.state.roam && !this.state.roam.seen.includes(track.id)) this.state.roam.seen.push(track.id);
       this.persist();
       // Appending is metadata only. Existing lookahead remains valid; new
@@ -295,8 +340,11 @@ export class Radio {
     const items: PreparedItem[] = selection.items.map(item => ({
       id: randomUUID(), track: metadataTrack(item.track), reason: item.reason,
       requestedBy: selection.source === "model" ? "model" : request.trackIds?.length ? "user" : "fallback",
-      status: "resolved", hosting: item.hosting
+      status: "resolved", hosting: item.hosting, ...(item.hostingVersion ? { hostingVersion: item.hostingVersion } : {})
     }));
+    this.listenerNotes.clear();
+    // Ordered confirmation bypasses model selection, not Emily's spoken writing.
+    if (request.prompt) for (const item of items) if (item.hostingVersion !== HOSTING_VERSION) this.listenerNotes.set(item.id, request.prompt.slice(0, 600));
     this.roamRevision++;
     this.audioRevision++;
     if (settings.djEnabled && items[0]) {
@@ -318,9 +366,11 @@ export class Radio {
     if (!current) throw new AppError(409, "QUEUE_EMPTY", "Create a programme before playing music.");
     await this.music.audio(current.track.id);
     await this.intro(current);
+    if (!this.state.items.includes(current)) throw new AppError(409, "QUEUE_CHANGED", "节目已更换，旧串场没有继续播放。");
     // A voice change during synthesis invalidates the old result; prepare the current voice.
     while (!this.closed && this.settings().djEnabled && current.dj?.voice !== this.settings().voice) {
       await this.intro(current);
+      if (!this.state.items.includes(current)) throw new AppError(409, "QUEUE_CHANGED", "节目已更换，旧串场没有继续播放。");
     }
     if (this.restartNotice) { delete this.state.warning; this.restartNotice = false; }
     if (this.settings().djEnabled && current.dj?.status !== "tts_ready") this.state.warning = "主持语音暂不可用，实际歌曲仍可播放。";
@@ -384,7 +434,7 @@ export class Radio {
       else if (this.state.status === "idle") this.state.warning = "End of programme. Choose a new programme or replay a track.";
       if (this.state.roam && this.state.index > 2) {
         const remove = this.state.index - 2;
-        this.state.items.splice(0, remove); this.state.index -= remove;
+        for (const removed of this.state.items.splice(0, remove)) this.listenerNotes.delete(removed.id); this.state.index -= remove;
       }
       // Navigation does not write feedback. A skip is never a permanent dislike.
       this.persist();

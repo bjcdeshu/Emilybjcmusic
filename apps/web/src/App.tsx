@@ -160,12 +160,12 @@ export function App() {
     const merged = { ...current, queue:value.queue, updatedAt:value.updatedAt, ...(value.roaming?{roaming:value.roaming}:{}) };
     nowRef.current = merged; setNow(merged); setQueue(value.queue);
   }
-  async function enqueue(trackId: string, programmeId: string): Promise<QueueAddResponse> {
+  async function enqueue(trackId: string, programmeId: string, listenerNote?: string): Promise<QueueAddResponse> {
     if (queueAdding.current || !sessionRef.current?.authenticated) throw new Error("请等待上一首加入完成。");
     const currentEpoch = epoch.current;
     queueAdding.current = true; queueAddProgramme.current = programmeId; metadataRevision.current++;
     try {
-      const result = await post<QueueAddResponse>("/api/queue/add",{trackId,programmeId});
+      const result = await post<QueueAddResponse>("/api/queue/add",{trackId,programmeId,...(listenerNote?{listenerNote}:{})});
       if (currentEpoch !== epoch.current) throw new Error("登录或音乐连接已改变，本页不再使用这次结果。");
       metadataRevision.current++; mergeQueueMetadata(result.now);
       // A real ended/next can complete during rights recheck. Re-read metadata

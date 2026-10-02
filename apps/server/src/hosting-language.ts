@@ -10,6 +10,17 @@ export function isHosting(text: string, language: "en" | "zh"): boolean {
   return !!text.trim() && /\p{Script=Han}/u.test(text) && !/[<>`\x00-\x1f\x7f]/.test(text) && !/https?:\/\//i.test(text);
 }
 
+export function hasKana(text: string): boolean { return /[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text); }
+/** Conservative Mandarin handoff: never invent a translation/romanization. */
+export function mandarinNames(text: string, track: { title: string; artist: string; album?: string }): string {
+  const names = [[track.title, "这首歌"], [track.artist, "这位歌手"], [track.album || "", "这张专辑"]] as const;
+  for (const [name, replacement] of [...names].sort((a,b)=>b[0].length-a[0].length)) {
+    if (!name || !hasKana(name)) continue;
+    text = text.split(`《${name}》`).join(replacement).split(name).join(replacement);
+  }
+  return text;
+}
+
 export function spokenMetadata(value: string): string | undefined {
   // Omit the entire name rather than extract an English fragment from mixed metadata,
   // transliterate an unknown artist, or invent an official English song title.

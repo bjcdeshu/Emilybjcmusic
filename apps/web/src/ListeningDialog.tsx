@@ -3,11 +3,11 @@ import { ArrowRight, Check, MessageCircle, Plus, Send, X } from 'lucide-react';
 import type { ListeningMessage, ListeningMode, ListeningRequest, ListeningResponse, NowPlayingState, ProgrammeRequest, QueueAddResponse, SetupStatus } from '@emily/shared';
 import { errorMessage, post } from './api';
 import { StationIdentity, Spinner } from './components';
-export type ListeningTurn = ListeningMessage & { suggestion?: ListeningResponse; programmeId?: string; additions?: Record<string,string> };
+export type ListeningTurn = ListeningMessage & { suggestion?: ListeningResponse; programmeId?: string; listenerNote?: string; additions?: Record<string,string> };
 type Props = {
   close: () => void; setup: SetupStatus | null; busy: boolean; now: NowPlayingState | null;
   turns: ListeningTurn[]; setTurns: Dispatch<SetStateAction<ListeningTurn[]>>;
-  enqueue: (trackId: string, programmeId: string) => Promise<QueueAddResponse>;
+  enqueue: (trackId: string, programmeId: string, listenerNote?: string) => Promise<QueueAddResponse>;
   createProgramme: (request: ProgrammeRequest) => Promise<boolean>;
 };
 export function ListeningDialog({ close, setup, busy, now, turns, setTurns, enqueue, createProgramme }: Props) {
@@ -27,7 +27,7 @@ export function ListeningDialog({ close, setup, busy, now, turns, setTurns, enqu
     const abort = new AbortController(); controller.current = abort;
     try {
       const response = await post<ListeningResponse>('/api/conversation',request,abort.signal);
-      if (!abort.signal.aborted) { setTurns(old => [...old.slice(-29),{role:'assistant',text:response.reply,suggestion:response,...(programmeId?{programmeId}:{})}]); retry.current = null; }
+      if (!abort.signal.aborted) { setTurns(old => [...old.slice(-29),{role:'assistant',text:response.reply,suggestion:response,listenerNote:request.messages.filter(m=>m.role==='user').slice(-3).map(m=>m.text).join('；').slice(-600),...(programmeId?{programmeId}:{})}]); retry.current = null; }
     } catch (e) { if (!abort.signal.aborted) setError(errorMessage(e)); }
     finally { if (!abort.signal.aborted) setSending(false); }
   }
@@ -41,7 +41,7 @@ export function ListeningDialog({ close, setup, busy, now, turns, setTurns, enqu
     if (!turn.programmeId || adding || sending || busy) return;
     setAdding(trackId); setError(''); setResultNote('');
     try {
-      const result = await enqueue(trackId,turn.programmeId);
+      const result = await enqueue(trackId,turn.programmeId,turn.listenerNote);
       setTurns(old=>old.map(t=>t===turn?{...t,additions:{...t.additions,[trackId]:result.message}}:t));
       if (mounted.current) setResultNote(result.message);
     } catch(e) { if (mounted.current) setError(errorMessage(e)); }
@@ -64,7 +64,7 @@ export function ListeningDialog({ close, setup, busy, now, turns, setTurns, enqu
       {!available&&<p className="inline-error">{!setup?.model.configured?'模型尚未配置，暂时不能对话选曲。':'请先连接你的网易云音乐。'}</p>}
       {resultNote&&<p className="listening-result" role="status"><Check size={14}/>{resultNote}</p>}
       <form className="listening-compose" onSubmit={send}><label className="sr-only" htmlFor="listening-message">告诉 Emily 想听什么</label><textarea autoFocus id="listening-message" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();e.currentTarget.form?.requestSubmit();}}} rows={2} maxLength={500} placeholder={mode==='enqueue'?'歌名、歌手，或者想找什么音乐…':'想换成怎样的一组音乐？'} disabled={sending||!!adding||replacing}/><button className="primary-button" type="submit" aria-label="发送听歌想法" disabled={sending||!!adding||replacing||!draft.trim()||!available}><Send size={18}/></button></form>
-      <div className="listening-footnote"><small>对话仅在本页内存保留，最近上下文与候选信息会发给现有模型。Enter 发送，Shift+Enter 换行。</small><button className="text-button" disabled={sending||!!adding||replacing||!turns.length} onClick={()=>{setTurns([]);setError('');setResultNote('');retry.current=null;}}>清空对话</button></div>
+      <div className="listening-footnote"><small>对话不存档。确认加入时，相关原话会暂存于服务器内存供串场使用，并发给现有模型；生成的串场及音频会随节目保留。Enter 发送，Shift+Enter 换行。</small><button className="text-button" disabled={sending||!!adding||replacing||(!turns.length&&!error)} onClick={()=>{setTurns([]);setError('');setResultNote('');retry.current=null;void post('/api/hosting/context/clear',{}).catch(()=>{if(mounted.current)setError('页面对话已清空，但待播串场上下文清理失败；可重试清空。');});}}>清空对话</button></div>
     </div>
   </dialog>;
 }
