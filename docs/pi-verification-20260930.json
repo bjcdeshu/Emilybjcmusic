@@ -1,5 +1,12 @@
 {
   "date": "2026-09-30",
+  "restrainedRhythm": {
+    "date":"2026-10-02","release":"69e7c08","local":{"typecheck":true,"build":true,"web":36,"browser":4,"skipped":0,"decodedBassBurstFixture":true},
+    "rn":{"build":true,"web":36,"identityPreflightHealth":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-69e7c08","priorRelease":"7d2c642"},
+    "live":{"completed":true,"initialQueue":11,"realDjToSong":true,"frames":100,"accentRange":[0,0.65],"titleStable":true,"fourMobileViewports":true,"opaqueSheetSameAudio":true,"reducePauseZero":true,"queueProgrammeRoamingSettingsHistoryPreserved":true,"finalPausedLogout":true,"pageErrors":[]},
+    "boundaries":["Not BPM or user subjective approval","Frontend-only scope; prior server53/deployment7 not rerun","No programme/song/NetEase write, no voice or hosting changes"],
+    "assets":["index-DUIzW0H_.css","index-CXBvGHUQ.js"]
+  },
   "hostingPresenceAndJapaneseNames": {
     "date":"2026-10-02","release":"7d2c642","local":{"typecheck":true,"serverTestTypecheck":true,"build":true,"server":53,"web":34,"browser":3,"deployment":7,"built":true},
     "realCopyReview":{"singleChars":[66,88,64,81],"batchChars":[91,83,81],"xiaoxiaoParagraphSeconds":17.952,"decodedAndCached":true,"earlierBatchInvalidThenBoundedRerunPassed":true,"stillGenericPhrasesNotSubjectiveApproval":true},

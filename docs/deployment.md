@@ -1,6 +1,10 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新7d2c642主持表达/日文名字安全承接已发布，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新69e7c08克制律动/不透明面板已发布，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+
+## 最新窄发布：69e7c08（2026-10-02）
+
+current=/opt/emily/releases/69e7c08；仅Emily app重启，adapter PID未变，两unitsactive/NRestarts0。停应用后root-only pre-69e7c08 SQLite+env/key备份/cmp，保留7d2c642可代码回滚，不覆盖新用户数据。RN identity/preflight/health/build/web36通过。无新env/schema/依赖/Node/DNS/反代变更。线上原11首/漫游/settings/history不变，真实DJ→歌曲100帧响应/4视口/sheet/reduce/pause通过；最后paused/logout。运维记录changes/2026-10-02-emily-restrained-rhythm.md，更多见development.md顶部。
 
 ## 当前适合的部署方式
 

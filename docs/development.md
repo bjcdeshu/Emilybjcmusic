@@ -1,12 +1,16 @@
 # Emily Development Guide
 
-## 当前阶段：克制节奏响应与视觉细节优化中（2026-10-02）
+## 当前阶段：克制节奏响应与视觉细节已发布69e7c08（2026-10-02）
 
-David认可上轮方案可用，但认为视觉不够高级，要求更多克制到能感到节奏而非乱跳的律动；已明确『ok，推进优化』。Pi在干净d71a4ae/已同步同名分支继续单写入：真实分组频段/轻重音包络、细环微响应、音频驱动慢光、主持小灯，阅读/transport固定；取消定时漂移与面板淡入叠影，保留整屏与真实音频所有权。本轮尚未发布，生产仍7d2c642。
+David认可上轮方案可用，但认为视觉不够高级，要求更多克制到能感到节奏而非乱跳的律动；已明确『ok，推进优化』。Pi在干净d71a4ae/已同步同名分支继续单写入：真实分组频段/轻重音包络、细环微响应、音频驱动慢光、主持小灯，阅读/transport固定；取消定时漂移与面板淡入叠影，保留整屏与真实音频所有权。本轮已发布69e7c08，生产current=/opt/emily/releases/69e7c08；上轮7d2c642保留回滚。单graph/单RAF真实非重叠频段≤24、85/330ms声音条、900/1600ms慢光、低频增量accent≤.65（非BPM）驱动细环≤3.6%；取消固定漂移，主持弱accent/小灯，dialog降低背景响应且不透明平移入场。pause/静音/hidden/offscreen/reduce归零。
+
+Windows typecheck/build、web36、browser4（含实际解码低频脉冲）全部通过0skip；RN build/web36通过。本轮前端范围未重跑server53/deployment7，上一轮结果不冒充本轮。RN身份/专用用户preflight/health正常，两unitsactive、Emily NRestarts0、adapter PID未变；停Emily后root-only SQLite+env/key一致性备份pre-69e7c08/cmp。无依赖/schema/env/Node/DNS/其他业务改动。真实Chrome既有中文DJ自然结束→原网易歌曲，100帧accent0–.65、阅读锚点稳定、4手机视口、sheet同audio/reduce/pause通过；原11首/programme/漫游/settings/history未改，无新programme/新增歌曲，最终paused/logout/pageErrors[]。实际截图已审阅，测试不代表David主观认可或精确节拍检测。
+
+私有证据：work/.tmp/emily-browser-tools/design-rhythm[-live]；线上result.json completed=true。assets index-DUIzW0H_.css / index-CXBvGHUQ.js。RN运维记录changes/2026-10-02-emily-restrained-rhythm.md；开发分支按既有范围同步，不覆盖main。
 
 ## 上轮：Emily主持表达与日文名字安全承接已发布7d2c642（2026-10-02）
 
-David在5ca516d实际体验后纠正：串场太短，情感不足，也缺少作为Emily的情感表达；并明确回复『是的，你优化吧』授权实施。Pi继续单写入，当前checkout ee0a9e4干净且已同步origin同名分支。此次不以加字数代替质量：恢复有视角/承接/长短变化的自然主持，不虚构听众心境、个人经历或音乐事实；检查旧队列/ordered确认/手动入队/漫游路径，保留原队列/播放/quiet/voice与页面内存聊天边界。现已发布7d2c642，以下5ca516d为上一轮历史。当前RN current=/opt/emily/releases/7d2c642，两unitsactive/NRestarts0。
+David在5ca516d实际体验后纠正：串场太短，情感不足，也缺少作为Emily的情感表达；并明确回复『是的，你优化吧』授权实施。Pi继续单写入，当前checkout ee0a9e4干净且已同步origin同名分支。此次不以加字数代替质量：恢复有视角/承接/长短变化的自然主持，不虚构听众心境、个人经历或音乐事实；检查旧队列/ordered确认/手动入队/漫游路径，保留原队列/播放/quiet/voice与页面内存聊天边界。现已发布7d2c642，以下5ca516d为上一轮历史。当轮RN current=/opt/emily/releases/7d2c642，两unitsactive/NRestarts0；最新见本页顶部。
 
 追加问题（2026-10-02）：David报告中文朗读遇部分日语歌曲不读/跳过，怀疑TTS；未提供具体歌，不确定漏读名字/整个串场/歌曲。实际代码允许混日文，晓晓混合样文9.432秒/中文参照9.288秒均tts_ready/解码；不能证明发音正确或复现全部故障。此次对含假名metadata采用自然中文指代，保留原名UI、不造译名、不更换声线/拼接多音源/跳曲，纯汉字日文不能可靠识别。
 
