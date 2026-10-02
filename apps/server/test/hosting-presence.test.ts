@@ -35,7 +35,8 @@ test('ordered confirmation writes hosting without reselecting; pending manual ad
   assert.deepEqual(app.services.radio.now().dj,before.dj); assert.equal(app.services.radio.now().status,'playing');
   assert(!JSON.stringify(app.services.store.get('radio')).includes(note));assert(!JSON.stringify(app.services.store.history()).includes(note));
   await app.services.radio.pause();await app.services.radio.move(1);
-  await until(()=>hostCalls(p).length===calls+1); await tick();
+  await until(()=>hostCalls(p).length===calls+1);
+  await until(()=>app.services.store.get<{items:{hostingVersion?:number}[]}>('radio')?.items[2]?.hostingVersion===HOSTING_VERSION);
   const data=JSON.parse((hostCalls(p).at(-1)!.body.messages as {content:string}[])[1]!.content);
   assert.equal(data.listenerNote,note);assert.equal(data.origin,'user');assert.equal(data.previousInQueueNotProofOfListening.title,'Fixture track 101');
   assert.equal(app.services.radio.now().status,'paused');assert.equal(app.services.store.history().length,1);
