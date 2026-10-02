@@ -147,6 +147,9 @@ export class GeminiTtsPreview implements GeminiPreviewPort {
       const bytes = Buffer.from(encoded, "base64");
       if (bytes.toString("base64") !== encoded) throw new Error();
       return bytes;
+    } catch (error) {
+      if (controller.signal.aborted) throw new AppError(504, "GEMINI_TTS_TIMEOUT", "Gemini 本次准备超时，未获得完整音频。没有自动重试或收费回退；当前歌曲保持暂停，可稍后手动再试。");
+      throw error;
     } finally { clearTimeout(timer); await response?.body?.cancel().catch(() => undefined); }
   }
 }

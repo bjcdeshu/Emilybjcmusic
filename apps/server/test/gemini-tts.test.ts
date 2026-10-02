@@ -107,7 +107,7 @@ test("Gemini rejects malformed/oversize/empty/remote or incomplete audio and tim
       assert.deepEqual(await readdir(join(dir, "audio")), []); await client.close();
     }
     const client = new GeminiTtsPreview({ ...readyConfig(dir), ttsTimeoutMs: 100 }, () => true, Date.now, { fetch: async (_url, options) => new Promise((_resolve, reject) => { options!.signal!.addEventListener("abort", () => reject(new Error("TEST_PRIVATE_TIMEOUT")), { once: true }); }) });
-    await assert.rejects(client.preview("gemini:Sulafat", "transition"), (e: Error) => !e.message.includes("TEST_PRIVATE_TIMEOUT")); await client.close();
+    await assert.rejects(client.preview("gemini:Sulafat", "transition"), (e: Error & { code?: string; statusCode?: number }) => e.code === "GEMINI_TTS_TIMEOUT" && e.statusCode === 504 && !e.message.includes("TEST_PRIVATE_TIMEOUT")); await client.close();
     const invalid = new GeminiTtsPreview(readyConfig(dir), () => true, Date.now, { fetch: async () => response(), convert: dummyConvert, validate: async () => false });
     await assert.rejects(invalid.preview("gemini:Sulafat", "transition")); assert.deepEqual(await readdir(join(dir, "audio")), []); await invalid.close();
   } finally { await rm(dir, { recursive: true, force: true }); }

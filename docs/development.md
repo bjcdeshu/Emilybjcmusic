@@ -1,6 +1,10 @@
 # Emily Development Guide
 
-## 当前阶段：Gemini TTS 免费试听接入已完成本地回归（2026-10-02，尚未发布）
+## 当前阶段：Gemini TTS 免费层已获本人确认，进行真实固定样音验证（2026-10-03，尚未发布）
+
+2026-10-03（本机日期）：David直接确认此Key所属AI Studio项目『是免费层』。Pi从clean已同步6e97529继续；先单次真实固定中文样文请求，成功才在本地限额内比较候选，不自动重试/付费回退。该确认不是模型列表的计费证明，也不把免费服务store=false当作禁止训练。Key仅私有读取，音频/诊断私有保存，不改线上节目/声线/OAPI。Windows实际3次请求：Sulafat/transition HTTP200、端到端45.867s，12.480s/150668B MP324k单声道、严格WAV/转码/decoder/cache复用通过；随后Aoede/transition与Kore/transition各60s超时，未拿到HTTP响应、未发布partial、没有自动重试。不能据此说三声线稳定或已改善自然度。新增明确504/GEMINI_TTS_TIMEOUT与页面首次等待/缓存文案，预算仍原85s内有界。已重新核RN身份/current=2e993d4/两unitsactive/NRestarts0/adapter PID1964070；准备隔离候选并从RN做一次Sulafat长句固定样文，成功后仅Emily窄发布试听，不切正式主持。下面2026-10-02的『免费层待确认』与请求0为当时历史状态。
+
+### 前一阶段本地实现（2026-10-02）
 
 David已选定Google官方Gemini TTS并安全提供专用Key，明确要求高效直接推进；子代理只是可选提效手段，不为配置多代理延误主线。Pi继续唯一源码写入者/原任务，从clean ba27ff3开始；当前生产仍为2e993d4的Edge。官方models.list认证HTTP200并列出gemini-3.8-flash-tts，未发送合成请求；该接口不能确认Free Tier，需要项目层级确认，不开通付费/自动付费回退。
 
