@@ -1,8 +1,14 @@
 # Emily Development Guide
 
-## 当前阶段：收听体验一致性优化实施中（2026-10-02）
+## 当前阶段：收听体验一致性优化已发布536815c（2026-10-02）
 
-David认可源码审阅清单并明确『可以啊，你规划推进』。Pi从干净7e725bc/已同步独立分支继续单写入；生产起点a11d094。计划按安全点歌→阅读连续性→拖动手感推进：搜索单曲默认metadata-only加入，替换明确确认；聊天仅页面内存草稿/不抢回看；真实LRC全文定位/跟随/手动暂停/切歌更新；队列首次定位当前和当前行无损；拖动预览松手提交，键盘保留；清理短英文旧提示。保持现有布局/律动/单audio/声线/原节目边界，未完成不记发布。
+David认可源码审阅清单并明确『可以啊，你规划推进』。Pi从干净7e725bc/已同步独立分支继续单写入；生产起点a11d094。计划按安全点歌→阅读连续性→拖动手感推进：搜索单曲默认metadata-only加入，替换明确确认；聊天仅页面内存草稿/不抢回看；真实LRC全文定位/跟随/手动暂停/切歌更新；队列首次定位当前和当前行无损；拖动预览松手提交，键盘保留；清理短英文旧提示。保持现有布局/律动/单audio/声线/原节目边界。已发布536815c：搜索现节目默认加入，空节目显式单首开始；Library新节目/history重编排native确认和scope guard；草稿App内存/clear/logout/disconnect清理，近底跟随/新回复按钮；useLyrics共用12项volatile cache，全文真实当前行/初始定位/手动暂停/回到当前/切歌更新；队列初始定位和当前行不重载；SeekControl pointer预览/release提交/Escape和cancel丢弃/track-phase guard，键盘即时；旧短英文提示和歧义欢迎示例清理。visualViewport适配输入区域，400px高模拟通过，不冒充真机软键盘验证。
+
+Windows typecheck/build/web37/browser5通过0skip，新增tests/ux-browser.test.ts纳入test:browser串行运行；RN build/web37通过。本轮未改server/shared契约，不重跑历史server53/deployment7。早期browser失败：鼠标停在主持区阻止阅读滚动、证据目录依赖、替换确认新增后旧测试缺一步、fixture类型缺picUrl和歌词跨层重复selector；相称修正并保留断言全跑通过。
+
+RN current=/opt/emily/releases/536815c；旧a11d094保留，stopEmily后root-only pre-536815c SQLite+env/key/cmp；identity/preflight/health/两unitsactive/NRestarts0，adapter PID未变；无依赖版本/schema/env/Node/DNS/其他业务变化。真实验证早期现场队列9后8（未确定变化原因，不外推原11首保留），首轮未等歌曲metadata导致拖动验证不通过/整队列状态比较不适当，后轮脚本fill精度不匹配0.1step；修正脚本后有界复跑。最终8首原曲在准备前后相同、曲序/programme/roaming/settings/history不变；无新programme/歌曲/网易写入。真实拖动预览不seek、目标106秒/release实际106秒、恢复暂停位置、58行真实歌词、搜索默认add但线上未执行不同曲新增（fixture覆盖新增/重复）、替换取消/草稿/4视口/singleaudio通过，最后paused/logout/pageErrors[]/completed=true。不声称第一次即成功，也不声称初始9首全过程无变化。
+
+私有证据work/.tmp/emily-browser-tools/design-ux[-live]，最终result.json及state-result.json；assets index-Yl2ZXD1U.css / index-BpvrdQPW.js。运维changes/2026-10-02-emily-ux-continuity.md。用户主观体验/真机键盘/长期播放未本轮验收。
 
 ## 上轮：细节与律动第二轮已发布a11d094（2026-10-02）
 

@@ -1,5 +1,13 @@
 {
   "date": "2026-09-30",
+  "uxContinuity": {
+    "date":"2026-10-02","release":"536815c","local":{"typecheck":true,"build":true,"web":37,"browser":5,"skipped":0},
+    "fixtureCoverage":["library new add and duplicate preserve source/time/programme/history","replacement and history cancel","draft reopen and clear","queue current positioning and no reload","real lyrics initial/current/manual/reduce/track change","chat unread no scroll theft","drag preview/release/Escape and keyboard","400px simulated keyboard viewport"],
+    "rn":{"build":true,"web":37,"identityPreflightHealth":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-536815c","priorRelease":"a11d094"},
+    "live":{"completed":true,"finalRunQueue":8,"sameTrackBeforeAfterPreparation":true,"queueOrderProgrammeRoamingSettingsHistoryPreservedFinalRun":true,"dragTargetSeconds":106,"dragActualSeconds":106,"previewNoSeek":true,"realLyricLines":58,"searchAddDefault":true,"actualNewSongAdded":false,"replaceCancelPreserved":true,"draftRetainedCleared":true,"fourMobileViewports":true,"singleAudio":true,"finalPausedLogout":true,"pageErrors":[]},
+    "boundaries":["Earlier real runs started9 then8 queue, cause not established; no whole-session unchanged claim","Earlier real checks lacked metadata wait, compared mutable queue state and slider.fill violated0.1step; corrected bounded rerun","No physical keyboard/subjective/long-play approval","No new backend/schema/dependency/provider write"],
+    "assets":["index-Yl2ZXD1U.css","index-BpvrdQPW.js"]
+  },
   "listeningDetails": {
     "date":"2026-10-02","release":"a11d094","local":{"typecheck":true,"build":true,"web":37,"browser":4,"skipped":0},
     "rn":{"build":true,"web":37,"identityPreflightHealth":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-a11d094","priorRelease":"69e7c08"},
