@@ -1,12 +1,12 @@
 # Emily Development Guide
 
-## 当前阶段：Emily中文串场情感与主持表达优化中（2026-10-02）
+## 当前阶段：Emily主持表达与日文名字安全承接已发布7d2c642（2026-10-02）
 
-David在5ca516d实际体验后纠正：串场太短，情感不足，也缺少作为Emily的情感表达；并明确回复『是的，你优化吧』授权实施。Pi继续单写入，当前checkout ee0a9e4干净且已同步origin同名分支。此次不以加字数代替质量：恢复有视角/承接/长短变化的自然主持，不虚构听众心境、个人经历或音乐事实；检查旧队列/ordered确认/手动入队/漫游路径，保留原队列/播放/quiet/voice与页面内存聊天边界。以下5ca516d为上一生产状态，本轮尚未发布。
+David在5ca516d实际体验后纠正：串场太短，情感不足，也缺少作为Emily的情感表达；并明确回复『是的，你优化吧』授权实施。Pi继续单写入，当前checkout ee0a9e4干净且已同步origin同名分支。此次不以加字数代替质量：恢复有视角/承接/长短变化的自然主持，不虚构听众心境、个人经历或音乐事实；检查旧队列/ordered确认/手动入队/漫游路径，保留原队列/播放/quiet/voice与页面内存聊天边界。现已发布7d2c642，以下5ca516d为上一轮历史。当前RN current=/opt/emily/releases/7d2c642，两unitsactive/NRestarts0。
 
 追加问题（2026-10-02）：David报告中文朗读遇部分日语歌曲不读/跳过，怀疑TTS；未提供具体歌，不确定漏读名字/整个串场/歌曲。实际代码允许混日文，晓晓混合样文9.432秒/中文参照9.288秒均tts_ready/解码；不能证明发音正确或复现全部故障。此次对含假名metadata采用自然中文指代，保留原名UI、不造译名、不更换声线/拼接多音源/跳曲，纯汉字日文不能可靠识别。
 
-生产current=`/opt/emily/releases/5ca516d`（功能e18b3d1、精确检索窄修bea0f80、准备预算/单版本接受5ca516d）。David实际否定54b04f1振幅太杂和晓晓人机感；随后要求具体一首加入当前漫游队列，并一起优化聊天。默认逐曲确认加入队尾/留在聊天，只有显式『另选一组』才更换节目；原音源/位置/暂停/队列/漫游不被入队接管。竖条空间/时间平滑、密度/亮度降低，串场缩短套话并提供同一audio真实声线试听。保留已认可的e3328e8整屏和底部面板。
+上一轮生产current=`/opt/emily/releases/5ca516d`（功能e18b3d1、精确检索窄修bea0f80、准备预算/单版本接受5ca516d）。David实际否定54b04f1振幅太杂和晓晓人机感；随后要求具体一首加入当前漫游队列，并一起优化聊天。默认逐曲确认加入队尾/留在聊天，只有显式『另选一组』才更换节目；原音源/位置/暂停/队列/漫游不被入队接管。竖条空间/时间平滑、密度/亮度降低，串场缩短套话并提供同一audio真实声线试听。保留已认可的e3328e8整屏和底部面板。
 
 真实网易查询『李建清《匆匆》』无准确署名；同名实际结果为李剑青等。新版给出明确署名澄清，未悄悄改歌手/添加目标。准确『李剑青《匆匆》』查询返回两个完整权益版本，仍需David确认/选择。真实验证保留12首原队列/原漫游/历史，用已有待播曲测试duplicate/no-op；完整新增一首与竞态由fixture证明，不冒称已将未确认目标加入。最新真实短主持→网易歌、18连续动态采样、暂停/reduce、固定台湾国语女声试听恢复同源位置且保持暂停、12手机首屏/logout通过。原quiet=false djEnabled已恢复，最后paused/logout。自然听感及视觉舒适度仍待David实际评价，测试不替代认可。
 
@@ -219,11 +219,23 @@ David最新要求去掉『Emily正在串场』label，用效果提示；改中�
 - 公开真实Gemini两次consult200：错署名只澄清不扩/替换，正确署名返回2版本/完整权益，原12条current/title/scope/history不变。短中文51chars/真实TTS→原网易歌曲；连续18帧100ms观察，≤40根、变化有界（该曲该窗口最大相邻6px，非全目录舒适度证明）。实际playing时已有待播曲duplicate校验200/already_present，不换audio/time/暂停意图，原漫游继续；没有给目标歌执行加入。pause/reduce energy0/still、restored/song/paused×360×560、393×640/740/851共12首屏全部fits/noOverflow/navHidden；晓臻真实试听同audio、自然ended恢复原song/time保持paused、未保存voice不变、quiet恢复/logout音源清空/pageErrors[]。无新programme/history/permanentfeedback/网易写入；不外推长时/真机/自然听感/新美学认可。
 - 最新资产index-C9ElvXDJ.css/index-juQzwINS.js；private evidence `../.tmp/emily-browser-tools/design-calm-enqueue` / `design-calm-enqueue-live`，已实际审阅，不入Git。公开结果complete=true只涵盖上述路径，真实新目标入队等待署名/版本确认。
 
+## 主持表达与日文名字安全承接（2026-10-02，7d2c642）
+
+- David明确授权纠正过短串场，随后追加中文朗读部分日语歌曲跳过的问题。Pi新增hosting-editor.ts：Emily温暖/敏锐/好奇、有自己视角，通常2–5句/60–140字、硬280，允许长短变化；情感来自真实点歌/节目上下文，不虚构听众心境、亲身经历、歌词/音频特征/歌曲背景，不把去套话等同去情感。提示词约束不是语义认证，也没有用户新的听感认可。
+- 模型选曲与单首HOST_ONE写作分离：ordered确认保持选曲顺序，手动入队仍metadata-only/不调模型或TTS；到正常lookahead/navigation再为已选歌曲写稿。旧中文queue v2 DJ引用失效后按需生成v3，保留节目ID/原queue/历史/漫游/quiet/voice；已有v3稿件重启复用，英文原边界保留。单首模型≤20s、既有TTS≤60s、最多2个intro job、预准备下一首；失败一次后短报幕+明确warning，不循环重试。
+- 点歌确认可携带最近≤3条用户原话/600chars listenerNote，服务端按queueitem存有界内存，不将原聊天写SQLite/日志；生成串场和音频沿用私有存储，UI已说明这一区别。消费后/清空聊天owner context-clear/logout/替换/断开/关闭/重启清理；context revision阻止清理后的迟到稿件采用旧原话。原音源/进度/暂停不由清理或入队操作接管。
+- 日文：原中文校验并未禁止假名，真实晓晓混合日文样文tts_ready/9.432s、纯中文参照9.288s均可解码，未复现全部故障且未人工核音。现模型接收nullable spokenTitle/spokenArtist，含假名名字自然指代；若仍照搬已知名字则精确替换，残留假名退回安全报幕，不造译名/罗马字、不自动切女声/拼接、不跳曲。纯汉字日文仍可能按中文读，不能承诺准确日语发音。
+- 实际修复两项回归：新写作await改变时序导致旧refill测试发现额外续填，intro完成只补lookahead不连锁调refill，原精确队列断言保留通过；clear期间旧prepare可能再次循环，增加item membership使迟到返回QUEUE_CHANGED。新增model-wait pause/voice/clear/close、旧稿lazy/version重用、ordered/manual/volatile context/fallback、日本metadata+TTSfailed保留歌曲测试。Windows typecheck/testtypecheck/build/server53/web34/deployment7/built/browser3通过0skip；RN build/testtypecheck/server53/web34同样通过。
+- 真实Gemini多轮样稿审阅：早期仍劝放松/背景音乐/套话，迭代提示并核对4种场景；最终4单首66/88/64/81字及3首整组91/83/81字有效，88字晓晓真实17.952s/解码/cache通过。一次整组返回未通过validation，未伪称成功；增预算/单JSON围栏兼容后有界复跑通过，不修虚构ID。样稿仍有泛泛“自然展开”等表达，未证明稳定高质量。
+- 窄发布：只重启Emily application，adapter PID未变，无依赖/SQLschema/env/Node/bridge/DNS/proxy/其他业务修改；停后SQLite+env一致性root-only pre-7d2c642/cmp，原子current/owner preflight/health通过，保留5ca516d及旧备份，回滚不盲覆盖新数据。
+- 真实线上没有新建programme或加歌：实际当前11首（不是上一轮12，未擅自补回），原roaming enabled、djEnabled=true、voice=晓伊；本次日文当前曲目67字中文稿/14.304s真实晓伊DJ自然ended→原网易song，原目录日文标题保留。sameTrack/queue/programme/history/roaming/settings/singleaudio/pause/context-clear不换源全部通过，pageErrors[]/completed=true。最终paused/logout，截图实际读取，未保存私有截图/音频/列表入Git。
+- assets index-C9ElvXDJ.css/index-DbojVw-b.js；private evidence ../.tmp/emily-browser-tools/design-presence[-live]、../.tmp/emily-deployment-review/presence-*.log。不外推人工自然度、正确日语发音、全部日本歌曲故障已修复或长期连续播放。当前实际稿仍偏泛，技术成功不是David情感认可。
+
 ## 下一步
 
-1. 新版5ca516d已发布，可直接在『聊聊』点歌加入；当前原12首漫游队列保留，无须再扫码/新建节目。若David指的是李剑青《匆匆》，先本人确认署名/版本，再加入；不得默认替他接受。默认晓晓未擅改，新增试听可按真实听感选择晓臻/晓雨/晓伊。尚无自然音色或新动效的David认可，不把技术通过当作体验彻底解决。
+1. 新版7d2c642已发布（上一版5ca516d），可直接在『聊聊』点歌加入；当前原12首漫游队列保留，无须再扫码/新建节目。若David指的是李剑青《匆匆》，先本人确认署名/版本，再加入；不得默认替他接受。默认晓晓未擅改，新增试听可按真实听感选择晓臻/晓雨/晓伊。尚无自然音色或新动效的David认可，不把技术通过当作体验彻底解决。
 2. 本人授权保留，无需重新扫码。缺歌词不解灰/换源，不要求真机锁屏/PWA专项；保留舒服布局与连续声音响应，不将技术测试当新效果认可。
-3. 当前源码5ca516d、发布文档已提交；2026-10-01已把独立分支 `pi/emily-continue-20260930` 推送到origin同名分支并建立tracking，工作树干净，无ahead/behind。旧main/Iris来源分支/原图/秘密未改或上传。继续维护本入口、契约与共享记忆，不以历史『未push』当当前状态。
+3. 上一轮源码5ca516d、发布文档已提交；2026-10-01已把独立分支 `pi/emily-continue-20260930` 推送到origin同名分支并建立tracking，工作树干净，无ahead/behind。旧main/Iris来源分支/原图/秘密未改或上传。继续维护本入口、契约与共享记忆，不以历史『未push』当当前状态。
 
 ## 历史基线：Phase 2 mock（保留原有贡献）
 

@@ -1,5 +1,14 @@
 {
   "date": "2026-09-30",
+  "hostingPresenceAndJapaneseNames": {
+    "date":"2026-10-02","release":"7d2c642","local":{"typecheck":true,"serverTestTypecheck":true,"build":true,"server":53,"web":34,"browser":3,"deployment":7,"built":true},
+    "realCopyReview":{"singleChars":[66,88,64,81],"batchChars":[91,83,81],"xiaoxiaoParagraphSeconds":17.952,"decodedAndCached":true,"earlierBatchInvalidThenBoundedRerunPassed":true,"stillGenericPhrasesNotSubjectiveApproval":true},
+    "japaneseProbe":{"mixedTextAccepted":true,"mixedXiaoxiaoSeconds":9.432,"chineseReferenceSeconds":9.288,"bothDecoded":true,"notPronunciationOrAllFailureReproduction":true,"safeKanaNamesWithoutTranslation":true,"hanOnlyJapaneseNotInferred":true},
+    "rn":{"server":53,"web":34,"build":true,"testTypecheck":true,"ownerPreflight":true,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"backup":"pre-7d2c642","priorRelease":"5ca516d","unitsActiveZeroRestarts":true},
+    "live":{"fixture":false,"completed":true,"initialQueue":11,"voice":"zh-CN-XiaoyiNeural","djEnabled":true,"chineseChars":67,"djSeconds":14.304,"realDjEndedToOriginalJapaneseSong":true,"originalJapaneseUiNames":true,"sameTrackQueueProgrammeHistoryRoamingSettings":true,"singleAudio":true,"contextClearNoAudioChange":true,"finalPausedLogout":true,"newProgramme":false,"addedSongs":false,"pageErrors":[]},
+    "boundaries":["No new emotional quality or Japanese pronunciation approval","No exact original failure track from user, root cause not confirmed","Raw listener notes bounded transient memory, generated scripts/audio persist privately","Fixture tests cover ordered/manual/old-version/pause/voice/clear/close and failure loops","No dependency/schema/env/Node/bridge/DNS/proxy/other-business change"],
+    "assets":["index-C9ElvXDJ.css","index-DbojVw-b.js"]
+  },
   "calmListeningAndQueueEnqueue": {
     "date":"2026-10-01","release":"5ca516d","featureCommit":"e18b3d1","lookupFix":"bea0f80",
     "feedback":"David rejects chaotic54b04f1 bars/mechanical Xiaoxiao, wants exact ONE song added to current roaming queue and refined chat interaction. e3328e8 layout remains comfortable; no new naturalness/aesthetic approval.",

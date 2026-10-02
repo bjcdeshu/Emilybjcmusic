@@ -1,6 +1,6 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新5ca516d点歌入队/对话交互/克制音波与声线试听已发布，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新7d2c642主持表达/日文名字安全承接已发布，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
 ## 当前适合的部署方式
 
@@ -63,7 +63,7 @@
 ## RN运行导航（2026-09-30已部署，非最终收听验收）
 
 - URL：`https://emily.unbow.de`，Cloudflare DNS-only A/TTL300，直连RN，不代理音乐到CDN；Let's Encrypt独立证书。
-- App：`/opt/emily/current` → `/opt/emily/releases/5ca516d`（点歌入队/原队列漫游保留/聊天与克制动效/固定声线试听；中文/真实歌词/整屏保留）（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
+- App：`/opt/emily/current` → `/opt/emily/releases/7d2c642`（中文情感段落/日文安全指代；点歌入队/原队列漫游保留/聊天与克制动效/固定声线试听；中文/真实歌词/整屏保留）（Git快照、RN Node22构建），`emily.service`。专用账户emily，回环3100。
 - Music：`/opt/emily/adapter-135df9e` upstream4.40.1/135df9eddab12cc8879f63c090c0ce808040504f，专用lockfile与MIT LICENSE；解灰依赖/分支/route移除，audit0。仅 `/opt/emily/netease-bridge.cjs` 私有桥接，`emily-adapter.service` 回环3101；ENABLE_GENERAL_UNBLOCK/ENABLE_PROXY/ENABLE_RANDOM_CN_IP=false。新xeapi注册在RN超时，桥接把xeapi请求改成网易eapi原始传输；本人QR授权、实际2首安全网易CDN整曲数据与浏览器连播通过；不代表全目录/VIP档位验收。重建补丁用 `deploy/prepare-netease-upstream.mjs`，拒绝不匹配的上游文件hash；bridge test为明确fixture安全测试。
 - 私有环境：`/etc/emily/emily.env`、`adapter.env`（0600/emily），data=`/var/lib/emily/radio`（0700），SQLite0600；模型=`https://oapi.unbow.de/v1` / `gemini-3.8-flash` / Emily专用key，timeout30秒。主人密码本机安全副本 `C:/Users/David/AppData/Local/Emily-private/owner-password.txt`，已核验ACL；不打印/上传/提交。
 - TTS：`/opt/emily/tools/tts/bin/edge-tts` 7.2.3专用venv，requirements-resolved.txt记录依赖；专用用户真实合成与解码/缓存成功；当前默认晓晓zh-CN-XiaoxiaoNeural，晓伊、晓臻/晓雨台湾国语及七款英文可选，试听不自动保存声线/恢复音乐。应用无需使用root uvx。
@@ -81,11 +81,19 @@
 
 固定上游版本不改；私有桥新增第10路固定POST lyric，仅id/cookie/timestamp/noCookie。App新增owner/no-store/known catalogue lyrics/LRC parser，真实49行歌词、当前行随actual media seek/pause/全文同源通过。中文Gemini programme200/model/0warnings→晓晓真实语音→网易歌曲、12手机首屏/暂停reduce/退出通过；本机server40/web31/deployment7/browser2，RNserver40/web31/build/testtypecheck与专用用户晓晓解码缓存通过。旧e3328e8和root-only `pre-54b04f1`（停app一致性SQLite+emily.env/key+adapter.env+旧bridge，cmp）保留；不改系统Node/DNS/proxy/其他业务。初次脚本缺voice行断言停，第二次root误跑owner-preflight回滚，最终以服务用户预检发布通过；权限未放宽。回滚优先旧code+必要bridge/env窄恢复，不能默认覆盖后续授权/历史；如要回英文须显式选择声线（一次性中文迁移已持久化）。
 
-### 当前5ca516d更新（2026-10-01）
+### 历史5ca516d更新（2026-10-01）
 
 功能e18b3d1→lookup动词窄修bea0f80→前端预算/版本选择5ca516d。只application停启，adapter PID unchanged；env/bridge/Node/DNS/proxy/其他业务/SQLschema/dependency不改。每次先RN身份、npm ci/build/相关测试，再停Emily一致性SQLite+emily.env/key备份cmp于root-only pre-e18b3d1/pre-bea0f80/pre-5ca516d；原子current/owner preflight/health200/两unitsactive/NRestarts0。保留54b04f1与中间release；优先code回滚，不覆盖新授权/history。
 
 RN server46/web34及service-user Edge晓臻34,704bytes/5.784秒、晓晓29,808/4.968秒/metadata/decode/cache；最后5ca516d web34/build。真实公开Gemini错署名澄清/正确署名2完整权益版本、原12queue/漫游/history不变、duplicate enqueue recheck/already_present保持当前实际音源/time/playing、真实短中文DJ→原网易song/平滑竖条连续观察/12手机首屏/pause/reduce、同audio晓臻preview真实ended恢复原source/time保持paused，原quiet restored/voice未保存不变/logout/pageErrors[]/completed=true。准确新增目标因署名仍需用户确认未执行，新增一首/next/pause/refill/clear/replace/close由fixture回归证明；不冒称已给用户加入李剑青《匆匆》或人声舒适验收。无new programme/history/permanentfeedback/网易write。
+
+### 当前7d2c642更新（2026-10-02）
+
+中文主持v3段落/上下文视角、ordered与manual/旧队列lazy HOST_ONE（20s+既有TTS60s），不重复选歌/不在add换音源。日文假名名自然指代，原UI不变、纯汉字日文读音不保证。Raw listenerNote≤600只内存，owner context-clear/logout等清理，已生成稿/音频仍私有保存。
+
+RN build/testtypecheck/server53/web34、owner preflight/health/两unitsactive/NRestarts0；只Emily app restart，adapter PID不变，其余env/Node/schema/dependencies/bridge/proxy/DNS/业务不动。root-only停后SQLite+env/key/cmp `/var/backups/emily-20260930/pre-7d2c642`，旧5ca516d保留，回滚优先code不覆盖新用户数据。
+
+真实Chrome当前11首原列表/原漫游/历史/settings保留，实际晓伊中文67字14.304s→原日文歌、原名UI、singleaudio/context-clear不换源、paused/logout/pageErrors[]/complete=true；不新建节目/加歌/改voice/quiet。真实混日文晓晓probe合成可解码不是发音验收；本次具体曲目链路通过不代表David所有日语跳过问题根因已确认。文案仍有泛化，情感体验待用户。assets index-C9ElvXDJ.css/index-DbojVw-b.js。
 
 ## 验收与放行
 
