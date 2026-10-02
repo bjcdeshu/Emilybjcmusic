@@ -38,6 +38,12 @@ export function RadioSignal({ active, analysis }: { active: boolean; analysis: R
         surface.style.setProperty("--signal-bass", (state.bass * gain).toFixed(3));
         surface.style.setProperty("--signal-accent", (state.accent * gain * (voice ? .35 : 1)).toFixed(3));
       }
+      if (device) {
+        // Raw, gated detail remains available in the foreground sheet; only the
+        // covered stage uses attenuated envelopes. Never build a second graph.
+        state.detail.forEach((level, band) => device.style.setProperty(`--signal-band-${band}`, level.toFixed(3)));
+        device.style.setProperty("--signal-voice", (voice ? state.detail[1]! * gain : 0).toFixed(3));
+      }
       context!.clearRect(0, 0, width, height);
       const inset = width * .07, step = (width - inset * 2) / bars;
       for (let i = 0; i < bars; i++) {
@@ -66,7 +72,7 @@ export function RadioSignal({ active, analysis }: { active: boolean; analysis: R
     modal.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["open"] });
     document.addEventListener("visibilitychange", update); reduced.addEventListener("change", update); canvas.addEventListener("signal-update", update); update();
     return () => {
-      for (const surface of surfaces) if (surface) { for (const name of ["energy", "bass", "accent"]) surface.style.removeProperty(`--signal-${name}`); delete surface.dataset.motion; delete surface.dataset.covered; }
+      for (const surface of surfaces) if (surface) { for (const name of ["energy", "bass", "accent", "voice", "band-0", "band-1", "band-2"]) surface.style.removeProperty(`--signal-${name}`); delete surface.dataset.motion; delete surface.dataset.covered; }
       cancelAnimationFrame(frame); size.disconnect(); intersection.disconnect(); modal.disconnect(); document.removeEventListener("visibilitychange", update); reduced.removeEventListener("change", update); canvas.removeEventListener("signal-update", update);
     };
   }, [analysis]);

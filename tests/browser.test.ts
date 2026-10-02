@@ -47,6 +47,9 @@ test("real browser: Mandarin hosting reading scroll, pause/reduce/modal gates an
     assert.equal(app.services.radio.now().dj?.language,'zh');assert.equal(app.services.radio.now().dj?.voice,'zh-CN-XiaoxiaoNeural');
     assert.equal(await page.locator('.transcript-text').getAttribute('lang'),'zh');assert.equal(await page.getByText('Emily 正在串场',{exact:true}).count(),0);
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.transcript-text')!).transform!=='none'&&new DOMMatrix(getComputedStyle(document.querySelector('.transcript-text')!).transform).m42< -2);
+    const wordmark=page.locator('.host-identity .host-wordmark');
+    await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('.host-identity .host-wordmark')!).opacity)>.88);
+    const markBounds=await wordmark.boundingBox();await page.waitForTimeout(100);assert.deepEqual(await wordmark.boundingBox(),markBounds,'voice only lights the stationary wordmark');
     const offset=()=>page.locator('.transcript-text').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).m42);
     await page.getByRole('button',{name:'暂停',exact:true}).click();const paused=await offset();await page.waitForTimeout(350);assert.equal(await offset(),paused,'pause stops reading aid');
     await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'播放',exact:true}).click();await page.waitForTimeout(350);assert.equal(await offset(),paused,'reduce never auto-scrolls');
@@ -89,6 +92,13 @@ test('real browser: measured bass bursts drive bounded accents, modal attenuatio
   assert(Math.max(...values)>.08,'actual bass attacks must register');assert(Math.max(...values)<=.65);assert(Math.max(...values)-Math.min(...values)>.05);
   await page.getByRole('button',{name:'听感与节目',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.radio-device')?.getAttribute('data-covered')==='true');
   assert.equal(await page.locator('.radio-sheet').evaluate(el=>getComputedStyle(el).opacity),'1');await page.waitForTimeout(100);assert(await page.locator('.radio-device').evaluate(el=>Number((el as HTMLElement).style.getPropertyValue('--signal-accent'))<=.143));
+  await page.locator('.radio-sheet').evaluate(el=>Promise.all(el.getAnimations().map(a=>a.finished)));
+  const indicator=page.locator('.sheet-signal'),indicatorBounds=await indicator.boundingBox(),detail:number[]=[];
+  for(let i=0;i<14;i++){detail.push(await indicator.locator('i').first().evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).m22));await page.waitForTimeout(80);}
+  assert(Math.max(...detail)-Math.min(...detail)>.03,'foreground indicator follows real bass while room is attenuated');assert.deepEqual(await indicator.boundingBox(),indicatorBounds,'indicator footprint never pushes text');
+  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);assert(await indicator.locator('i').evaluateAll(els=>els.every(el=>Math.abs(new DOMMatrix(getComputedStyle(el).transform).m22-.14)<.001)));
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('.radio-sheet').getByRole('button',{name:'暂停',exact:true}).click();await page.waitForTimeout(100);assert(await indicator.locator('i').evaluateAll(els=>els.every(el=>Math.abs(new DOMMatrix(getComputedStyle(el).transform).m22-.14)<.001)));
+  await page.locator('.radio-sheet').getByRole('button',{name:'播放',exact:true}).click();
   await page.keyboard.press('Escape');await page.getByRole('button',{name:'暂停',exact:true}).click();assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-accent')),'0.000');
   if(process.env.EMILY_BROWSER_EVIDENCE_DIR)await writeFile(join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'rhythm-fixture-result.json'),JSON.stringify({fixture:true,actualDecodedBassBursts:true,samples:values,accentCap:.65,modalAttenuates:true,pauseZero:true}));
  }finally{if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
@@ -286,6 +296,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       return !a.paused && a.currentSrc.includes("/api/audio/") && a.currentTime > 0;
     });
     phases.push("dj");
+    await page.waitForFunction(()=>Number((document.querySelector('.radio-device') as HTMLElement).style.getPropertyValue('--signal-band-1'))>.05);
     const signalFrame = await page.locator(".radio-signal").evaluate((el: HTMLCanvasElement) => el.toDataURL());
     assert.equal(await page.locator(".vinyl-disc").count(), 0);
     assert.equal(await page.locator(".record-stage").count(), 0);

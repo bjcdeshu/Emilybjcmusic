@@ -14,8 +14,8 @@ export function frequencyGroups(samples: Uint8Array, sampleRate: number, count =
     return level;
   });
 }
-export type RhythmState = { levels: number[]; body: number; bass: number; accent: number; lowFloor: number; age: number };
-export const quietRhythm = (): RhythmState => ({ levels: [], body: 0, bass: 0, accent: 0, lowFloor: 0, age: 0 });
+export type RhythmState = { levels: number[]; detail: number[]; body: number; bass: number; accent: number; lowFloor: number; age: number };
+export const quietRhythm = (): RhythmState => ({ levels: [], detail: [0, 0, 0], body: 0, bass: 0, accent: 0, lowFloor: 0, age: 0 });
 const follow = (from: number, to: number, dt: number, rise: number, fall: number) => from + (to - from) * (1 - Math.exp(-dt / (to > from ? rise : fall)));
 /** Accent = measured low-frequency rise relative to its recent floor, NOT a beat clock.
  * Constant tones settle; quiet never manufactures pulses. Fast restrained attack,
@@ -31,6 +31,13 @@ export function rhythmFrame(groups: number[], prior: RhythmState, elapsedMs: num
   const onset = age < 180 ? 0 : Math.min(.65, Math.max(0, bass - floor - .035) * 2.2);
   return {
     levels: groups.map((x, i) => follow(prior.levels[i] || 0, Math.min(1, Math.max(0, x)), dt, 85, 330)),
+    // Three ordered, disjoint ranges of the measured groups. Not three delayed
+    // copies of one envelope: a single tone should only light its own range.
+    detail: [0, 1, 2].map(band => {
+      const range = groups.slice(Math.floor(band * groups.length / 3), Math.floor((band + 1) * groups.length / 3));
+      const level = range.reduce((sum, x) => sum + x, 0) / Math.max(1, range.length);
+      return follow(prior.detail[band] || 0, level, dt, 110, 320);
+    }),
     body: follow(prior.body, mean, dt, 900, 1600),
     bass: follow(prior.bass, bass, dt, 160, 550),
     accent: Math.max(onset, prior.accent * Math.exp(-dt / 240)),

@@ -17,3 +17,12 @@ test('accent responds to actual low-energy rise, steady tone settles, gates zero
  let fast=quietRhythm(),slow=quietRhythm();for(let i=0;i<100;i++)fast=rhythmFrame(base,fast,10,true);for(let i=0;i<50;i++)slow=rhythmFrame(base,slow,20,true);assert(Math.abs(fast.body-slow.body)<1e-8);assert(Math.abs(fast.levels[0]-slow.levels[0])<1e-8);
  assert(rhythmFrame(base,quietRhythm(),10000,true).body<.03,'return from hidden cannot jump the envelope');
 });
+test('foreground detail is three distinct measured ranges, stable tone stays stable and quiet resets all',()=>{
+ for(const band of [0,1,2]){
+  const groups=Array.from({length:24},(_,i)=>Math.floor(i/8)===band?.5:0);let state=quietRhythm();
+  for(let i=0;i<200;i++)state=rhythmFrame(groups,state,16,true);
+  assert(state.detail[band]>.499);assert(state.detail.every((v,i)=>i===band||v===0));
+  assert.deepEqual(rhythmFrame(groups,state,16,false).detail,[0,0,0]);
+  assert.deepEqual(rhythmFrame([],state,16,true).detail,[0,0,0]);
+ }
+});
