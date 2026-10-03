@@ -8,7 +8,8 @@ const env = (p: HttpFixture) => ({EMILY_NETEASE_API_BASE:p.base, EMILY_NETEASE_C
 const hostCalls = (p: HttpFixture) => p.requests.filter(r=>r.path==='/v1/chat/completions'&&JSON.stringify(r.body).includes('HOST_ONE:'));
 
 test('Emily policy allows emotional paragraphs with bounded factual and listener boundaries, not one-sentence reporting', () => {
-  assert.match(EMILY_MANDARIN_HOST,/60–140/); assert.match(EMILY_MANDARIN_HOST,/好奇/); assert.match(EMILY_MANDARIN_HOST,/不重复近期/);
+  assert.match(EMILY_MANDARIN_HOST,/没有字数下限/); assert.match(EMILY_MANDARIN_HOST,/有具体聊天的段落可展开到2–5句/); assert.match(EMILY_MANDARIN_HOST,/不是把所有段落都缩成一句歌名通报/);
+  assert.match(EMILY_MANDARIN_HOST,/好奇/); assert.match(EMILY_MANDARIN_HOST,/不重复近期/);assert.match(EMILY_MANDARIN_HOST,/不把边界写进台词/);assert.match(EMILY_MANDARIN_HOST,/硬上限280/);
   assert.match(EMILY_MANDARIN_HOST,/不能编造/); assert.match(EMILY_MANDARIN_HOST,/不替用户判断/);
   assert.match(EMILY_MANDARIN_HOST,/气口/);assert.match(EMILY_MANDARIN_HOST,/不删掉完整想法和情感/);assert.match(EMILY_MANDARIN_HOST,/不输出笑声/);
   assert(!EMILY_MANDARIN_HOST.includes('12-45')); assert.match(EMILY_MANDARIN_HOST,/没有听过/);
