@@ -1,12 +1,20 @@
 # Emily Development Guide
 
-## 当前阶段：纠正v5串场过短，恢复默认完整段落（2026-10-03，进行中）
+## 当前阶段：完整串场v6已发布13237d1；Gemini冷却中，新长稿语音未验收（2026-10-03）
 
-David实际反馈『现在的问题变成串场词太短了』，否定v5普通过渡无下限导致的13–27字报幕效果。Pi从clean7d6fd8e接续，仍唯一写入者；承认上轮27字/6.44s技术播放不能当内容目标通过。保留Gemini/Sulafat与TTS参数、OAPI、UI和所有曲目/queue/history；重点取消短接默认/短句示例，完整口语段落成为常态，短报幕仅明确失败降级。补长度/展开检查并约束编辑不把合格段落删成报幕；连续真实稿必须检查内容和长度，数字不是质量证明。当前生产仍9e345f3，不为凑字引入虚构经历/音乐事实或用户心情。
+David实际反馈『现在的问题变成串场词太短了』，否定v5普通过渡无下限导致的13–27字报幕效果。Pi从clean7d6fd8e接续，仍唯一写入者；承认上轮27字/6.44s技术播放不能当内容目标通过。保留Gemini/Sulafat与TTS参数、OAPI、UI和所有曲目/queue/history；重点取消短接默认/短句示例，完整口语段落成为常态，短报幕仅明确失败降级。补长度/展开检查并约束编辑不把合格段落删成报幕；连续真实稿必须检查内容和长度，数字不是质量证明。生产已从9e345f3窄发布到13237d1；不为凑字引入虚构经历/音乐事实或用户心情。
 
-v6候选已实现：正常稿（含普通过渡/批量后续/日文安全指代）目标3–5句、约90–160字，硬280；这些是Pi实现目标，David未指定精确字数。新增Unicode文字/数字计数≥60且剔除确切歌名/歌手/专辑后≥40，标点/metadata堆叠不能填满底线；数字不是语义质量评分。过短或已知问题仍只触发一次copy edit，共享原HOST_ONE≤20s/batch deadline，编辑完整复用主持规则且不能删成报幕，合格原稿和邻稿保留；失败才短报幕+warning。旧enum过渡保持原HOST_ONE路径，不新增无谓editor调用；v6懒失效沿用，无新上下文持久化。3项新增回归（server71→74）和既有断言全部保留。
+13237d1/v6已实现：正常稿（含普通过渡/批量后续/日文安全指代）目标3–5句、约90–160字，硬280；这些是Pi实现目标，David未指定精确字数。新增Unicode文字/数字计数≥60且剔除确切歌名/歌手/专辑后≥40，标点/metadata堆叠不能填满底线；数字不是语义质量评分。过短或已知问题仍只触发一次copy edit，共享原HOST_ONE≤20s/batch deadline，编辑完整复用主持规则且不能删成报幕，合格原稿和邻稿保留；失败才短报幕+warning。旧enum过渡保持原HOST_ONE路径，不新增无谓editor调用；v6懒失效沿用，无新上下文持久化。3项新增回归（server71→74）和既有断言全部保留。
 
-本机typecheck/testtypecheck/build/server74/browser7/built通过0skip。真实OAPI以虚构情境/人工ID检查连续5单首+4批量稿，多轮暴露服务解释/猜心理/虚构经历/假设故事同质化，并非所有稿件质量通过；保留各轮结果，有限匹配和提示修正不冒称彻底解决。最后完整一轮6请求、9段91–123字、无短报幕/已知命中；仍可泛化、假设句式重复，不以检查通过当David听感认可。单独有界编辑1请求7.313s将3稿修订为114/107/109字，无降级/剩余已知命中，只是定向样本。全部writer probes不访问Radio/网易/TTS；私有结果位于Emily-private/paragraph-review-20261003，ACL已核仅David/SYSTEM/Administrators，测试日志../.tmp/emily-deployment-review/paragraph-*.log。下一步候选RN相称验证、窄发布和真实长段→原歌验证；不变更声线/设置或重建节目。
+本机typecheck/testtypecheck/build/server74/browser7/built通过0skip。真实OAPI以虚构情境/人工ID检查连续5单首+4批量稿，多轮暴露服务解释/猜心理/虚构经历/假设故事同质化，并非所有稿件质量通过；保留各轮结果，有限匹配和提示修正不冒称彻底解决。最后完整一轮6请求、9段91–123字、无短报幕/已知命中；仍可泛化、假设句式重复，不以检查通过当David听感认可。单独有界编辑1请求7.313s将3稿修订为114/107/109字，无降级/剩余已知命中，只是定向样本。全部writer probes不访问Radio/网易/TTS；私有结果位于Emily-private/paragraph-review-20261003，ACL已核仅David/SYSTEM/Administrators，测试日志../.tmp/emily-deployment-review/paragraph-*.log。RN13237d1 build/testtypecheck/server74/built通过0skip；未另跑未改的web38/deployment9。Windows完整browser7最终重跑通过，assets仍index-Yl2ZXD1U.css/index-n2wJRwpO.js。
+
+发布完成：核RN身份，停Emily后root-only /var/backups/emily-20260930/pre-13237d1配对SQLite+env备份/cmp；env不改、原子切current=/opt/emily/releases/13237d1、专用用户preflight/health200/两unitsactive/NRestarts0，adapter PID1964070未变。旧9e345f3保留代码回滚。只读对比settings/history/加密授权/programme/完整track队列/漫游/index全部保留，本轮现场13→13首（不是历史16首）。没有新programme/加歌/改设置或网易写入。
+
+线上验证未完整通过：第一轮现有节目play后写出当前97字/下一段124字、均v6且无短报幕warning，但两段Gemini状态tts_failed；脚本等音频到120s超时，最后paused/logout。随后一次有界人工复验523ms返回tts_failed、队列保持，未继续循环。再用一次固定非私人试听接口仅诊断安全错误契约，429/GEMINI_TTS_LIMIT，没有保存其他声线或播放试听；只读DB当天本地计数8/60、分钟计数1且窗口早已过，备份发布前为7，说明本次仅1个生成额度被占用，后续被应用冷却拦截。当前代码只有provider429会设置此进程冷却，因此证据支持供应商429引发的冷却，不是本地60/day耗尽；原始provider响应/Retry-After未记录，不能断言Google每日配额、精确恢复时间或永久不可用。没有通过重启清冷却、扩大限额/等待预算、换声或付费回退。
+
+10月3日18:02（UTC+8）David明确『继续』。Pi重核checkout（13237d1，只有本端development.md收尾未提交）、RN身份/现有入口/规则；服务仍从04:38:44 UTC运行，无重启。18:05一次有界真实play复验366ms返回tts_failed、97字仍保留，随后paused/logout；本地生成计数仍8，确认没有新供应商生成请求、仍被同一进程冷却拦截。只读与pre-13237d1对比全部保持，现场仍13首。未再试音、改设置、重建programme、重启或开新provider进程绕过冷却。本地24h窗口从2026-10-02 17:24:15 UTC起算，不是Google每日配额证明。由于provider冷却上限24h，此次应用侧冷却最迟约2026-10-04 04:39 UTC（UTC+8中午12:39）结束；没有原始Retry-After，不能给出更精确的恢复时间，也不保证Google届时恢复。
+
+停止进一步合成，未建立后台/定时重试。新文案已生效，但**新长段真实语音→原歌尚未验收，不能沿用旧27字或旧74字成功结果作本轮证明**；仅冷却结束后再按用户使用/请求做一次有界检查。节目最终paused/logout；最终health200/两unitsactive/NRestarts0/adapter不变。技术失败与长段亲切感未获认可分开记录。运维changes/2026-10-03-emily-paragraph-copy.md；私有live-first-failed.json/live-second-failed.json/live-continue-1805-failed.json/live-result.json/cooldown-result.json及private-live-scripts.json不入Git/共享记忆。回滚只切9e345f3代码、保留当前DB/env；回滚不被当作清除Google冷却的手段。
 
 ## 上轮：串场口语策略v5已发布9e345f3，但实际反馈台词过短（2026-10-03）
 

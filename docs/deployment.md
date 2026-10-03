@@ -1,8 +1,18 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新9e345f3口语策略v5已发布，保留7280ba1（功能759f482）正式Gemini Flash-Lite/Sulafat；新稿→原歌真实验证通过；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新13237d1完整串场v6已发布，保留正式Gemini Flash-Lite/Sulafat；当前Google429后的应用冷却阻止新语音，本轮长稿→原歌尚未通过；旧9e345f3/v5短稿链路成功仅为历史证据；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
-## 最新窄发布：9e345f3（2026-10-03，口语策略v5）
+## 最新窄发布：13237d1（2026-10-03，完整串场v6；长稿语音待恢复验证）
+
+David实际纠正v5串场太短；Pi保留Sulafat及TTS/OAPI/UI/曲目，恢复每段完整展开，目标约90–160字/3–5句、硬280。正常稿与最多一次编辑稿共同检查≥60文字/数字、剔除metadata后≥40；长度是回归防线，不是自然度分数。编辑仍共享原HOST_ONE≤20s/batch deadline，失败才短报幕+warning，不重排曲目。Windows typecheck/testtypecheck/build/server74/browser7/built、RN build/testtypecheck/server74/built通过0skip；未重跑未改的web38/deployment9。最终一轮真实writer虚构情境9段91–123字，仍有假设句式同质化等质量边界，不是用户听感认可。
+
+current=/opt/emily/releases/13237d1，旧9e345f3保留。停Emily后root-only /var/backups/emily-20260930/pre-13237d1配对SQLite+env备份/cmp；env不改、专用用户preflight/health200/两unitsactive/NRestarts0，adapter PID1964070保持。assets仍index-Yl2ZXD1U.css/index-n2wJRwpO.js。无依赖/schema/Node/DNS/proxy/其他业务变更。
+
+真实现有节目写出当前97字/下一段124字v6稿，但Gemini均tts_failed，未验证新音频→原歌曲。最初浏览器等待音频超时，后一次人工复验也失败；固定非私人试听仅用于错误诊断，得到429/GEMINI_TTS_LIMIT。本地固定24h窗口8/60、分钟窗口已过，仅1次新增生成额度（7→8）后被进程冷却拦截。当前代码仅provider429设置该冷却，支持供应商429归因；原始Retry-After/错误正文未保留，不能确认Google每日配额或精确恢复时间。10月3日18:05（UTC+8）David要求继续后，有界复验366ms仍tts_failed，计数仍8、没有新供应商请求；没有重启/绕冷却/扩大限额/付费或Edge自动回退。
+
+与停机备份只读对比settings/history/授权/programme/完整track队列/漫游/index全部保持，本轮现场13→13首，最终paused/logout。当前服务健康但**新长段语音未验收**，内容亲切感也未获用户认可。进程从04:38:44 UTC持续运行，provider冷却上限24h意味着该次应用拦截最迟约2026-10-04 04:39 UTC（UTC+8中午12:39）到期；这不是Google恢复保证，不启动定时或轮询重试。回滚只切9e345f3代码、保留DB/env，不用旧SQLite覆盖新数据，也不将重启当限流绕过。运维changes/2026-10-03-emily-paragraph-copy.md。
+
+## 历史窄发布：9e345f3（2026-10-03，口语策略v5）
 
 David批准少解释腔/真实上下文接话/连续段落去重复，且已明确肯定新音色；本轮仅写稿策略和有界copy edit，不改声线/合成参数/OAPI配置/前端/选曲。Windows typecheck/testtypecheck/build/server71/browser7/built、RN build/testtypecheck/server71/built通过0skip；未重跑未改的web38/deployment9。多轮真实OAPI虚构场景检验提示遵循不足，新增有限已知话术匹配、最多一次索引固定的稿件编辑，共享原始写稿deadline；编辑失败保留已选曲目/顺序，仅相应稿降级。不是语义正确或情感质量保证。
 

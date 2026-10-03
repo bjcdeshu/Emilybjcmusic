@@ -1,5 +1,16 @@
 {
   "date": "2026-09-30",
+  "paragraphHostingV6": {
+    "date":"2026-10-03","release":"13237d1","hostingVersion":6,"deployed":true,"liveAudioAcceptance":false,
+    "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":74,"browser":7,"built":true,"skipped":0},
+    "rn":{"build":true,"testTypecheck":true,"server":74,"built":true,"skipped":0,"preflight":true,"health":200,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"restarts":0,"backup":"pre-13237d1","envUnchanged":true},
+    "copyPolicy":{"targetChars":[90,160],"targetSentences":[3,5],"maximumChars":280,"minimumLettersOrNumbers":60,"minimumOutsideMetadata":40,"exactLengthSpecifiedByUser":false,"editorUsesSameFloorAndOriginalDeadline":true,"shortCopyOnlyHonestFallback":true,"notQualityScore":true},
+    "realCopy":{"syntheticContextReviews":true,"finalWriterCalls":6,"finalWriterSamples":9,"finalCharsRange":[91,123],"finalKnownMatches":0,"finalFallback":false,"targetedEditorCalls":1,"targetedEditorMs":7313,"targetedEditorChars":[114,107,109],"noMusicOrTtsInCopyProbes":true,"repetitionAndGeneralizationRemain":true,"notSubjectiveAcceptance":true},
+    "live":{"completed":false,"initialQueue":13,"finalQueue":13,"currentAndNextChars":[97,124],"currentAndNextCopyVersion":6,"currentAndNextStatus":"tts_failed","copyFallback":false,"programmeQueueRoamingSettingsHistoryCredentialsPreserved":true,"newProgramme":false,"addedSongs":false,"settingsWrites":false,"finalPausedLogout":true,"firstFailure":"timed out waiting for audio; stored synthesis failed","boundedRecheckMs":523,"safePreviewDiagnosticStatus":429,"safePreviewDiagnosticCode":"GEMINI_TTS_LIMIT","local24hCountBefore":7,"local24hCountAfter":8,"minuteWindowElapsed":true},
+    "continueAtUserRequest":{"at":"2026-10-03T10:05:06.719Z","attempts":1,"playMs":366,"playHttp":200,"djStatus":"tts_failed","newProviderGenerationRequests":0,"local24hCountStill":8,"queueStill":13,"stateComparisonAllTrue":true,"sameProcessSince":"2026-10-03T04:38:44Z","restarted":false,"health":200},
+    "boundaries":["Provider429 is inferred from the only cooldown-setting code path plus unchanged local counters; raw provider response/Retry-After was not captured","App cooldown upper bound is24h, approximately2026-10-04T04:39Z for this event, not a Google recovery guarantee","No restart or second provider instance to bypass cooldown, no limit increase, alternate engine, paid fallback or automatic retries","Length and known-pattern checks do not prove emotional presence, factual completeness or varied paragraphs","New long audio/natural-ended-to-song not verified; old27-char/74-char successes cannot substitute","No separate rerun of unchanged web38/deployment9","Queue13 is a dated observation, not a conclusion that historical16/17 stayed unchanged across sessions"],
+    "assets":["index-Yl2ZXD1U.css","index-n2wJRwpO.js"]
+  },
   "conversationalHostingLive": {
     "date":"2026-10-03","release":"9e345f3","hostingVersion":5,"deployed":true,
     "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":71,"browser":7,"built":true,"skipped":0},
