@@ -9,7 +9,7 @@ test('Mandarin safely refers to Japanese names without translating catalogue or 
  assert(hasKana('ﾖﾙｼｶ'));assert(!hasKana('中島美嘉'),'Han-only names cannot infer pronunciation');
 });
 test('Japanese catalogue retains original names and actual track; model mixed names are safe spoken references, failed DJ does not skip song',async()=>{
- const dir=await temporaryDirectory(),p=new HttpFixture();await p.start();p.detailSongs=[{id:101,name:track.title,ar:[{name:track.artist}],al:{name:'TEST ALBUM',picUrl:''},dt:120000}];p.hostingText=`这首是${track.artist}的《${track.title}》。你想重听，我也好奇这次会注意到哪里。先听，感受可以慢慢说。`;
+ const dir=await temporaryDirectory(),p=new HttpFixture();await p.start();p.detailSongs=[{id:101,name:track.title,ar:[{name:track.artist}],al:{name:'TEST ALBUM',picUrl:''},dt:120000}];p.hostingText=`这首是${track.artist}的《${track.title}》。你想重听，我也好奇以前的歌单里还有哪些名字。这里继续保留明确标记的测试句子，确保日文原名替换后中文段落并未被剪成一句报幕。这是测试场景，不是私人用户的经历或对作品声音的评价。`;
  const tts=new FixtureTts(dir,true),app=fixtureApp(dir,{EMILY_NETEASE_API_BASE:p.base,EMILY_NETEASE_COOKIE:COOKIE_SENTINEL,EMILY_MODEL_BASE_URL:p.base+'v1',EMILY_MODEL_API_KEY:'TEST_ONLY',EMILY_MODEL_NAME:'fixture'},{tts});
  try{
   const result=await app.services.radio.programme({trackIds:['101'],ordered:true,limit:1});assert.equal(result.now.track?.title,track.title);assert.equal(result.now.track?.artist,track.artist);assert.equal(result.now.dj?.status,'tts_ready');assert(!hasKana(result.now.dj!.text));assert(result.now.dj!.text.includes('我也好奇'));
