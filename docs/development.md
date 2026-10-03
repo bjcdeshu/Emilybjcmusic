@@ -1,10 +1,16 @@
 # Emily Development Guide
 
-## 当前阶段：按David认可的策略优化串场亲切感（2026-10-03，进行中）
+## 当前阶段：串场口语策略v5已发布9e345f3，保留Gemini/Sulafat（2026-10-03）
 
-David实际听后明确『这次这个音色好很多了』，但台词仍『有人机的感觉』、不够亲切；随后认可少解释腔/不硬凑感悟、有具体上下文就展开、连续多段检查的方案。Pi仍为唯一写入者，从clean41778bd继续；保留正式Sulafat/Flash-Lite及所有TTS参数、OAPI写稿通道、界面、歌曲/queue/漫游/history，只调整写稿策略与例子，旧稿沿现有版本机制在正常准备时更新，不启动全队列生成。当前生产7280ba1。先检验短接话/具体上下文/批量连续台词及事实边界，再做相称回归和Emily窄发布；不会将自动测试或本端文案审阅记为David听感认可。
+David实际听后明确『这次这个音色好很多了』，但台词仍『有人机的感觉』、不够亲切；随后认可少解释腔/不硬凑感悟、有具体上下文就展开、连续多段检查的方案。Pi仍为唯一写入者，从clean41778bd继续；保留正式Sulafat/Flash-Lite及所有TTS参数、OAPI写稿通道、界面、歌曲/queue/漫游/history，只调整写稿策略与例子，旧稿沿现有版本机制在正常准备时更新，不启动全队列生成。本轮从生产7280ba1升级到9e345f3。批准的是策略方向，不代表新台词已获听感认可；音色已有David『好很多了』的明确正面评价，不再把音色本身记为完全未反馈。
 
-实现v5：重写提示/情境示意，无通用字数下限，有具体话题保留完整回应；单首与batch共用，batch避免把本批末项叫电台最后一首。多轮真实OAPI写稿（明确虚构上下文/人工ID、不走网易/TTS）暴露光改提示仍有心理推测/声音属性/服务解释回潮，故增加小范围已知话术检查，命中才最多一次copy edit，共享原始写稿deadline，不扩总20s单首预算。编辑只返回内部索引与稿，不动选择/顺序；失败或仍命中仅该稿降级报幕并提示，非全批重新选歌。检查是启发式，不是假称事实或自然度评分。保留原上下文清理、pause/late guard、懒失效与当前+下一段预生成。初版测试空值类型/可选属性类型错误已修；新增缺陷检查/fixture选择归属导致断言失败，补问题识别并把通用fixture改为明确测试说明，保留长段/状态断言后全server71通过。最终Windows typecheck/testtypecheck/build/server71/browser7/built通过0skip；未改web/deployment，不冒称另跑web38/deployment9。真实OAPI虚构上下文多轮迭代仍见泛化，这不是情感质量验收；最后口语编辑真实单次5.585s修订3段已知坏稿，保留上下文、无报幕降级/剩余已知匹配（只是启发式），后补同类措辞变体。所有写稿检查不访问网易/Radio/TTS；另一次独立编辑诊断曾因临时脚本缺base末尾斜杠失败，修成既有/v1/后成功，应用base处理未改。下一步RN候选验证、停Emily一致备份/窄发布，真实当前节目一段新稿→Sulafat→原歌验证。
+实现v5：重写提示/情境示意，无通用字数下限，有具体话题保留完整回应；单首与batch共用，batch避免把本批末项叫电台最后一首。多轮真实OAPI写稿（明确虚构上下文/人工ID、不走网易/TTS）暴露光改提示仍有心理推测/声音属性/服务解释回潮，故增加小范围已知话术检查，命中才最多一次copy edit，共享原始写稿deadline，不扩总20s单首预算。编辑只返回内部索引与稿，不动选择/顺序；失败或仍命中仅该稿降级报幕并提示，非全批重新选歌。检查是启发式，不是假称事实或自然度评分。保留原上下文清理、pause/late guard、懒失效与当前+下一段预生成。初版测试空值类型/可选属性类型错误已修；新增缺陷检查/fixture选择归属导致断言失败，补问题识别并把通用fixture改为明确测试说明，保留长段/状态断言后全server71通过。最终Windows typecheck/testtypecheck/build/server71/browser7/built通过0skip；未改web/deployment，不冒称另跑web38/deployment9。真实OAPI虚构上下文多轮迭代仍见泛化，这不是情感质量验收；最后口语编辑真实单次5.585s修订3段已知坏稿，保留上下文、无报幕降级/剩余已知匹配（只是启发式），后补同类措辞变体。所有写稿检查不访问网易/Radio/TTS；另一次独立编辑诊断曾因临时脚本缺base末尾斜杠失败，修成既有/v1/后成功，应用base处理未改。最终再次Windows typecheck/testtypecheck/build/server71/browser7/built通过0skip；最新真实内部编辑一次5.107s修订3段明确虚构场景坏稿、无降级且无剩余已知命中。RN9e345f3 build/testtypecheck/server71/built通过。没有运行未改动的web38/deployment9；线上UI资产与7280ba1相同。
+
+已完成发布：RN身份核对、仅停Emily，root-only /var/backups/emily-20260930/pre-9e345f3配对SQLite+env备份/cmp，env/TTS/OAPI配置不改，保留7280ba1回滚；切current9e345f3、服务用户preflight/health200/两unitsactive/NRestarts0，adapter PID1964070不变。只读与停机备份对比确认settings/history/加密授权/节目/队列完整track对象/漫游/index均保留。旧稿lazy失效，启动未调用写稿/TTS。
+
+真实Chrome当前节目检查completed=true/pageErrors[]：现场16首（与上轮17首不是同次观测），v5中文串场27字、准备11.403s、Gemini/Sulafat语音6.44s/gain0.9，natural ended→同一原网易歌；受保护Range206/private-no-store、同audio、queue16→16/原programme/漫游/settings/history通过，最终paused/logout，未加歌/新programme/改设置。随后只读DB确认当前＋下一段hostingVersion5/Gemini ready，原备份状态对比全部通过。截图已读取；本段是无新私人聊天的短过渡，不是长篇上下文质量验收，日文原名UI保留。新策略仍可能有泛化/过短，已知话术检查不是全面语义保证，最终亲切感待David实际反馈。
+
+证据：本机私有Emily-private/copy-review-20261003含多轮虚构上下文稿、editor-result.json、live-result.json及线上截图/私有稿；不入Git/共享记忆。测试与候选日志../.tmp/emily-deployment-review/copy-*.log，运维changes/2026-10-03-emily-conversational-copy.md。回滚可切7280ba1代码并仅重启Emily，保持当前DB/env（旧版按其版本机制重备稿）；不得用旧DB覆盖用户新数据。
 
 ## 上轮：正式Gemini主持已上线7280ba1（功能759f482），线上真实串场→歌曲通过（2026-10-03）
 

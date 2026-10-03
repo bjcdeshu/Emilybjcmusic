@@ -1,6 +1,16 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新7280ba1（功能759f482）正式Gemini Flash-Lite/Sulafat主持已发布并完成真实串场→原曲验证；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新9e345f3口语策略v5已发布，保留7280ba1（功能759f482）正式Gemini Flash-Lite/Sulafat；新稿→原歌真实验证通过；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+
+## 最新窄发布：9e345f3（2026-10-03，口语策略v5）
+
+David批准少解释腔/真实上下文接话/连续段落去重复，且已明确肯定新音色；本轮仅写稿策略和有界copy edit，不改声线/合成参数/OAPI配置/前端/选曲。Windows typecheck/testtypecheck/build/server71/browser7/built、RN build/testtypecheck/server71/built通过0skip；未重跑未改的web38/deployment9。多轮真实OAPI虚构场景检验提示遵循不足，新增有限已知话术匹配、最多一次索引固定的稿件编辑，共享原始写稿deadline；编辑失败保留已选曲目/顺序，仅相应稿降级。不是语义正确或情感质量保证。
+
+current=/opt/emily/releases/9e345f3，旧7280ba1保留。停Emily后root-only /var/backups/emily-20260930/pre-9e345f3配对SQLite+env备份/cmp；env不变，preflight/health200/两unitsactive/Emily NRestarts0/adapter PID1964070未变。与停机备份只读对比settings/history/授权/节目/队列完整track/漫游/index保留。仅Emily重启，无新依赖/schema/Node/DNS/proxy/其他业务变化。
+
+真实Chrome现有节目：27字v5串场准备11.403s、Sulafat音频6.44s自然ended→同一原网易歌；Range206/private-no-store、singleaudio/gain0.9、现场16→16首/原programme/漫游/settings/history通过，最终paused/logout，无加歌/换节目/改设置。随后只读DB当前及下一段v5/Gemini ready。assets仍index-Yl2ZXD1U.css/index-n2wJRwpO.js。新台词亲切感、长段上下文仍待实际用户反馈，不以短段技术播放外推。
+
+代码回滚7280ba1并仅重启Emily，保留当前DB/env；旧版本可能按其策略版本lazy重备串场。不得盲目恢复旧SQLite覆盖新用户数据。运维changes/2026-10-03-emily-conversational-copy.md，详细验证见development.md。
 
 ## 历史窄发布：2e993d4（2026-10-02）
 

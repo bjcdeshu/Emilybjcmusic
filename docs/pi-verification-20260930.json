@@ -1,5 +1,13 @@
 {
   "date": "2026-09-30",
+  "conversationalHostingLive": {
+    "date":"2026-10-03","release":"9e345f3","hostingVersion":5,"deployed":true,
+    "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":71,"browser":7,"built":true,"skipped":0},
+    "rn":{"build":true,"testTypecheck":true,"server":71,"built":true,"skipped":0,"preflight":true,"health":200,"onlyEmilyRestart":true,"adapterPidUnchanged":true,"restarts":0,"backup":"pre-9e345f3","envUnchanged":true},
+    "realCopy":{"syntheticContextReviews":true,"knownFailuresPreserved":true,"finalEditorCalls":1,"finalEditorMs":5107,"editedScripts":3,"remainingKnownMatches":0,"fallback":false,"noMusicOrTtsInCopyProbes":true,"notSemanticQualityProof":true},
+    "live":{"completed":true,"initialQueue":16,"finalQueue":16,"hostChars":27,"prepareMs":11403,"hostSeconds":6.44,"naturalEndedToSameSong":true,"currentAndNextCopyVersion":5,"currentAndNextGeminiReady":true,"singleAudio":true,"gain":0.9,"privateRange206":true,"programmeQueueRoamingSettingsHistoryPreserved":true,"pairedBackupCredentialStatePreserved":true,"newProgramme":false,"addedSongs":false,"settingsWrites":false,"finalPausedLogout":true,"pageErrors":[]},
+    "boundaries":["David approved current timbre as much better; new copy strategy approved, subjective new-copy acceptance pending","Known copy defects trigger at most one edit in original writer deadline; valid song selection and order cannot be altered by editor","Heuristic is not full factual or naturalness validation; ordinary no-context transitions may remain brief","Real current27-character short transition does not prove long contextual paragraphs or Japanese pronunciation","No separate web/deployment regression rerun for unchanged code; UI/TTS/OAPI configuration unchanged","Queue16 is a new dated observation, not proof historical17 stayed constant across sessions"]
+  },
   "geminiHostingLive": {
     "date":"2026-10-03","feature":"759f482","release":"7280ba1","deployed":true,"model":"gemini-3.8-flash-lite-tts","voice":"gemini:Sulafat",
     "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":65,"web":38,"browser":7,"deployment":9,"built":true,"skipped":0},
