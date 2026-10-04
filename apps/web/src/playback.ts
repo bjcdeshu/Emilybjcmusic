@@ -1,6 +1,7 @@
-import type { NowPlayingState } from "@emily/shared";
+import type { ListeningCheckpoint, NowPlayingState } from "@emily/shared";
 
 export type AudioPhase = "idle" | "dj" | "song" | "preview";
+export type SleepTimer = { mode: "track"; itemId: string } | { mode: "time"; deadline: number };
 export type AudioStatus = "idle" | "loading" | "playing" | "paused" | "blocked" | "error" | "ended";
 export type PlaybackSnapshot = {
   phase: AudioPhase;
@@ -9,6 +10,7 @@ export type PlaybackSnapshot = {
   duration: number;
   volume: number;
   wantsPlayback: boolean;
+  sleep?: SleepTimer | undefined;
   message?: string | undefined;
   warning?: string | undefined;
 };
@@ -27,6 +29,9 @@ type PlayerOptions = {
   onResolved: (now: NowPlayingState) => void;
   advance: () => Promise<NowPlayingState>;
   sourceUrl: (url?: string) => string | undefined;
+  onCheckpoint?: (value: ListeningCheckpoint & { heard?: boolean }, force: boolean) => void;
+  onSleep?: () => void;
+  clock?: () => number;
 };
 
 /** One real audio element; no timer-derived progress or pretend server playback. */
@@ -56,14 +61,17 @@ export class RadioAudio {
     this.listen("playing", () => {
       if (this.resolving || this.audio.paused || this.audio.ended) return;
       if (!this.state.wantsPlayback) { this.audio.pause(); return; }
+      if (this.checkSleep()) return;
       this.switching = false;
       this.emit({ status: "playing", message: undefined });
+      this.checkpoint(true, this.state.phase === "song");
     });
     this.listen("pause", () => {
       // Old queued events at a source boundary must not cancel the new stream.
       if (this.switching || this.resolving || this.audio.ended || !this.audio.paused) return;
       if (!["idle", "error", "blocked", "ended"].includes(this.state.status)) {
         this.emit({ status: "paused", wantsPlayback: false });
+        this.checkpoint();
       }
     });
     for (const name of ["waiting", "stalled", "seeking"]) {
@@ -96,10 +104,38 @@ export class RadioAudio {
   }
 
   private readPosition() {
-    if (this.resolving) return;
+    if (this.resolving || this.positionRestore) return;
+    if (this.checkSleep()) return;
     const duration = Number.isFinite(this.audio.duration) && this.audio.duration > 0 ? this.audio.duration : 0;
     const time = Number.isFinite(this.audio.currentTime) ? Math.max(0, this.audio.currentTime) : 0;
     this.emit({ duration, time: duration ? Math.min(time, duration) : time });
+    if (this.state.status === "playing") this.checkpoint(false);
+  }
+
+  private clock() { return (this.options.clock || Date.now)(); }
+  checkpoint(force = true, heard = false) {
+    if (this.resolving || this.positionRestore || !this.now?.programmeId || !this.now.currentItemId || !["dj", "song"].includes(this.state.phase) || !this.audio.src) return;
+    this.options.onCheckpoint?.({ programmeId: this.now.programmeId, itemId: this.now.currentItemId, phase: this.state.phase as "dj" | "song", positionMs: Math.round(Math.max(0, this.audio.currentTime || 0) * 1000), sampledAt: this.clock(), ...(this.state.phase === "dj" && this.now.dj ? { djId: this.now.dj.id } : {}), ...(heard ? { heard: true } : {}) }, force);
+  }
+  skipHosting() {
+    if (this.resolving || this.state.phase !== "dj" || !this.now?.track) return;
+    this.source(this.now.track.audioUrl, "song");
+    this.checkpoint();
+  }
+  setSleep(mode: "track" | 15 | 30 | 60 | null) {
+    const sleep: SleepTimer | undefined = mode === null ? undefined : mode === "track" ? this.now?.currentItemId ? { mode: "track", itemId: this.now.currentItemId } : undefined : { mode: "time", deadline: this.clock() + mode * 60_000 };
+    this.emit({ sleep, message: undefined });
+  }
+  checkSleep(): boolean {
+    const sleep = this.state.sleep;
+    if (sleep?.mode !== "time" || this.clock() < sleep.deadline) return false;
+    this.finishSleep(); return true;
+  }
+  private finishSleep() {
+    this.emit({ sleep: undefined });
+    this.endPreview(); this.pause(); this.checkpoint();
+    this.emit({ message: "定时已结束，播放已暂停。" });
+    this.options.onSleep?.();
   }
 
   configure(settings: { volume: number; djEnabled: boolean }) {
@@ -117,14 +153,12 @@ export class RadioAudio {
 
   setDjEnabled(enabled: boolean) {
     this.djEnabled = enabled;
-    if (!enabled && this.state.phase === "dj" && this.now?.track) {
-      this.source(this.now.track.audioUrl, "song");
-    }
+    if (!enabled && this.state.phase === "dj" && this.now?.track) this.skipHosting();
   }
 
   /** Queue/refill metadata is not transport: never load, play, pause or seek. */
   mergeMetadata(now: NowPlayingState): boolean {
-    if (!this.now || this.resolving || now.programmeId !== this.now.programmeId || now.track?.id !== this.now.track?.id || now.updatedAt < this.now.updatedAt) return false;
+    if (!this.now || this.resolving || now.programmeId !== this.now.programmeId || now.track?.id !== this.now.track?.id || (now.currentItemId && this.now.currentItemId && now.currentItemId !== this.now.currentItemId) || now.updatedAt < this.now.updatedAt) return false;
     this.now = { ...this.now, queue: now.queue, updatedAt: now.updatedAt, ...(now.roaming ? { roaming: now.roaming } : {}) };
     return true;
   }
@@ -145,7 +179,7 @@ export class RadioAudio {
     if (!restore) return;
     this.previewRestore = undefined;
     this.pause();
-    const volume = this.state.volume;
+    const volume = this.state.volume, sleep = this.state.sleep;
     if (restore.snapshot.phase === "dj" && !this.djEnabled && this.now?.track) {
       restore.url = this.options.sourceUrl(this.now.track.audioUrl) || ""; restore.time = 0;
       restore.snapshot = { ...restore.snapshot, phase: "song", time: 0, duration: 0 };
@@ -164,7 +198,7 @@ export class RadioAudio {
     this.positionRestore = restoreTime;
     if (restore.url) this.audio.addEventListener("loadedmetadata", restoreTime, { once: true });
     this.switching = false;
-    this.emit({ ...restore.snapshot, volume, wantsPlayback: false, status: restore.snapshot.phase === "idle" ? "idle" : "paused" });
+    this.emit({ ...restore.snapshot, volume, sleep, wantsPlayback: false, status: restore.snapshot.phase === "idle" ? "idle" : "paused" });
   }
   /** Restore metadata without autoplay, regardless of the server's playing flag. */
   restore(now: NowPlayingState) {
@@ -172,23 +206,24 @@ export class RadioAudio {
     this.generation++;
     this.resolving = false;
     this.emit({ wantsPlayback: false });
-    this.install(now);
+    this.install(now, now.resume);
   }
 
   /** Resolve a queue operation; a pause while it is in-flight remains authoritative. */
-  async perform(resolve: () => Promise<NowPlayingState>, autoplay = true) {
+  async perform(resolve: () => Promise<NowPlayingState>, autoplay = true, resume?: ListeningCheckpoint) {
     this.endPreview();
     const generation = ++this.generation;
     this.playAttempt++;
     this.resolving = true;
     this.switching = true;
     this.audio.pause();
-    this.emit({ status: "loading", wantsPlayback: autoplay, time: 0, duration: 0, message: undefined, warning: undefined });
+    this.emit({ status: "loading", wantsPlayback: autoplay, time: 0, duration: 0, message: "正在准备歌曲与主持；可以随时暂停。", warning: undefined });
     try {
       const now = await resolve();
       if (this.destroyed || generation !== this.generation) return;
       this.resolving = false;
-      this.install(now);
+      this.checkSleep();
+      this.install(now, resume);
       this.options.onResolved(now);
     } catch (error) {
       if (this.destroyed || generation !== this.generation) return;
@@ -198,8 +233,9 @@ export class RadioAudio {
     }
   }
 
-  private install(now: NowPlayingState) {
+  private install(now: NowPlayingState, resume?: ListeningCheckpoint) {
     this.now = now;
+    if (this.state.sleep?.mode === "track" && this.state.sleep.itemId !== now.currentItemId) this.emit({ sleep: undefined });
     if (!now.track) {
       const finished = this.state.wantsPlayback;
       this.clearSource();
@@ -207,8 +243,10 @@ export class RadioAudio {
       return;
     }
     const readyDj = this.djEnabled && now.dj?.status === "tts_ready" && this.options.sourceUrl(now.dj.audioUrl);
-    this.emit({ warning: this.djEnabled && now.dj && !readyDj ? "这段主持语音尚不可用，将直接播放歌曲；文案仍可阅读。" : undefined });
-    if (readyDj) this.source(readyDj, "dj");
+    const restored = resume && resume.programmeId === now.programmeId && resume.itemId === now.currentItemId && (resume.phase === "song" || (resume.djId === now.dj?.id && readyDj)) ? resume : undefined;
+    this.emit({ warning: this.djEnabled && now.dj && !readyDj ? hostingFailureMessage(now.dj) : undefined });
+    if (restored?.phase === "song") this.source(now.track.audioUrl, "song", restored.positionMs / 1000);
+    else if (readyDj) this.source(readyDj, "dj", restored?.positionMs ? restored.positionMs / 1000 : 0);
     else this.source(now.track.audioUrl, "song");
   }
 
@@ -222,7 +260,7 @@ export class RadioAudio {
     this.switching = false;
   }
 
-  private source(url: string | undefined, phase: AudioPhase) {
+  private source(url: string | undefined, phase: AudioPhase, position = 0) {
     this.clearPositionRestore();
     const safe = this.options.sourceUrl(url);
     if (!safe) {
@@ -236,12 +274,27 @@ export class RadioAudio {
     this.emit({ phase, status: this.state.wantsPlayback ? "loading" : "paused", time: 0, duration: 0, message: undefined });
     this.audio.src = safe;
     this.audio.volume = this.state.volume * phaseGain(phase);
+    if (position > 0) {
+      const revision = this.sourceRevision;
+      const restore = () => {
+        this.clearPositionRestore();
+        if (revision !== this.sourceRevision || this.destroyed) return;
+        try { this.audio.currentTime = Math.min(position, Number.isFinite(this.audio.duration) ? Math.max(0, this.audio.duration - 0.1) : position); } catch { this.emit({ warning: "音源暂不支持恢复位置，将从当前可用位置继续。" }); }
+        this.readPosition();
+        if (this.state.wantsPlayback) void this.play();
+      };
+      this.positionRestore = restore;
+      this.audio.addEventListener("loadedmetadata", restore, { once: true });
+      this.emit({ time: position });
+    }
     this.audio.load();
-    if (this.state.wantsPlayback) void this.play();
+    if (this.state.wantsPlayback && !this.positionRestore) void this.play();
     else this.switching = false;
   }
 
   async play() {
+    if (this.checkSleep()) return;
+    if (this.positionRestore) { this.emit({ wantsPlayback: true, status: "loading", message: undefined }); return; }
     if (this.resolving) {
       this.emit({ wantsPlayback: true, status: "loading", message: undefined });
       return;
@@ -275,6 +328,7 @@ export class RadioAudio {
     this.switching = false;
     this.emit({ wantsPlayback: false, status: this.state.phase === "idle" && !this.resolving ? "idle" : "paused" });
     this.audio.pause();
+    this.checkpoint();
   }
 
   seek(seconds: number) {
@@ -282,17 +336,21 @@ export class RadioAudio {
     try {
       this.audio.currentTime = Math.max(0, Math.min(seconds, this.state.duration));
       this.readPosition();
+      this.checkpoint();
     } catch {
       this.emit({ warning: "当前音源暂不支持跳转。" });
     }
   }
 
   private ended() {
+    if (this.checkSleep()) return;
     if (this.state.phase === "preview") { this.endPreview(); return; }
     if (!this.state.wantsPlayback || this.resolving) return;
     if (this.state.phase === "dj") {
       this.source(this.now?.track?.audioUrl, "song");
+      this.checkpoint();
     } else if (this.state.phase === "song") {
+      if (this.state.sleep?.mode === "track" && this.state.sleep.itemId === this.now?.currentItemId) { this.finishSleep(); return; }
       // Advance once from a real ended event, not a guessed duration or interval.
       void this.perform(this.options.advance, true);
     }
@@ -315,7 +373,7 @@ export class RadioAudio {
     this.generation++;
     this.resolving = false;
     this.now = null;
-    this.emit({ ...initialPlayback, volume: this.state.volume, message: undefined, warning: undefined });
+    this.emit({ ...initialPlayback, volume: this.state.volume, sleep: undefined, message: undefined, warning: undefined });
     this.clearSource();
   }
 
@@ -325,6 +383,14 @@ export class RadioAudio {
     for (const [name, listener] of this.listeners) this.audio.removeEventListener(name, listener);
     this.listeners = [];
   }
+}
+
+export function hostingFailureMessage(dj: NonNullable<NowPlayingState["dj"]>, details = false) {
+  const failure = dj.failure;
+  const cooling = failure?.retryAt && Date.parse(failure.retryAt) > Date.now();
+  const reason = failure?.code === "cooldown" ? cooling ? "Google 语音正在冷却" : "上次主持遇到 Google 限流，尚未重新验证" : failure?.code === "local_limit" ? "本机语音防护额度暂已用完" : failure?.code === "timeout" ? "本次主持准备超时" : failure?.code === "busy" ? "另一段语音正在准备" : "这段主持语音尚不可用";
+  const retry = failure?.retryAt && Date.parse(failure.retryAt) > Date.now() ? `；本机将在 ${new Date(failure.retryAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} 后允许再试，不保证供应商已恢复` : "";
+  return details ? `${reason}${retry}。可直接听歌，文案仍可阅读；不会自动重试或切换收费服务。` : `${reason}。本次直接听歌，文案仍可阅读。`;
 }
 
 export function formatTime(seconds: number) {

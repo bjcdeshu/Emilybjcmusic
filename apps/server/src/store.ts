@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { chmodSync, lstatSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import type { FeedbackRequest, HistoryEntry, RadioSettings, Track } from "@emily/shared";
+import type { CollectionResponse, ListeningEntry, FeedbackRequest, HistoryEntry, RadioSettings, Track } from "@emily/shared";
 import { AppError } from "./errors.js";
 
 export function privateDirectory(path: string): void {
@@ -80,6 +80,14 @@ export class Store {
   }
   feedbackMap(): Map<string, FeedbackRequest["kind"]> {
     return new Map(this.db.prepare("SELECT track_id,kind FROM feedback").all().map(row => [String(row.track_id), String(row.kind) as FeedbackRequest["kind"]]));
+  }
+  collection(): CollectionResponse {
+    const liked = this.db.prepare("SELECT t.metadata,f.created_at FROM feedback f JOIN tracks t ON t.id=f.track_id WHERE f.kind='like' ORDER BY f.created_at DESC LIMIT 100").all().map(row => ({ track: metadataTrack(JSON.parse(String(row.metadata)) as Track), playedAt: String(row.created_at) }));
+    return { liked, recent: this.get<ListeningEntry[]>("listening_recent") || [], feedback: Object.fromEntries(this.feedbackMap()) };
+  }
+  recordListening(track: Track, now: number): void {
+    const recent = this.get<ListeningEntry[]>("listening_recent") || [];
+    this.set("listening_recent", [{ track: metadataTrack(track), playedAt: new Date(now).toISOString() }, ...recent.filter(row => row.track.id !== track.id)].slice(0, 100));
   }
   settings(defaults: RadioSettings): RadioSettings { return this.get<RadioSettings>("settings") || defaults; }
   putSession(hash: string, ownerHash: string, expires: number, now: number): void {

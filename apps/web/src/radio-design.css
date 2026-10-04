@@ -102,6 +102,14 @@
 .sheet-transport .main-play { width:44px; height:44px; }
 .sheet-transport .main-play svg { width:20px; }
 .queue-track-list { width:100%; }
+.queue-item-main { display:flex; align-items:center; }
+.queue-item-main .queue-row { min-width:0; flex:1; }
+.queue-more { flex:0 0 44px; }
+.queue-actions { display:flex; justify-content:flex-end; gap:18px; padding:0 4px 8px; }
+.sleep-control { display:grid; gap:8px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+.sleep-control select { color:var(--ink); background:var(--stage); }
+.skip-hosting { position:absolute; right:24px; top:-28px; font-size:12px; color:var(--muted); min-height:36px; }
+.sheet-status { color:var(--muted); font-size:12px; padding:10px 0; }
 .queue-row { display:flex; align-items:center; gap:12px; width:100%; min-height:64px; text-align:left; color:var(--muted); background:none; padding:12px 0; border-top:1px solid var(--line); }
 .queue-row:hover { background:var(--inset); }
 .queue-row .cover { width:36px; height:36px; }

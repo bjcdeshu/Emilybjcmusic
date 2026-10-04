@@ -18,6 +18,12 @@ npm run start --workspace @emily/server
 
 The last command is a running service, not part of automated tests. Test servers bind `127.0.0.1` on ephemeral ports and tests use temporary directories under explicit `TMPDIR` or the platform's `os.tmpdir()`. The real Edge check synthesizes a sentence in the selected hosting language (default Mandarin), validates female voice metadata, uses ffprobe/ffmpeg to decode the MP3, checks a cache hit, and removes its temporary media. Ordinary tests exercise local HTTP NetEase/model fixtures and CLI/audio fixtures; they do **not** prove a real NetEase account or real model is connected.
 
+## Daily listening extension (Pi / 2026-10-04)
+
+Owner-only checkpoint/collection/resume/queue-edit reuse existing kv and catalogue/feedback, no schema migration. Checkpoint matches exact current programme and queue occurrence; DJ also matches actual segment, position is reported real media time rather than server inference. Browser events write every10s/explicit boundaries; one checkpoint plus100 recent unique-track metadata, likes query100. Recent means actual browser song playing report, not completed listening or generated programme. No new raw chat/audio persistence. Resume intent never regenerates the current host. Queue edits reject current/past/stale/busy, preserve roaming seen/settings/history/feedback and suppress withdrawn pending hosting results. New tests preserve all old race/rights assertions.
+
+Gemini failures retain only authored safe reason enum and known cooldown timestamp. Numeric/date Retry-After is bounded as before and now saved in private kv across restarts, cache hits remain usable. No raw errors/provider logs, budget expansion/retry/fallback/engine changes. API details in docs/api-contract.md; exact verification and production state in docs/development.md.
+
 ## Application environment (parent/operator provisions secrets)
 
 | Name | Use |

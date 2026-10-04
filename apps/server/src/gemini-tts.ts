@@ -24,7 +24,7 @@ export type GeminiPreviewPort = {
   preview(voice: string, sample: VoicePreviewSample): Promise<DjSegment>;
   close(): Promise<void>;
 };
-type Dependencies = { fetch?: typeof fetch; convert?: typeof wavToMp3; validate?: typeof validateTtsAudio };
+type Dependencies = { fetch?: typeof fetch; convert?: typeof wavToMp3; validate?: typeof validateTtsAudio; readCooldown?: () => number | undefined; saveCooldown?: (until: number) => void };
 
 /** Strict supported unary format only; never guess PCM endianness or prepend a second WAV header. */
 export function validateGeminiWav(bytes: Buffer): boolean {
@@ -62,6 +62,8 @@ export class GeminiTtsPreview implements GeminiPreviewPort, TtsPort {
   constructor(private readonly config: AppConfig, private readonly takeRequest: () => boolean, private readonly clock: () => number = Date.now, private readonly dependencies: Dependencies = {}) {
     this.audioDir = join(config.dataDir, "audio");
     privateDirectory(this.audioDir);
+    const saved = dependencies.readCooldown?.();
+    if (saved && Number.isFinite(saved)) this.cooldownUntil = Math.min(saved, this.clock() + 86_400_000);
   }
   get ready(): boolean { return !this.closed && this.config.ttsEnabled && !!this.config.geminiTtsKey && this.config.geminiTtsFreeTierConfirmed; }
   get hostingReady(): boolean { return this.ready && this.config.geminiTtsHostingEnabled; }
@@ -72,7 +74,11 @@ export class GeminiTtsPreview implements GeminiPreviewPort, TtsPort {
     if (!(GEMINI_HOST_VOICES as readonly string[]).includes(voice) || !isHosting(text, "zh") || text.length > 280) throw new AppError(400, "INVALID_TTS_INPUT", "Gemini 主持只接收有界中文朗读稿和已启用的声线。");
     if (!this.hostingReady) return { id: createHash("sha256").update(text + voice).digest("hex"), text, voice, language: "zh", provider: "gemini", model: GEMINI_TTS_MODEL, deliveryVersion: VERSION, status: "text_only", createdAt: new Date(this.clock()).toISOString() };
     try { return await this.synthesize(text, voice, false); }
-    catch { return { id: this.identity(text, voice), text, voice, language: "zh", provider: "gemini", model: GEMINI_TTS_MODEL, deliveryVersion: VERSION, status: "tts_failed", createdAt: new Date(this.clock()).toISOString() }; }
+    catch (error) {
+      const code = error instanceof AppError ? error.code : '';
+      const failure: NonNullable<DjSegment['failure']> = code === 'GEMINI_TTS_COOLDOWN' || code === 'GEMINI_TTS_RATE_LIMITED' ? { code: 'cooldown', retryAt: new Date(this.cooldownUntil).toISOString() } : { code: code === 'GEMINI_TTS_LIMIT' ? 'local_limit' : code === 'GEMINI_TTS_TIMEOUT' ? 'timeout' : code === 'GEMINI_TTS_BUSY' ? 'busy' : 'unavailable' };
+      return { id: this.identity(text, voice), text, voice, language: "zh", provider: "gemini", model: GEMINI_TTS_MODEL, deliveryVersion: VERSION, status: "tts_failed", failure, createdAt: new Date(this.clock()).toISOString() };
+    }
   }
   private identity(text: string, voice: string): string { return createHash("sha256").update(JSON.stringify({ provider: "gemini", model: GEMINI_TTS_MODEL, voice: voice.slice(7), language: "zh", style: STYLE, version: VERSION, text, encoding: "wav-pcm24k-mono-to-mp3-96k-v1" })).digest("hex"); }
   async preview(voice: string, sample: VoicePreviewSample): Promise<DjSegment> {
@@ -118,7 +124,8 @@ export class GeminiTtsPreview implements GeminiPreviewPort, TtsPort {
     try {
       if (await this.cached(segment.id)) return segment;
       if (!this.ready) throw new Error();
-      if (this.clock() < this.cooldownUntil || !this.takeRequest()) throw new AppError(429, "GEMINI_TTS_LIMIT", "本机 Gemini 试听额度暂已用完，请稍后再试；不会切换付费服务。");
+      if (this.clock() < this.cooldownUntil) throw new AppError(429, "GEMINI_TTS_COOLDOWN", `Google 语音正在冷却；本机在 ${new Date(this.cooldownUntil).toISOString()} 后允许手动再试，不保证供应商届时恢复。不会自动重试或启用付费。`);
+      if (!this.takeRequest()) throw new AppError(429, "GEMINI_TTS_LIMIT", "本机 Gemini 语音防护额度暂已用完，请稍后再试；这不是 Google 实际配额说明，不会切换付费服务。");
       await this.prune();
       const timeout = Math.min(this.config.ttsTimeoutMs, 60_000, deadline - Date.now() - 18_000);
       if (timeout <= 0) throw new Error();
@@ -150,8 +157,10 @@ export class GeminiTtsPreview implements GeminiPreviewPort, TtsPort {
         body: JSON.stringify({ model: GEMINI_TTS_MODEL, store: false, stream: false, input: [{ type: "user_input", content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style: STYLE }] }] }], response_format: { type: "audio" }, generation_config: { speech_config: [{ voice }] } })
       });
       if (response.status === 429) {
-        const seconds = Number(response.headers.get("retry-after"));
-        this.cooldownUntil = this.clock() + Math.min(86_400_000, Math.max(60_000, Number.isFinite(seconds) ? seconds * 1000 : 0));
+        const retry = response.headers.get("retry-after") || "";
+        const delay = /^\d+(\.\d+)?$/.test(retry) ? Number(retry) * 1000 : Date.parse(retry) - this.clock();
+        this.cooldownUntil = this.clock() + Math.min(86_400_000, Math.max(60_000, Number.isFinite(delay) ? delay : 0));
+        this.dependencies.saveCooldown?.(this.cooldownUntil);
         throw new AppError(429, "GEMINI_TTS_RATE_LIMITED", "Google 的语音额度或速率已达限制，请稍后再试；不会自动重试或启用付费。");
       }
       if (!response.ok || !response.body || !/^application\/json\b/i.test(response.headers.get("content-type") || "")) throw new Error();

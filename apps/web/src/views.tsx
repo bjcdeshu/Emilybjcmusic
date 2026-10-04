@@ -5,6 +5,7 @@ import { FEMALE_VOICES, GEMINI_HOST_VOICES, GEMINI_PREVIEW_VOICES, MAX_PROGRAMME
 import { api, errorMessage } from "./api";
 import { Cover, Empty, PageHeading, Spinner } from "./components";
 import { ProgrammeConfirm } from './ProgrammeConfirm';
+import { ListeningCollection } from './ListeningCollection';
 
 const programmes = [
   { name: "Soft Focus", tag: "沉下来，慢一点", prompt: "A warm, unhurried programme for focused work. Gentle textures and calm, restrained hosting in the chosen host language. Let Emily offer a grounded personal perspective with naturally varied hosting length.", icon: Headphones },
@@ -103,7 +104,7 @@ export function Library({ setup, busy, now, enqueue, createProgramme, openQr, co
 }
 function LoaderLabel() { return <Spinner label="搜索中" />; }
 
-export function RadioHistory({ createProgramme, busy, refreshKey, programmeId }: { createProgramme: (request: ProgrammeRequest) => void; busy: boolean; refreshKey: number; programmeId?: string | undefined }) {
+export function RadioHistory({ createProgramme, busy, refreshKey, programmeId, enqueue }: { enqueue: (id: string, programmeId: string) => Promise<QueueAddResponse>; createProgramme: (request: ProgrammeRequest) => void; busy: boolean; refreshKey: number; programmeId?: string | undefined }) {
   const [pending,setPending]=useState<{request:ProgrammeRequest;scope:string}|null>(null);
   function revisit(request:ProgrammeRequest){if(programmeId)setPending({request,scope:programmeId});else createProgramme(request);}
   const [history, setHistory] = useState<HistoryResponse | null>(null);
@@ -119,7 +120,7 @@ export function RadioHistory({ createProgramme, busy, refreshKey, programmeId }:
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [refreshKey, retry]);
-  return <section className="view-panel" aria-labelledby="history-title">{pending&&<ProgrammeConfirm close={()=>setPending(null)} confirm={()=>{const proposal=pending;setPending(null);if(!busy&&proposal.scope===programmeId)createProgramme(proposal.request);}} />}<PageHeading id="history-title" section="历史" title="听过的时光">回到一档听过的节目，或者让熟悉的音乐重新排列。</PageHeading><div className="section-heading"><h2>节目历史</h2><button className="icon-button" aria-label="刷新历史" disabled={loading} onClick={() => setRetry((v) => v + 1)}><RefreshCw size={19} className={loading ? "spin" : ""} /></button></div>{loading && <Spinner />}{error && <p className="inline-error" role="alert">{error}</p>}{!loading && !error && !history?.items.length && <Empty title="第一档节目，留给现在。">开始听歌后，节目记录会出现在这里。</Empty>}
+  return <section className="view-panel" aria-labelledby="history-title">{pending&&<ProgrammeConfirm close={()=>setPending(null)} confirm={()=>{const proposal=pending;setPending(null);if(!busy&&proposal.scope===programmeId)createProgramme(proposal.request);}} />}<PageHeading id="history-title" section="历史" title="听过的时光">回到一档听过的节目，或者让熟悉的音乐重新排列。</PageHeading><ListeningCollection programmeId={programmeId} enqueue={enqueue} createProgramme={createProgramme} busy={busy} refreshKey={refreshKey}/><div className="section-heading"><h2>节目历史</h2><button className="icon-button" aria-label="刷新历史" disabled={loading} onClick={() => setRetry((v) => v + 1)}><RefreshCw size={19} className={loading ? "spin" : ""} /></button></div>{loading && <Spinner />}{error && <p className="inline-error" role="alert">{error}</p>}{!loading && !error && !history?.items.length && <Empty title="第一档节目，留给现在。">开始听歌后，节目记录会出现在这里。</Empty>}
     <div className="history-list">{history?.items.map((entry) => <article className="history-card" key={entry.id}><div className="section-heading"><span className="muted tiny">{entry.tracks.length} 首音乐</span><time dateTime={entry.createdAt}>{dateLabel(entry.createdAt)}</time></div><h3>{entry.title}</h3><div className="history-tracks">{entry.tracks.map((track, index) => <span key={`${track.id}-${index}`}><b>{track.title}</b><small>{track.artist}</small></span>)}</div><button className="secondary-button" disabled={busy || !entry.tracks.length} onClick={() => revisit({ trackIds: entry.tracks.map((track) => track.id).slice(0, 30), prompt: `Revisit this personal programme: ${entry.title}. Use the chosen host language and contextual hosting with naturally varied length.`, limit: Math.min(entry.tracks.length, MAX_PROGRAMME_TRACKS) })}>重新编排<ArrowUpRight size={17} /></button></article>)}</div>
   </section>;
 }
@@ -172,11 +173,12 @@ export function Settings(props: SettingsProps) {
       <div className="service-row"><span><b>网易云音乐</b><small>{setup?.music.connected ? setup.music.user?.name || "个人账号已连接" : setup?.music.configured ? "等待个人授权" : "音乐服务未配置"}</small></span>{setup?.music.connected ? <button className="text-button" onClick={() => setConfirmDisconnect(true)}><Unplug size={16} />断开</button> : <button className="secondary-button" disabled={!setup?.music.configured} onClick={props.openQr}>连接</button>}</div>
       {confirmDisconnect && <div className="confirm-inline"><p>断开后将停止播放，并移除服务端的音乐授权。需要重新扫码才能继续。</p><div className="button-row"><button className="danger-button" disabled={busy} onClick={() => { void props.disconnect().then(() => setConfirmDisconnect(false)); }}>确认断开</button><button className="text-button" onClick={() => setConfirmDisconnect(false)}>取消</button></div></div>}
       <div className="service-row"><span><b>节目编排</b><small>{setup?.model.configured ? "模型已配置，调用结果会在节目中提示" : "使用真实歌单顺序，模型未配置"}</small></span><span className={`status-dot ${setup?.model.configured ? "good" : ""}`} /></div>
-      <div className="service-row"><span><b>主持语音</b><small>{setup?.tts.available ? `可用 · ${voiceLabel(settings?.voice || setup.tts.voice)}` : "语音暂不可用，仍可听歌"}</small></span><span className={`status-dot ${setup?.tts.available ? "good" : ""}`} /></div>
+      <div className="service-row"><span><b>主持语音</b><small>{setup?.tts.available ? `已配置 · ${voiceLabel(settings?.voice || setup.tts.voice)}` : "语音暂不可用，仍可听歌"}</small></span><span className={`status-dot ${setup?.tts.available ? "good" : ""}`} /></div>
+      <p className="muted tiny">语音配置状态不是当前供应商可用性检查；最近一次失败与已知冷却时间可在播放器“听感与节目”查看。</p>
       {setup?.music.message && <p className="muted tiny">{setup.music.message}</p>}
     </section>
     <details className="settings-card install-details"><summary><Smartphone size={20} />随身电台与隐私<span>⌄</span></summary><p className="muted">{props.canInstall ? "将 Emily 添加到主屏幕，用独立窗口收听。" : "Android Chrome：菜单 ⋮ → 添加到主屏幕。需要 HTTPS 或本机 localhost。"}</p>{props.canInstall && <button className="secondary-button" onClick={() => void props.install()}>添加到主屏幕<ArrowUpRight size={17} /></button>}
-      <div className="privacy-note"><ShieldCheck size={17} /><p>离线只保留应用外壳。登录口令、个人接口、歌单与音频不进入离线缓存；离线不代表还能收听。</p></div>
+      <div className="privacy-note"><ShieldCheck size={17} /><p>离线只保留应用外壳。登录口令、个人接口、歌单与音频不进入离线缓存；续听位置、喜欢和最近实际播放保存在主人服务端，不保存聊天。离线不代表还能收听。</p></div>
       {props.updateReady && <p className="inline-good">新版本已下载，下次重新打开时更新。请先暂停，再刷新页面。</p>}
     </details>
     <button className="logout-button" disabled={busy} onClick={props.logout}><LogOut size={18} />退出个人电台</button><p className="settings-footnote">EMILY / A PRIVATE FREQUENCY<br />No rooms. No audience. Just you and the music.</p>

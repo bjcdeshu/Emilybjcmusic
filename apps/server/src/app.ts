@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import fastify, { type FastifyInstance } from "fastify";
 import { GEMINI_HOST_VOICES, GEMINI_PREVIEW_VOICES, MAX_PROGRAMME_TRACKS, VOICE_PREVIEW_SAMPLES, voiceLanguage, type VoicePreviewSample } from "@emily/shared";
-import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, QueueAddRequest, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
+import type { ApiResponse, AuthSession, FeedbackRequest, ProgrammeRequest, QueueAddRequest, QueueEditRequest, ListeningCheckpoint, ListeningRequest, RadioSettings, SetupStatus } from "@emily/shared";
 const EMILY_VERSION = "0.3.0-dev";
 import { loadConfig, FEMALE_VOICES, type AppConfig } from "./config.js";
 import { Store } from "./store.js";
@@ -36,6 +36,7 @@ const qrSchema = { type: "string", pattern: "^[a-f0-9]{64}$" };
 const textSchema = (maxLength: number) => ({ type: "string", minLength: 1, maxLength, pattern: "^[^\\u0000-\\u001f\\u007f]+$" });
 const emptyQuery = objectSchema({});
 const emptyBody = objectSchema({});
+const uuidSchema = { type: "string", pattern: "^[a-f0-9-]{36}$" };
 
 /** Constructing/importing an app never binds a listener. */
 export function buildApp(options: AppOptions = {}): EmilyApp {
@@ -51,7 +52,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   const music = new NeteaseAdapter(config, store, clock);
   const selector = new ProgrammeSelector(config);
   const conversation = new ListeningConversation(config, music, store);
-  const gemini = new GeminiTtsPreview(config, () => store.takeRate("gemini-tts-minute", 2, 60_000, clock()) && store.takeRate("gemini-tts-day", 60, 86_400_000, clock()), clock);
+  const gemini = new GeminiTtsPreview(config, () => store.takeRate("gemini-tts-minute", 2, 60_000, clock()) && store.takeRate("gemini-tts-day", 60, 86_400_000, clock()), clock, { readCooldown: () => store.get<number>("gemini_cooldown_until"), saveCooldown: until => store.set("gemini_cooldown_until", until) });
   const tts = options.tts || new HostingTts(new EdgeTts(config, clock), gemini);
   const geminiPreview = options.geminiPreview || gemini;
   const radio = new Radio(config, store, music, selector, tts, clock);
@@ -77,6 +78,7 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
     if (route === "/api/conversation" && !store.takeRate("conversation", 12, 300_000, clock())) {
       throw new AppError(429, "CONVERSATION_RATE_LIMITED", "请稍等再继续对话选曲。");
     }
+    if (["/api/listening/checkpoint", "/api/queue/edit"].includes(route) && !store.takeRate(`ux:${route}`, 120, 60_000, clock())) throw new AppError(429, "UX_RATE_LIMITED", "操作过于频繁，请稍后再试。");
     if (route === "/api/queue/add" && !store.takeRate("queue-add", 24, 300_000, clock())) throw new AppError(429, "QUEUE_RATE_LIMITED", "请稍等再加入歌曲。");
     if (route === "/api/tts/preview" && !store.takeRate("voice-preview", 8, 300_000, clock())) throw new AppError(429, "TTS_PREVIEW_RATE_LIMITED", "请稍等再试听声线。");
     if (route === "/api/programme" && !store.takeRate("programme", 8, 300_000, clock())) {
@@ -138,6 +140,10 @@ export function buildApp(options: AppOptions = {}): EmilyApp {
   app.get("/api/now", { schema: { querystring: emptyQuery } }, async () => success(radio.now()));
   app.get("/api/queue", { schema: { querystring: emptyQuery } }, async () => success({ items: radio.now().queue }));
   app.post<{ Body: QueueAddRequest }>("/api/queue/add", { schema: { body: objectSchema({ trackId: idSchema, programmeId: { type: "string", pattern: "^[a-f0-9-]{36}$" }, listenerNote: textSchema(600) }, ["trackId", "programmeId"]), querystring: emptyQuery } }, async request => success(await radio.enqueue(request.body)));
+  app.post<{ Body: QueueEditRequest }>("/api/queue/edit", { schema: { body: objectSchema({ programmeId: uuidSchema, itemId: uuidSchema, action: { type: "string", enum: ["next", "remove"] } }, ["programmeId", "itemId", "action"]), querystring: emptyQuery } }, async request => success(radio.editQueue(request.body)));
+  app.post<{ Body: ListeningCheckpoint & { heard?: boolean } }>("/api/listening/checkpoint", { schema: { body: objectSchema({ programmeId: uuidSchema, itemId: uuidSchema, phase: { type: "string", enum: ["dj", "song"] }, positionMs: { type: "integer", minimum: 0, maximum: 86_400_000 }, djId: qrSchema, sampledAt: { type: "integer", minimum: 0, maximum: 8_640_000_000_000_000 }, heard: { type: "boolean" } }, ["programmeId", "itemId", "phase", "positionMs", "sampledAt"]), querystring: emptyQuery } }, async request => { radio.checkpoint(request.body); return success({ saved: true }); });
+  app.get("/api/listening/collection", { schema: { querystring: emptyQuery } }, async () => success(store.collection()));
+  app.post<{ Body: { programmeId: string; itemId: string } }>("/api/player/resume", { schema: { body: objectSchema({ programmeId: uuidSchema, itemId: uuidSchema }, ["programmeId", "itemId"]), querystring: emptyQuery } }, async request => success(radio.resume(request.body.programmeId, request.body.itemId)));
   app.post<{ Body: { trackId?: string } }>("/api/player/play", { schema: { body: objectSchema({ trackId: idSchema }), querystring: emptyQuery } }, async request => success(await radio.play(request.body?.trackId)));
   app.post<{ Body: { enabled: boolean } }>("/api/player/roaming", { schema: { body: objectSchema({ enabled: { type: "boolean" } }, ["enabled"]), querystring: emptyQuery } }, async request => success(radio.setRoaming(request.body.enabled)));
   app.post("/api/player/pause", { schema: { body: emptyBody, querystring: emptyQuery } }, async () => success(await radio.pause()));

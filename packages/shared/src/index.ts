@@ -31,7 +31,12 @@ export type DjSegment = {
   provider?: "gemini";
   model?: string;
   deliveryVersion?: number;
+  failure?: { code: "cooldown" | "local_limit" | "busy" | "timeout" | "unavailable"; retryAt?: string };
 };
+export type ListeningCheckpoint = { programmeId: string; itemId: string; phase: "dj" | "song"; positionMs: number; djId?: string; sampledAt: number };
+export type ListeningEntry = { track: Track; playedAt: string };
+export type CollectionResponse = { liked: ListeningEntry[]; recent: ListeningEntry[]; feedback: Record<string, FeedbackRequest["kind"]> };
+export type QueueEditRequest = { programmeId: string; itemId: string; action: "next" | "remove" };
 export type NowPlayingState = {
   status: "idle" | "playing" | "paused" | "loading" | "error";
   track?: Track;
@@ -43,6 +48,8 @@ export type NowPlayingState = {
   programmeTitle?: string;
   /** Opaque programme identity; metadata updates never become transport actions. */
   programmeId?: string;
+  currentItemId?: string;
+  resume?: ListeningCheckpoint;
   roaming?: { enabled: boolean; scope: "playlist"; preparing: boolean; message?: string };
   warning?: string;
 };
@@ -51,7 +58,7 @@ export type PlayerActionResponse = { now: NowPlayingState };
 export type PlayRequest = { trackId?: string };
 export const MAX_QUEUE_ITEMS = 48;
 export type QueueAddRequest = { trackId: string; programmeId: string; /** Optional owner wording, volatile until intro preparation; never saved as chat. */ listenerNote?: string };
-export type QueueAddResponse = PlayerActionResponse & { track: Track; outcome: "added" | "already_present"; message: string };
+export type QueueAddResponse = PlayerActionResponse & { track: Track; outcome: "added" | "already_present"; message: string; itemId?: string };
 export const VOICE_PREVIEW_SAMPLES = ["transition", "bright", "reflective"] as const;
 export type VoicePreviewSample = typeof VOICE_PREVIEW_SAMPLES[number];
 export type VoicePreviewResponse = { segment: DjSegment };

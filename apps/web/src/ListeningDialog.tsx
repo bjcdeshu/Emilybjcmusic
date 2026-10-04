@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type FormEvent, type SetStateAction, type ReactNode } from 'react';
 import { ArrowRight, Check, MessageCircle, Plus, Send, X } from 'lucide-react';
 import type { ListeningMessage, ListeningMode, ListeningRequest, ListeningResponse, NowPlayingState, ProgrammeRequest, QueueAddResponse, SetupStatus } from '@emily/shared';
 import { errorMessage, post } from './api';
@@ -7,11 +7,12 @@ export type ListeningTurn = ListeningMessage & { suggestion?: ListeningResponse;
 type Props = {
   close: () => void; setup: SetupStatus | null; busy: boolean; now: NowPlayingState | null;
   turns: ListeningTurn[]; setTurns: Dispatch<SetStateAction<ListeningTurn[]>>;
+  undoNotice: ReactNode;
   draft: string; setDraft: Dispatch<SetStateAction<string>>;
   enqueue: (trackId: string, programmeId: string, listenerNote?: string) => Promise<QueueAddResponse>;
   createProgramme: (request: ProgrammeRequest) => Promise<boolean>;
 };
-export function ListeningDialog({ close, setup, busy, now, turns, setTurns, draft, setDraft, enqueue, createProgramme }: Props) {
+export function ListeningDialog({ close, setup, busy, now, turns, setTurns, draft, setDraft, undoNotice, enqueue, createProgramme }: Props) {
   const dialog = useRef<HTMLDialogElement>(null), controller = useRef<AbortController|null>(null), log = useRef<HTMLDivElement>(null);
   const mounted = useRef(true), retry = useRef<{ request: ListeningRequest; programmeId?: string } | null>(null);
   const [sending,setSending] = useState(false), [error,setError] = useState('');
@@ -68,6 +69,7 @@ export function ListeningDialog({ close, setup, busy, now, turns, setTurns, draf
         {!turns.length && <div className="listening-welcome"><MessageCircle size={20}/><p>可以直接说歌名和歌手。点一首，就只找这一首；你核对版本后再加入。</p><button className="text-button" onClick={()=>setDraft('想找一首适合今晚听的民谣')}>比如：今晚想听一首民谣<ArrowRight size={15}/></button></div>}
         {turns.map((turn,index)=><article key={index} className={`listening-turn ${turn.role}`}><b>{turn.role==='user'?'你':'Emily'}</b><p>{turn.text}</p>{turn.suggestion?.clarifications?.length?<div className="listening-clarify">{turn.suggestion.clarifications.map(name=><button key={name} className="secondary-button" disabled={sending||!!adding||replacing} onClick={()=>setDraft(`确认，是${name}，只找这一首`)}>确认：{name}</button>)}</div>:null}{turn.suggestion?.tracks.length?<ul className="listening-proposal">{turn.suggestion.tracks.map(track=><li key={track.id}><span><b>{track.title}</b><small>{track.artist}{track.album?` · ${track.album}`:''}</small>{turn.additions?.[track.id]&&<small className="inline-good" role="status">{turn.additions[track.id]}</small>}</span>{turn.suggestion?.mode!=='replace'&&<button className="secondary-button" aria-label={`加入待播：${track.title} · ${track.artist}`} disabled={!!adding||sending||busy||replacing||queueChanged(turn)||!!turn.additions?.[track.id]||(turn.suggestion?.match==='choose_version'&&!!Object.keys(turn.additions||{}).length)} onClick={()=>void add(turn,track.id)}>{adding===track.id?<Spinner label="加入中"/>:turn.additions?.[track.id]?<><Check size={15}/>{turn.additions[track.id]!.startsWith('已加入')?'已加入':'已在列表'}</>:<><Plus size={15}/>加入待播</>}</button>}</li>)}</ul>:null}{turn.suggestion?.tracks.length&&turn.suggestion.mode!=='replace'&&queueChanged(turn)?<p className="muted tiny">{now?.track?'节目已经更换，请重新查找后加入当前列表。':'先从节目页开始一档节目；这里不会替你覆盖列表。'}</p>:null}{turn.suggestion?.warnings.length?<details className="listening-warnings"><summary>检索说明</summary>{turn.suggestion.warnings.map((w,i)=><p key={i}>{w}</p>)}</details>:null}</article>)}
         {sending&&<Spinner label="正在查找真实曲目，当前播放不变"/>}{error&&<div className="inline-error" role="alert"><p>{error}</p>{retry.current&&<button className="text-button" disabled={sending} onClick={()=>{const r=retry.current;if(r)void consult(r.request,r.programmeId);}}>重试这次查找</button>}</div>}
+        {undoNotice}
       </div>
       {unread&&<button className="text-button new-reply" onClick={latestReply}>有更新 · 查看最新回复</button>}
       {proposal&&mode==='replace'&&<div className="listening-replace"><p>会更换当前列表与漫游范围，不是追加。</p><button className="primary-button listening-accept" disabled={busy||sending||replacing||!!adding} onClick={()=>{setReplacing(true);void createProgramme(proposal).then(ok=>{if(mounted.current){if(ok)close();else{setError('新节目没有准备完成，未继续播放。');setReplacing(false);}}});}}>{replacing?'正在准备新节目':`确认换成这 ${proposal.trackIds?.length || 0} 首`}<ArrowRight size={17}/></button></div>}

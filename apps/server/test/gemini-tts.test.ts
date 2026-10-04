@@ -87,6 +87,17 @@ test("Gemini 429 cooldown and local budget stop network without automatic retrie
   } finally { await client.close(); await rm(dir, { recursive: true, force: true }); }
 });
 
+test('formal failure exposes safe reason and restart-persistent bounded cooldown, never raw provider data', async () => {
+  const dir=await directory();let calls=0,saved=0,clock=Date.now();const config={...readyConfig(dir),geminiTtsHostingEnabled:true};
+  const dependencies={readCooldown:()=>saved,saveCooldown:(v:number)=>{saved=v;},fetch:async()=>{calls++;return new Response('TEST_PRIVATE',{status:429,headers:{'retry-after':new Date(clock+120000).toUTCString()}});}};
+  let client=new GeminiTtsPreview(config,()=>true,()=>clock,dependencies);
+  try {
+    const first=await client.segment(VOICE_SAMPLES.zh.transition,'gemini:Sulafat');assert.equal(first.failure?.code,'cooldown');assert(first.failure?.retryAt);assert(!JSON.stringify(first).includes('TEST_PRIVATE'));assert.equal(calls,1);
+    await client.close();client=new GeminiTtsPreview(config,()=>true,()=>clock,dependencies);const second=await client.segment(VOICE_SAMPLES.zh.bright,'gemini:Sulafat');assert.equal(second.failure?.retryAt,first.failure?.retryAt);assert.equal(calls,1);
+    clock+=121000;await client.close();client=new GeminiTtsPreview(config,()=>false,()=>clock,dependencies);assert.equal((await client.segment(VOICE_SAMPLES.zh.bright,'gemini:Sulafat')).failure?.code,'local_limit');assert.equal(calls,1);
+  }finally{await client.close();await rm(dir,{recursive:true,force:true});}
+});
+
 test("Gemini rejects malformed/oversize/empty/remote or incomplete audio and timeouts, never publishes failed output", async () => {
   const dir = await directory();
   const samples = [

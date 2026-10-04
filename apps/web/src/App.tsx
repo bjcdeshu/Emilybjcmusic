@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, Check, ChevronRight, CircleAlert, History as HistoryIcon, ListMusic, LockKeyhole, Pause, Play, Radio, RefreshCw, Settings2, ShieldCheck, SkipForward, WifiOff, X } from "lucide-react";
-import type { AuthSession, FeedbackRequest, NowPlayingState, PlayerActionResponse, ProgrammeRequest, ProgrammeResponse, QueueAddResponse, QueueItem, QueueResponse, RadioSettings, SetupStatus, VoicePreviewResponse, VoicePreviewSample } from "@emily/shared";
+import type { AuthSession, CollectionResponse, ListeningCheckpoint, QueueEditRequest, FeedbackRequest, NowPlayingState, PlayerActionResponse, ProgrammeRequest, ProgrammeResponse, QueueAddResponse, QueueItem, QueueResponse, RadioSettings, SetupStatus, VoicePreviewResponse, VoicePreviewSample } from "@emily/shared";
 import { api, errorMessage, post } from "./api";
 import { Cover, MusicQrDialog, Spinner, StationIdentity } from "./components";
 import { useMediaSession, usePwa, useRadioAudio } from "./hooks";
@@ -33,6 +33,11 @@ export function App() {
   const [conversationOpen, setConversationOpen] = useState(false);
   const [conversationTurns, setConversationTurns] = useState<ListeningTurn[]>([]);
   const [conversationDraft, setConversationDraft] = useState('');
+  const [queueEditing, setQueueEditing] = useState(false);
+  const [undoAdd, setUndoAdd] = useState<{ programmeId: string; itemId: string; title: string } | null>(null);
+  const checkpointAt = useRef(0);
+  const checkpointError = useRef(false);
+  const queueEditPending = useRef(false);
   const [immersive, setImmersive] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const epoch = useRef(0);
@@ -49,6 +54,15 @@ export function App() {
   nowRef.current = now;
   const { audioRef, playerRef, playback } = useRadioAudio({
     advance: async () => (await post<PlayerActionResponse>("/api/player/next")).now,
+    onCheckpoint: (value, force) => {
+      if (!sessionRef.current?.authenticated || (!force && Date.now() - checkpointAt.current < 10_000)) return;
+      checkpointAt.current = Date.now();
+      const revision = epoch.current;
+      void api('/api/listening/checkpoint', { method: 'POST', body: JSON.stringify(value), keepalive: true }).then(() => { if (revision === epoch.current) checkpointError.current = false; }).catch(e => {
+        if (revision === epoch.current && !checkpointError.current && e?.status !== 409) { checkpointError.current = true; setNotice({ kind: 'info', text: '本次续听位置暂未保存，当前播放不受影响。' }); }
+      });
+    },
+    onSleep: () => transportPause(),
     onResolved: (value) => {
       nowRef.current = value;
       setNow(value); setQueue(value.queue); setHistoryRefresh((v) => v + 1);
@@ -72,7 +86,7 @@ export function App() {
       const id = actionId.current, metadata = metadataRevision.current;
       void api<NowPlayingState>('/api/now',{signal:controller.signal}).then(value=>{
         const current = nowRef.current;
-        if (controller.signal.aborted || id !== actionId.current || metadata !== metadataRevision.current || !current || value.programmeId !== current.programmeId || value.track?.id !== current.track?.id || value.updatedAt < current.updatedAt) return;
+        if (controller.signal.aborted || id !== actionId.current || metadata !== metadataRevision.current || !current || value.programmeId !== current.programmeId || value.track?.id !== current.track?.id || (value.currentItemId && current.currentItemId && value.currentItemId !== current.currentItemId) || value.updatedAt < current.updatedAt) return;
         mergeQueueMetadata(value);
       }).catch(()=>{});
     },10000);
@@ -89,6 +103,7 @@ export function App() {
   function clearPrivateState() {
     epoch.current++; actionId.current++; metadataRevision.current++; previewRevision.current++;
     queueAdding.current = false; queueAddProgramme.current = undefined;
+    setUndoAdd(null); setQueueEditing(false); checkpointError.current = false;
     if (volumeTimer.current) clearTimeout(volumeTimer.current);
     playerRef.current?.stop();
     setNow(null); setQueue([]); setSetup(null); setSettings(null); setFeedbacks({});
@@ -128,6 +143,7 @@ export function App() {
     if (settingsResult.status === "fulfilled") { setSettings(settingsResult.value); playerRef.current?.configure(settingsResult.value); }
     if (nowResult.status === "fulfilled" && !playerRef.current?.current) { nowRef.current = nowResult.value; setNow(nowResult.value); playerRef.current?.restore(nowResult.value); }
     if (queueResult.status === "fulfilled") setQueue(queueResult.value.items);
+    void api<CollectionResponse>('/api/listening/collection', { signal: signal ?? null }).then(value => { if (!signal?.aborted && currentEpoch === epoch.current) setFeedbacks(value.feedback); }).catch(() => {});
     const failures = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
     if (failures.length) setNotice({ kind: "error", text: `部分电台数据未能载入：${errorMessage(failures[0]!.reason)}` });
     setLoading(false);
@@ -145,12 +161,12 @@ export function App() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  async function perform(resolve: () => Promise<NowPlayingState>): Promise<boolean> {
+  async function perform(resolve: () => Promise<NowPlayingState>, resume?: ListeningCheckpoint): Promise<boolean> {
     previewRevision.current++;
     const id = ++actionId.current;
     setActionBusy(true); setView("listen");
     window.scrollTo({ top: 0, behavior: "instant" });
-    await playerRef.current?.perform(resolve, true);
+    await playerRef.current?.perform(resolve, true, resume);
     if (id === actionId.current) setActionBusy(false);
     return id === actionId.current && !!playerRef.current?.current?.track && playerRef.current.snapshot.status !== "error";
   }
@@ -175,8 +191,44 @@ export function App() {
         try { const latest = await api<NowPlayingState>("/api/now"); if (currentEpoch === epoch.current) mergeQueueMetadata(latest); }
         catch { /* Addition already succeeded; next poll resolves metadata, not a false add failure. */ }
       }
+      if (result.outcome === 'added' && result.itemId) setUndoAdd({ programmeId, itemId: result.itemId, title: result.track.title });
       return result;
     } finally { queueAdding.current = false; }
+  }
+  useEffect(() => {
+    if (undoAdd && (undoAdd.programmeId !== now?.programmeId || !queue.slice(queue.findIndex(i => i.id === now?.currentItemId) + 1).some(i => i.id === undoAdd.itemId))) setUndoAdd(null);
+  }, [now?.programmeId, now?.currentItemId, queue, undoAdd]);
+  async function editQueue(itemId: string, action: QueueEditRequest['action'], scope = nowRef.current?.programmeId): Promise<boolean> {
+    if (!scope || queueEditPending.current || queueAdding.current) return false;
+    queueEditPending.current = true; setQueueEditing(true);
+    const revision = epoch.current;
+    const removedTrack = nowRef.current?.queue.find(item => item.id === itemId)?.track.id;
+    try {
+      const result = await post<PlayerActionResponse>('/api/queue/edit', { programmeId: scope, itemId, action });
+      if (revision !== epoch.current) return false;
+      metadataRevision.current++; queueAddProgramme.current = scope; mergeQueueMetadata(result.now);
+      if (nowRef.current?.track?.id !== result.now.track?.id && nowRef.current?.programmeId === scope) {
+        try { const latest = await api<NowPlayingState>('/api/now'); if (revision === epoch.current) mergeQueueMetadata(latest); } catch { /* Edit succeeded; no transport change or fake failure. */ }
+      }
+      if (revision !== epoch.current) return false;
+      if (action === 'remove') {
+        setUndoAdd(current => current?.itemId === itemId ? null : current);
+        setConversationTurns(turns => turns.map(turn => {
+          if (turn.programmeId !== scope || !removedTrack || !turn.additions?.[removedTrack]) return turn;
+          const additions = { ...turn.additions }; delete additions[removedTrack]; return { ...turn, additions };
+        }));
+      }
+      return true;
+    } catch (e) { if (revision === epoch.current) setNotice({ kind: 'error', text: errorMessage(e) }); return false; }
+    finally { queueEditPending.current = false; if (revision === epoch.current) setQueueEditing(false); }
+  }
+  const undoNotice = undoAdd && <div className="queue-undo" role="status"><span>已加入 · {undoAdd.title}</span><button className="text-button" disabled={queueEditing} onClick={() => void editQueue(undoAdd.itemId, 'remove', undoAdd.programmeId)}>撤销加入</button></div>;
+  function retryTrack() {
+    const current = playerRef.current?.current, snapshot = playerRef.current?.snapshot;
+    if (!current?.track || !snapshot || actionBusy) return;
+    const resume: ListeningCheckpoint | undefined = current.programmeId && current.currentItemId && (snapshot.phase === 'song' || snapshot.phase === 'dj') ? { programmeId: current.programmeId, itemId: current.currentItemId, phase: snapshot.phase, positionMs: Math.round(snapshot.time * 1000), sampledAt: Date.now(), ...(current.dj ? { djId: current.dj.id } : {}) } : undefined;
+    const songOnly = resume?.phase === 'song';
+    void perform(async () => (await post<PlayerActionResponse>(songOnly ? '/api/player/resume' : '/api/player/play', songOnly ? { programmeId: current.programmeId, itemId: current.currentItemId } : { trackId: current.track!.id })).now, resume);
   }
   async function previewVoice(voice: string, sample: VoicePreviewSample): Promise<void> {
     const player = playerRef.current, currentEpoch = epoch.current;
@@ -202,14 +254,18 @@ export function App() {
     if (!player || !sessionRef.current?.authenticated) return;
     previewRevision.current++;
     if (player.snapshot.phase === "preview") { player.endPreview(); return; }
-    if (playback.status === "error" || !now?.track || playback.phase === "idle" || playback.status === "ended" || (settings?.djEnabled && (!now.dj || now.dj.voice !== settings.voice) && playback.time === 0)) {
+    if (playback.status === "error" && now?.track) { retryTrack(); return; }
+    if (!now?.track || playback.phase === "idle" || playback.status === "ended" || (settings?.djEnabled && now.resume?.phase !== 'song' && (!now.dj || now.dj.voice !== settings.voice) && playback.time === 0)) {
       void perform(async () => (await post<PlayerActionResponse>("/api/player/play", now?.track ? { trackId: now.track.id } : {})).now);
     } else {
       // Resume synchronously in the gesture; never replay a DJ intro on a pause/resume.
       void player.play();
       const currentEpoch = epoch.current;
-      void post<PlayerActionResponse>("/api/player/play", {}).catch((e) => {
-        if (currentEpoch === epoch.current) setNotice({ kind: "error", text: `播放状态未同步：${errorMessage(e)}` });
+      const current = player.current;
+      const path = current?.programmeId && current.currentItemId ? '/api/player/resume' : '/api/player/play';
+      const body = path.endsWith('/resume') ? { programmeId: current!.programmeId, itemId: current!.currentItemId } : {};
+      void post<PlayerActionResponse>(path, body).catch((e) => {
+        if (currentEpoch === epoch.current) { if (e?.status === 409 && player.current === current) player.pause(); setNotice({ kind: "error", text: `播放状态未同步：${errorMessage(e)}` }); }
       });
     }
   }
@@ -262,13 +318,14 @@ export function App() {
     try {
       const response = await post<{ saved: true }>("/api/feedback", { trackId, kind });
       if (currentEpoch !== epoch.current) return;
-      if (response.saved) { setFeedbacks((old) => ({ ...old, [trackId]: kind })); setNotice({ kind: "success", text: kind === "like" ? "已记下：你喜欢这首歌。" : "已记下：少来一点类似音乐。跳过歌曲不会自动点踩。" }); }
+      if (response.saved) { setHistoryRefresh(v => v + 1); setFeedbacks((old) => ({ ...old, [trackId]: kind })); setNotice({ kind: "success", text: kind === "like" ? "已记下：你喜欢这首歌。" : "已记下：少来一点类似音乐。跳过歌曲不会自动点踩。" }); }
     } catch (e) { if (currentEpoch === epoch.current) setNotice({ kind: "error", text: errorMessage(e) }); }
     finally { if (currentEpoch === epoch.current) setFeedbackBusy(false); }
   }
   async function disconnect() {
     const currentEpoch = ++epoch.current; metadataRevision.current++; previewRevision.current++;
     setSettingsBusy(true);
+    setUndoAdd(null);
     playerRef.current?.stop(); nowRef.current = null; setNow(null); setQueue([]); setConversationOpen(false); setConversationTurns([]); setConversationDraft('');
     try {
       const response = await post<SetupStatus>("/api/music/disconnect");
@@ -308,16 +365,17 @@ export function App() {
       {notice && <div className={`notice notice-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.kind === "success" ? <Check size={18} /> : <CircleAlert size={18} />}<p>{notice.text}</p><button className="icon-button" aria-label="关闭提示" onClick={() => setNotice(null)}><X size={17} /></button></div>}
       <main id="main-content" key={view} className={view === "listen" ? "listen-layout" : "single-view"}>
         {view === "listen" ? <>
-          <div className="listen-column"><Player analysis={analysis} now={now} queue={queue} playback={playback} settings={settings} setup={setup} loading={loading} busy={actionBusy} feedbackBusy={feedbackBusy} feedbackKind={now?.track ? feedbacks[now.track.id] : undefined} immersive={immersive} toggleImmersive={toggleImmersive} play={transportPlay} pause={transportPause} next={next} previous={previous} seek={(time) => playerRef.current?.seek(time)} volume={setVolume} quiet={() => { if (settings && !settingsBusy) void saveSettings({ djEnabled: !settings.djEnabled }); }} library={() => navigate("library")} conversation={() => setConversationOpen(true)} roaming={() => void toggleRoaming()} feedback={(kind) => void sendFeedback(kind)} selectTrack={playTrack} retry={() => { if (now?.track) playTrack(now.track.id); }} />
+          <div className="listen-column"><Player analysis={analysis} now={now} queue={queue} playback={playback} settings={settings} setup={setup} loading={loading} busy={actionBusy} feedbackBusy={feedbackBusy} feedbackKind={now?.track ? feedbacks[now.track.id] : undefined} immersive={immersive} toggleImmersive={toggleImmersive} play={transportPlay} pause={transportPause} next={next} previous={previous} seek={(time) => playerRef.current?.seek(time)} volume={setVolume} quiet={() => { if (settings && !settingsBusy) void saveSettings({ djEnabled: !settings.djEnabled }); }} library={() => navigate("library")} conversation={() => setConversationOpen(true)} roaming={() => void toggleRoaming()} feedback={(kind) => void sendFeedback(kind)} selectTrack={playTrack} retry={retryTrack} skipHosting={() => playerRef.current?.skipHosting()} sleep={mode => playerRef.current?.setSleep(mode)} queueEditing={queueEditing} editQueue={editQueue} undoNotice={undoNotice} online={pwa.online} />
             {!loading && !setup?.music.connected && <div className="setup-callout"><div><b>{setup?.music.configured ? "你的音乐，还差一次连接。" : "先把真实音乐接进来。"}</b><p>{setup?.music.configured ? "用自己的网易云账号扫码，然后选择一档节目。" : "音乐适配器未就绪；这里不会播放示例歌曲。"}</p></div><button className="icon-button" aria-label={setup?.music.configured ? "连接网易云" : "查看服务设置"} onClick={setup?.music.configured ? openQr : () => navigate("settings")}><ChevronRight size={22} /></button></div>}
             {notice?.kind === "error" && <button className="retry-data text-button" disabled={loading} onClick={() => void refreshPrivate()}><RefreshCw size={16} />重新读取电台数据</button>}
           </div>
-        </> : view === "library" ? <Library setup={setup} busy={actionBusy} now={now} enqueue={enqueue} createProgramme={createProgramme} openQr={openQr} conversation={() => setConversationOpen(true)} /> : view === "history" ? <RadioHistory createProgramme={createProgramme} busy={actionBusy} refreshKey={historyRefresh} programmeId={now?.programmeId} /> : <Settings settings={settings} setup={setup} busy={settingsBusy} save={saveSettings} disconnect={disconnect} logout={() => void logout()} openQr={openQr} refresh={() => void refreshPrivate()} volume={playback.volume} setVolume={setVolume} canInstall={pwa.canInstall} install={pwa.install} updateReady={pwa.updateReady} previewVoice={previewVoice} stopPreview={stopPreview} previewing={playback.phase==='preview' && playback.wantsPlayback} />}
+        </> : view === "library" ? <Library setup={setup} busy={actionBusy} now={now} enqueue={enqueue} createProgramme={createProgramme} openQr={openQr} conversation={() => setConversationOpen(true)} /> : view === "history" ? <RadioHistory createProgramme={createProgramme} busy={actionBusy} refreshKey={historyRefresh} programmeId={now?.programmeId} enqueue={enqueue} /> : <Settings settings={settings} setup={setup} busy={settingsBusy} save={saveSettings} disconnect={disconnect} logout={() => void logout()} openQr={openQr} refresh={() => void refreshPrivate()} volume={playback.volume} setVolume={setVolume} canInstall={pwa.canInstall} install={pwa.install} updateReady={pwa.updateReady} previewVoice={previewVoice} stopPreview={stopPreview} previewing={playback.phase==='preview' && playback.wantsPlayback} />}
       </main>
+      {view !== 'listen' && !conversationOpen && undoNotice}
       <footer className="page-footer"><span>YOUR MUSIC. A LITTLE COMPANY.</span></footer>
       {view !== "listen" && now?.track && <aside className="mini-player" data-playing={playback.status === "playing"} aria-label="正在收听"><button className="mini-track" onClick={() => navigate("listen")}><Cover title={now.track.title} url={now.track.coverUrl} /><span><b>{now.track.title}</b><small>{playback.phase === "dj" ? "Emily" : now.track.artist}</small></span></button><button className="icon-button" aria-label={playback.wantsPlayback ? "暂停" : "播放"} onClick={playback.wantsPlayback ? transportPause : transportPlay}>{playback.wantsPlayback ? <Pause size={21} fill="currentColor" /> : <Play size={21} fill="currentColor" />}</button><button className="icon-button" aria-label="下一首（不作为不喜欢反馈）" disabled={actionBusy} onClick={next}><SkipForward size={20} /></button></aside>}
       <nav className="mobile-nav" aria-label="电台导航">{tabs.map(({ id, name, icon: Icon }) => <button key={id} aria-current={view === id ? "page" : undefined} onClick={() => navigate(id)}><Icon size={20} strokeWidth={view === id ? 2.3 : 1.6} /><span>{name}</span>{id === "listen" && playback.status === "playing" && <i />}</button>)}</nav>
-      {conversationOpen && <ListeningDialog close={() => setConversationOpen(false)} setup={setup} busy={actionBusy} now={now} turns={conversationTurns} setTurns={setConversationTurns} draft={conversationDraft} setDraft={setConversationDraft} enqueue={enqueue} createProgramme={createProgramme} />}
+      {conversationOpen && <ListeningDialog close={() => setConversationOpen(false)} setup={setup} busy={actionBusy} now={now} turns={conversationTurns} setTurns={setConversationTurns} draft={conversationDraft} setDraft={setConversationDraft} undoNotice={undoNotice} enqueue={enqueue} createProgramme={createProgramme} />}
       {qrOpen && <MusicQrDialog close={() => setQrOpen(false)} connected={() => { void refreshPrivate(); }} />}
     </div>}
   </>;

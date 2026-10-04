@@ -13,7 +13,7 @@
     "dev:web": "npm run dev --workspace @emily/web",
     "build": "npm run build --workspace @emily/shared && npm run build --workspace @emily/server && npm run build --workspace @emily/web",
     "typecheck": "npm run build --workspace @emily/shared && npm run typecheck --workspace @emily/server && npm run typecheck --workspace @emily/web && tsc -p tsconfig.tests.json",
-    "test:browser": "npm run build && tsx --test --test-concurrency=1 tests/browser.test.ts tests/ux-browser.test.ts tests/gemini-browser.test.ts tests/gemini-host-browser.test.ts",
+    "test:browser": "npm run build && tsx --test --test-concurrency=1 tests/browser.test.ts tests/ux-browser.test.ts tests/gemini-browser.test.ts tests/gemini-host-browser.test.ts tests/daily-ux-browser.test.ts",
     "test:deployment": "npm run build && node --test scripts/deployment-preflight.test.mjs deploy/netease-bridge.test.mjs",
     "check:deployment": "node scripts/deployment-preflight.mjs"
   },

@@ -1,6 +1,14 @@
 # Emily Development Guide
 
-## 当前阶段：完整串场v6已发布13237d1；Gemini冷却中，新长稿语音未验收（2026-10-03）
+## 当前阶段：六项日常体验优化实施中（2026-10-04，Pi）
+
+David本人新反馈『我刚试了试没问题了，整体Emily很舒服了』，并明确批准六项增量优化：暂停态续听位置/已听串场不重复；本次直接听歌；队列下一首/移出/撤销加入；本首结束及15/30/60分钟定时停止；Emily内喜欢/最近实际播放回看；清晰且真实的等待/错误/冷却提示。保持Sulafat、完整串场v6、整屏/native sheet/单audio、原歌单漫游与本人权益，不重做视觉/引擎或加付费服务。新反馈取代旧的用户未认可状态，但不是Pi补跑技术验收。
+
+Pi（任务01a0f204-d57a-75b4-93d4-c35f2fa8aeae）仍唯一写入者，从clean ea8db54、pi/emily-continue-20260930接续。六项已实现，Windows typecheck/testtypecheck/build/server77/web41/browser8/built全部通过0skip，准备窄发布；此刻生产仍13237d1。续听与最近播放采用owner服务端有界元数据，浏览器不持久化聊天/歌单/音频；续听仅匹配同programme/queue item、保持暂停。定时停止基于真实ended/墙钟，不假造音乐进度，手机后台限制须明确。新增owner checkpoint/collection/resume/queue-edit接口，复用kv无需schema迁移；实际播放每10秒及边界保存位置，近期100首仅真实song playing报告，不从programme捏造历史。单次跳过保持pause；队列仅未来item精确操作、seen保留、撤销不还原旧快照。定时只本页生效，真实ended/墙钟核对，刷新退出取消、手动切歌取消本首模式。Gemini安全failure枚举与已知retryAt，不猜Google恢复；新冷却持久于私有kv、防重启绕过。准备只重启Emily，保留DB/env及adapter。
+
+回归过程保留事实：首次新增完整server运行3项既有HTTP fixture发生PROVIDER_UNAVAILABLE，未删断言/扩等待，后续两次完整77全部通过；新增web41通过。浏览器首轮7/8因撤销提示挤压小屏聊天输入，移入聊天滚动区修复并保留旧视口断言。补冷却UI fixture最初受模拟墙钟快进影响，retryAt早于测试浏览器时间，修正fixture时间而非放松冷却判定；最终完整browser8/8。证据../.tmp/emily-deployment-review/six-*，浏览器design-daily；不代表物理小米后台或15/30/60分钟真实等待验收。无真实writer/TTS调用用于开发。
+
+## 上轮：完整串场v6已发布13237d1；当时Gemini冷却，新长稿语音未验收（2026-10-03历史观察）
 
 David实际反馈『现在的问题变成串场词太短了』，否定v5普通过渡无下限导致的13–27字报幕效果。Pi从clean7d6fd8e接续，仍唯一写入者；承认上轮27字/6.44s技术播放不能当内容目标通过。保留Gemini/Sulafat与TTS参数、OAPI、UI和所有曲目/queue/history；重点取消短接默认/短句示例，完整口语段落成为常态，短报幕仅明确失败降级。补长度/展开检查并约束编辑不把合格段落删成报幕；连续真实稿必须检查内容和长度，数字不是质量证明。生产已从9e345f3窄发布到13237d1；不为凑字引入虚构经历/音乐事实或用户心情。
 

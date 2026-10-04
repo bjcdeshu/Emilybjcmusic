@@ -22,12 +22,37 @@ const fixture = (id = "test-song-1", dj = true) => ({
   track: { id, title: `TEST ONLY ${id}`, artist: "Test fixture", source: "local", audioUrl: `/test-only/${id}.wav` },
   ...(dj ? { dj: { id: `test-dj-${id}`, text: "Test-only hosting fixture.", audioUrl: "/test-only/dj.wav", status: "tts_ready", createdAt: "2026-01-01T00:00:00Z" } } : {})
 });
-function setup(advance = async () => fixture("test-song-2")) {
+function setup(advance = async () => fixture("test-song-2"), extra = {}) {
   const audio = new FakeAudio(); const changes = []; const resolved = [];
-  const player = new RadioAudio(audio, { onChange: (state) => changes.push(state), onResolved: (now) => resolved.push(now), advance, sourceUrl: (url) => url?.startsWith("/test-only/") ? url : undefined });
+  const player = new RadioAudio(audio, { onChange: (state) => changes.push(state), onResolved: (now) => resolved.push(now), advance, sourceUrl: (url) => url?.startsWith("/test-only/") ? url : undefined, ...extra });
   return { player, audio, changes, resolved };
 }
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+const scoped = (id = 'one') => ({ ...fixture(id), programmeId: 'TEST-programme', currentItemId: `TEST-item-${id}` });
+
+test('persisted song and partial DJ positions restore paused, stale scope ignored, source changes cancel pending seek', async () => {
+  const {player,audio}=setup();const now=scoped();now.resume={programmeId:now.programmeId,itemId:now.currentItemId,phase:'song',positionMs:32000,sampledAt:1};
+  player.restore(now);assert.equal(player.snapshot.phase,'song');assert.equal(audio.played.length,0);audio.duration=60;audio.dispatchEvent(new Event('loadedmetadata'));assert.equal(audio.currentTime,32);assert.equal(audio.paused,true);
+  await player.play();assert.equal(audio.currentTime,32);assert.equal(player.snapshot.phase,'song');
+  player.restore({...now,resume:{...now.resume,phase:'dj',djId:now.dj.id,positionMs:3000}});audio.duration=10;audio.dispatchEvent(new Event('loadedmetadata'));assert.equal(audio.currentTime,3);assert.equal(player.snapshot.phase,'dj');assert.equal(audio.paused,true);
+  player.restore({...now,resume:{...now.resume,itemId:'STALE'}});assert.equal(player.snapshot.phase,'dj');
+  player.restore(now);player.restore(scoped('two'));audio.duration=10;audio.dispatchEvent(new Event('loadedmetadata'));assert.equal(audio.currentTime,0);
+});
+test('one-off skip retains pause, does not advance and next host still plays; recent callback only on actual song playing', async () => {
+  let advances=0;const checkpoints=[];const {player,audio}=setup(async()=>{advances++;return scoped('two');},{onCheckpoint:(v)=>checkpoints.push(v)});
+  player.restore(scoped());player.skipHosting();assert.equal(player.snapshot.phase,'song');assert.equal(audio.paused,true);assert.equal(advances,0);assert(!checkpoints.some(c=>c.heard));
+  await player.play();assert.equal(checkpoints.at(-1).heard,true);assert.equal(checkpoints.at(-1).phase,'song');
+  audio.finish();await tick();assert.equal(advances,1);assert.equal(player.snapshot.phase,'dj');
+});
+test('sleep after real song end, wall-clock sleep across pending resolve, cancellation and preview never resurrect timer', async () => {
+  let clock=1000,advances=0,sleeps=0;const {player,audio}=setup(async()=>{advances++;return scoped('two');},{clock:()=>clock,onSleep:()=>sleeps++});
+  await player.perform(async()=>scoped());player.setSleep('track');audio.finish();assert.equal(player.snapshot.phase,'song');assert.equal(sleeps,0);audio.finish();await tick();assert.equal(sleeps,1);assert.equal(advances,0);assert.equal(audio.paused,true);assert.equal(player.snapshot.sleep,undefined);
+  await player.perform(async()=>scoped());player.setSleep(15);let release;const pending=player.perform(()=>new Promise(r=>release=r));clock+=900001;assert.equal(player.checkSleep(),true);release(scoped('two'));await pending;assert.equal(audio.paused,true);assert.equal(player.snapshot.wantsPlayback,false);
+  player.setSleep(30);await player.preview('/test-only/preview.wav');clock+=1800001;player.checkSleep();assert.equal(player.snapshot.phase,'dj');assert.equal(player.snapshot.sleep,undefined);assert.equal(audio.paused,true);
+  player.setSleep(60);player.setSleep(null);clock+=3600001;assert.equal(player.checkSleep(),false);
+  player.setSleep('track');await player.perform(async()=>scoped('three'));assert.equal(player.snapshot.sleep,undefined);player.setSleep(15);player.stop();assert.equal(player.snapshot.sleep,undefined);
+});
+
 
 test("audition and hosting use identical gain, including live volume changes and paused restoration", async () => {
   const { player, audio } = setup(); player.setVolume(.6); player.restore(fixture());

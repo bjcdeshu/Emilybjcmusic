@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import type { NowPlayingState } from "@emily/shared";
+import type { ListeningCheckpoint, NowPlayingState } from "@emily/shared";
 import { safeUrl } from "./api";
 import { initialPlayback, RadioAudio } from "./playback";
 
 export function useRadioAudio(callbacks: {
   advance: () => Promise<NowPlayingState>;
   onResolved: (now: NowPlayingState) => void;
+  onCheckpoint?: (value: ListeningCheckpoint & { heard?: boolean }, force: boolean) => void;
+  onSleep?: () => void;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const playerRef = useRef<RadioAudio | null>(null);
@@ -19,11 +21,21 @@ export function useRadioAudio(callbacks: {
       onChange: setPlayback,
       sourceUrl: safeUrl,
       advance: () => callbackRef.current.advance(),
-      onResolved: (now) => callbackRef.current.onResolved(now)
+      onResolved: (now) => callbackRef.current.onResolved(now),
+      onCheckpoint: (value, force) => callbackRef.current.onCheckpoint?.(value, force),
+      onSleep: () => callbackRef.current.onSleep?.()
     });
     playerRef.current = player;
-    return () => { player.destroy(); playerRef.current = null; };
+    const flush = () => { player.checkSleep(); player.checkpoint(); };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", flush);
+    return () => { window.removeEventListener("pagehide", flush); document.removeEventListener("visibilitychange", flush); player.destroy(); playerRef.current = null; };
   }, []);
+  useEffect(() => {
+    if (playback.sleep?.mode !== "time") return;
+    const timer = setInterval(() => playerRef.current?.checkSleep(), 1000);
+    return () => clearInterval(timer);
+  }, [playback.sleep]);
   return { audioRef, playerRef, playback };
 }
 

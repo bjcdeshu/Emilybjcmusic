@@ -34,6 +34,13 @@ button svg,a svg { flex-shrink:0; }
 .eyebrow,.station-label { font:10px/1.4 var(--font-meta); letter-spacing:.08em; color:var(--muted); }
 .muted { color:var(--muted); font-size:14px; line-height:1.65; }
 .tiny { font-size:12px; }
+.queue-undo { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:6px 12px; font-size:12px; background:var(--inset); border-radius:8px; }
+.queue-undo > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.queue-undo > button { flex-shrink:0; }
+.app-shell > .queue-undo { position:fixed; z-index:30; bottom:150px; left:16px; right:16px; max-width:600px; margin:auto; background:var(--paper); box-shadow:0 4px 20px #0002; }
+.listening-collection { margin-bottom:32px; padding-bottom:24px; border-bottom:1px solid var(--line); }
+.collection-tabs { display:flex; gap:16px; }
+.collection-tabs [aria-pressed=true] { color:var(--mint-dark); text-decoration:underline; text-underline-offset:8px; }
 .optional { margin-left:4px; color:var(--muted); font-size:12px; font-weight:400; }
 .station-identity { display:flex; align-items:center; gap:14px; color:#e4eae6; }
 .host-wordmark { display:block; width:116px; height:28px; flex-shrink:0; }
