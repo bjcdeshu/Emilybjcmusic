@@ -1,8 +1,18 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新9f9a57c（功能0170579）六项日常控制已发布，保留完整串场v6/正式Gemini Flash-Lite/Sulafat；10月4日当前101字/24.4秒长稿→原歌与暂停续听已通过，下一段旧tts_failed未重生成，不代表长期供应商可用；旧9e345f3/v5短稿链路成功仅为历史证据；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新ca8e846整站交互精修已发布，保留9f9a57c（功能0170579）六项日常控制，保留完整串场v6/正式Gemini Flash-Lite/Sulafat；10月4日当前101字/24.4秒长稿→原歌与暂停续听已通过，下一段旧tts_failed未重生成，不代表长期供应商可用；旧9e345f3/v5短稿链路成功仅为历史证据；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
-## 最新窄发布：9f9a57c（功能0170579，2026-10-04）
+## 最新窄发布：ca8e846（2026-10-04，UI/交互精修）
+
+由David反馈直接听歌UI不适、要求整站交互与动效精修触发，Pi从clean d8e29be实施。仅前端组件/样式/fixture及文档；保留后端/shared/playback/analysis/model/TTS/env/schema/依赖。44px跳主持位于稳定进度行，native sheets完整进出/焦点保护、定时预设/分组、queue渐展和焦点、回看分段/说明折叠、统一交互节奏。
+
+Windows typecheck/build/web41/完整browser8通过0skip；RN候选build/web41/built通过，未另跑未改的server77/deployment9。pre-ca8e846停Emily后配对SQLite+env备份/cmp，目录700/文件600；onlyEmily restart，adapter1964070保持。current=/opt/emily/releases/ca8e846，15:15:09UTC启动、health200/active/NRestarts0。assets index-C99Lw8JF.css/index-3jHVJqS7.js。
+
+线上暂停态四视口/单audio/源与位置不变、native退出焦点/reduce、定时设置取消、菜单只展开/聊天不发送、回看页通过，0unexpected POST/pageErrors。现场9→9首及programme/tracks/漫游/index/settings/history/授权保留，current+next既有v6/Gemini ready；本地Google day8/minute1窗口及冷却与备份不变，0新生成。短账号名ACL导致首次本地证据EPERM已改精确用户SID（仅David/SYSTEM/Administrators），第一次UI时间断言读早于metadata恢复，保留失败后改测试等待既有checkpoint再有界复验通过，产品逻辑未更改。私有证据polish-review-20261004；日志polish-*.log、fixture design-polish。运维changes/2026-10-04-emily-ui-polish.md。
+
+回滚9f9a57c仅切代码，保留当前DB/env；不盲还旧SQLite/清冷却。新UI主观认可未收到，线上没有重播/生成主持或物理后台验收。
+
+## 历史窄发布：9f9a57c（功能0170579，2026-10-04）
 
 David批准六项增量体验，Pi唯一写入。从clean ea8db54实现，保持voice/hosting/OAPI/queue。owner checkpoint/collection/queue-edit/resume复用kv和既有catalogue，无schema迁移/新依赖。Gemini冷却现在保存于私有kv，更新不改额度或绕过供应商限制；短阶段提示和options详情，不承诺到点供应商恢复。页面用户定时不创建服务器timer。
 

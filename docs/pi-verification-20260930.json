@@ -1,5 +1,16 @@
 {
   "date": "2026-09-30",
+  "interactionPolish": {
+    "date":"2026-10-04","release":"ca8e846","deployed":true,"userAcceptedSkipFunctionButNotUI":true,"newVisualAcceptance":false,
+    "local":{"typecheck":true,"build":true,"web":41,"browser":8,"skipped":0},
+    "rn":{"build":true,"web":41,"built":true,"preflight":true,"health":200,"backup":"pre-ca8e846","envUnchanged":true,"onlyEmilyRestart":true,"adapterPid":1964070,"nRestarts":0},
+    "scope":"frontend presentation only; no backend/shared/playback/analyser/TTS/model/dependency/schema change",
+    "fixtureChecks":["44px skip in transport, four viewport fit","host-to-song stable transport and skip focus handoff","native modal during exit, body lock and focus restored on completion","reduce instant dismissal and no animation","queue hidden actions inert, remove returns focus","chat close retains draft/focus","existing full audio/lyrics/preview/PWA/browser suites retained"],
+    "live":{"at":"2026-10-04T15:18:50.298Z","uiOnly":true,"completed":true,"fourViewports":true,"pausedAudioSourcePositionPreserved":true,"singleAudio":true,"nativeExitFocus":true,"reducedMotion":true,"timerSetThenCancelled":true,"queueMenuOnlyNoEdits":true,"chatNoSubmission":true,"collection":true,"queueBefore":9,"queueAfter":9,"programmeSettingsHistoryCredentialsRoamingPreserved":true,"existingCurrentAndNextGeminiReady":true,"geminiDayCount":8,"geminiMinuteCount":1,"generationWindowsAndCooldownUnchanged":true,"newProviderGenerationRequests":0,"newWriterRequests":0,"pageErrors":[],"unexpectedWrites":[],"finalLogout":true},
+    "failuresRetained":["first browser7 run two failures: old test selected pause before exit detached; wait actual close then full8 passed, no assertion deletion","local private evidence ACL short David name resolved to machine-domain SID; EPERM fixed by exact current user SID, no broader access","first UI time assertion compared pre-metadata0 with restored68.295; saved failure, test waits real metadata/checkpoint and one bounded repeat passed without product changes"],
+    "notRerun":["unchanged server77 and deployment9","real TTS/writer generation or full live hosting playback","physical background/lockscreen"],
+    "assets":["index-C99Lw8JF.css","index-3jHVJqS7.js"],"rollbackCode":"9f9a57c retaining current DB/env"
+  },
   "dailyListeningControls": {
     "date":"2026-10-04","feature":"0170579","release":"9f9a57c","deployed":true,
     "userApprovedSixIncrementalChanges":true,"priorOverallComfortFeedbackPositive":true,"newControlsSubjectivelyAccepted":false,

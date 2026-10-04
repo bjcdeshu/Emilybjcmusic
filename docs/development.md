@@ -1,8 +1,12 @@
 # Emily Development Guide
 
-## 当前阶段：整站交互与动效精修实施中（2026-10-04，Pi）
+## 当前阶段：整站交互与动效精修已发布ca8e846（2026-10-04，Pi）
 
-David在9f9a57c实用后确认「直接听歌」功能没问题，但UI很不舒服，要求进一步打磨整体UI/交互/设计/动效。Pi唯一写入者（任务01a0f204-d57a-75b4-93d4-c35f2fa8aeae）从clean d8e29be接续。计划：跳主持移入稳定的进度/transport语义区；native sheet完整进出与焦点生命周期；待播菜单/定时/回看信息层级；统一按钮、导航、内容轻过渡。保留已认可的整屏夜色/点阵身份/native sheet与纸色阅读页、Sulafat/完整v6、单audio与六项功能语义。只改前端呈现，不新增供应商请求、付费服务、人格记忆或服务端功能。实现已完成：44px跳主持迁入进度行，固定文本槽与phase轻淡过渡，音频/transport不重挂；useModalDialog统一280ms进入/180ms退出，保留native modal/焦点/scroll lock至动画结束，240ms安全兜底，reduce/hidden即时清理；queue渐展/inert/焦点恢复和过期scope guard，ListeningOptions分组直接定时，回看分段控件/说明折叠，chat与共享点击/导航/反馈节奏统一。Windows typecheck/build/web41/完整browser8通过0skip，未改后端不额外全跑server/deployment；首次browser两项因旧测试在退出动画结束前找到双暂停按钮，改等实际detached并保留原断言后完整通过。新增fixture检查四视口44px跳过/transport不跳/skip后焦点/队列remove后焦点/退出期间仍modal/reduce清理/聊天draft和焦点。证据polish-*.log/design-polish；未调用真实TTS或writer。RN已只读确认仍9f9a57c、两unitsactive/adapter1964070，待候选构建/窄发布/无生成线上呈现检查；技术通过不代替David审美认可。
+David在9f9a57c实用后确认「直接听歌」功能没问题，但UI很不舒服，要求进一步打磨整体UI/交互/设计/动效。Pi唯一写入者（任务01a0f204-d57a-75b4-93d4-c35f2fa8aeae）从clean d8e29be接续。计划：跳主持移入稳定的进度/transport语义区；native sheet完整进出与焦点生命周期；待播菜单/定时/回看信息层级；统一按钮、导航、内容轻过渡。保留已认可的整屏夜色/点阵身份/native sheet与纸色阅读页、Sulafat/完整v6、单audio与六项功能语义。只改前端呈现，不新增供应商请求、付费服务、人格记忆或服务端功能。实现已完成：44px跳主持迁入进度行，固定文本槽与phase轻淡过渡，音频/transport不重挂；useModalDialog统一280ms进入/180ms退出，保留native modal/焦点/scroll lock至动画结束，240ms安全兜底，reduce/hidden即时清理；queue渐展/inert/焦点恢复和过期scope guard，ListeningOptions分组直接定时，回看分段控件/说明折叠，chat与共享点击/导航/反馈节奏统一。Windows typecheck/build/web41/完整browser8通过0skip，未改后端不额外全跑server/deployment；首次browser两项因旧测试在退出动画结束前找到双暂停按钮，改等实际detached并保留原断言后完整通过。新增fixture检查四视口44px跳过/transport不跳/skip后焦点/队列remove后焦点/退出期间仍modal/reduce清理/聊天draft和焦点。证据polish-*.log/design-polish；未调用真实TTS或writer。RN候选build/web41/built通过，pre-ca8e846一致SQLite+env备份/cmp，env不改、只Emily重启；current=/opt/emily/releases/ca8e846，15:15:09UTC启动、health200/两unitsactive/NRestarts0、adapter1964070未动。assets index-C99Lw8JF.css/index-3jHVJqS7.js。技术通过不代替David审美认可。
+
+线上只验证呈现、不强制重播主持：当前歌曲checkpoint约68.295秒，保持暂停；四视口/单audio/面板收起焦点/scroll清理/reduce、30分钟设置后取消、队列菜单只展开/不编辑、chat只打开/不发送、回看页通过，pageErrors[]。现场9→9首、programme/完整queue/漫游/index/settings/history/授权与备份一致（早轮13首是不同时间观察，非本轮删曲）；current+next均既有v6/Gemini ready。Google day8/minute1及窗口/冷却记录与备份不变，0新增生成请求，无writer或preview调用。最后logout，音频始终暂停。
+
+验证失败留证：私有证据目录以短账号名David设ACL时Windows解析成机器域SID，导致EPERM；已改用当前用户完整SID，核仅David/SYSTEM/Administrators并可读写，无扩大授权。随后首轮UI检查在metadata恢复完成前记录time0，末尾恢复为68.295而断言失败；脚本改等metadata与既有checkpoint一致，未改产品逻辑，再一次有界复验completed=true。旧结果保存在私有polish-review-20261004；这是呈现验收，不是重测TTS/真实长音频或物理后台。代码回滚9f9a57c保留当前DB/env，不盲还SQLite。运维changes/2026-10-04-emily-ui-polish.md；本轮已完成，无后台重试/新功能拓展。
 
 ## 上轮：六项日常体验优化已发布9f9a57c（功能0170579，2026-10-04，Pi）
 
