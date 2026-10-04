@@ -60,7 +60,7 @@ test("real browser: Mandarin hosting reading scroll, pause/reduce/modal gates an
     assert.equal(await page.locator('.transcript-full').textContent(),provider.hostingText);await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),source,'reading does not remount audio');
     await page.locator('.hosting-scroll').dispatchEvent('wheel');const manual=await offset();await page.waitForTimeout(350);assert.equal(await offset(),manual,'manual reading suppresses auto scrolling');
-    await page.getByRole('button',{name:'听感与节目',exact:true}).click();await page.getByRole('button',{name:'安静模式',exact:true}).click();await page.getByRole('button',{name:'关闭播放面板'}).click();
+    await page.getByRole('button',{name:'听感与节目',exact:true}).click();await page.getByRole('button',{name:'安静模式',exact:true}).click();await page.getByRole('button',{name:'关闭播放面板'}).click();await page.locator('.radio-sheet').waitFor({state:'detached'});
     await page.waitForFunction(()=>document.querySelector('audio')!.currentSrc.includes('/api/media/track/'));
     await page.locator('.lyrics-preview').waitFor();await page.waitForFunction(()=>document.querySelector('audio')!.duration>0&&!document.querySelector('audio')!.paused);await page.getByRole('button',{name:'暂停',exact:true}).click();
     async function seek(time:number,index:string){const slider=page.getByLabel('歌曲播放进度');await slider.focus();await page.keyboard.press('Home');for(let step=0;step<Math.round(time*10);step++)await page.keyboard.press('ArrowRight');const actual=await page.evaluate(()=>({time:document.querySelector('audio')!.currentTime,duration:document.querySelector('audio')!.duration,value:(document.querySelector('.seek-range')as HTMLInputElement).value,disabled:(document.querySelector('.seek-range')as HTMLInputElement).disabled}));assert(Math.abs(actual.time-time)<.15,`keyboard seek changes actual media position: ${JSON.stringify(actual)}`);await page.waitForFunction(i=>document.querySelector('.lyrics-preview')!.getAttribute('data-line')===i,index);}
@@ -107,7 +107,7 @@ test('real browser: measured bass bursts drive bounded accents, modal attenuatio
   await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);assert(await indicator.locator('i').evaluateAll(els=>els.every(el=>Math.abs(new DOMMatrix(getComputedStyle(el).transform).m22-.14)<.001)));
   await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('.radio-sheet').getByRole('button',{name:'暂停',exact:true}).click();await page.waitForTimeout(100);assert(await indicator.locator('i').evaluateAll(els=>els.every(el=>Math.abs(new DOMMatrix(getComputedStyle(el).transform).m22-.14)<.001)));
   await page.locator('.radio-sheet').getByRole('button',{name:'播放',exact:true}).click();
-  await page.keyboard.press('Escape');await page.getByRole('button',{name:'暂停',exact:true}).click();assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-accent')),'0.000');
+  await page.keyboard.press('Escape');await page.locator('.radio-sheet').waitFor({state:'detached'});await page.getByRole('button',{name:'暂停',exact:true}).click();assert.equal(await page.locator('.radio-device').evaluate(el=>(el as HTMLElement).style.getPropertyValue('--signal-accent')),'0.000');
   if(process.env.EMILY_BROWSER_EVIDENCE_DIR){await mkdir(process.env.EMILY_BROWSER_EVIDENCE_DIR,{recursive:true});await writeFile(join(process.env.EMILY_BROWSER_EVIDENCE_DIR,'rhythm-fixture-result.json'),JSON.stringify({fixture:true,actualDecodedBassBursts:true,samples:values,accentCap:.65,modalAttenuates:true,pauseZero:true}));}
  }finally{if(browser)await browser.close();await app.close();await provider.close();await rm(directory,{recursive:true,force:true});}
 });
@@ -246,7 +246,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       await page.getByRole('button',{name:'阅读主持全文'}).click();
       assert(await page.locator('.transcript-full').isVisible(),'full hosting remains accessible');
       assert(await page.locator('.sheet-transport .main-play').isVisible());
-      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');await page.locator('.radio-sheet').waitFor({state:'detached'});
       assert.equal(await page.getByRole('button',{name:'阅读主持全文'}).evaluate(el=>el===document.activeElement),true,'sheet returns focus');
       await page.getByRole('button',{name:'听感与节目',exact:true}).click();
       assert(await page.getByLabel('音量',{exact:true}).isVisible());
@@ -263,6 +263,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
       await page.keyboard.press('Tab');
       assert(await page.evaluate(()=>!!document.activeElement?.closest('.radio-sheet')),'native modal keeps keyboard focus');
       await page.mouse.click(8,8); // Explicit backdrop dismissal.
+      await page.locator('.radio-sheet').waitFor({state:'detached'});
       assert.equal(await page.locator('.radio-sheet').count(),0);
       await page.setViewportSize({width:393,height:851});
       assert.equal(await page.evaluate(()=>document.querySelector('audio')!.currentSrc),source,'disclosure never changes audio');
@@ -378,7 +379,7 @@ test("real browser: programme audio, pause/quiet/seek, history, logout and stati
     }
     await page.setViewportSize({width:393,height:851});
     await page.getByRole('button',{name:'听感与节目',exact:true}).click();
-    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');await page.locator('.radio-sheet').waitFor({state:'detached'});
     assert.equal(await page.locator('.radio-sheet').count(),0);
     assert(await page.locator('.app-shell').evaluate(el=>el.classList.contains('immersive')),'first Escape closes sheet, not immersive layout');
     await page.keyboard.press('Escape');

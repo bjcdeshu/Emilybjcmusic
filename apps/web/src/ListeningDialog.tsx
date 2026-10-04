@@ -3,6 +3,7 @@ import { ArrowRight, Check, MessageCircle, Plus, Send, X } from 'lucide-react';
 import type { ListeningMessage, ListeningMode, ListeningRequest, ListeningResponse, NowPlayingState, ProgrammeRequest, QueueAddResponse, SetupStatus } from '@emily/shared';
 import { errorMessage, post } from './api';
 import { StationIdentity, Spinner } from './components';
+import { useModalDialog } from './useModalDialog';
 export type ListeningTurn = ListeningMessage & { suggestion?: ListeningResponse; programmeId?: string; listenerNote?: string; additions?: Record<string,string> };
 type Props = {
   close: () => void; setup: SetupStatus | null; busy: boolean; now: NowPlayingState | null;
@@ -13,7 +14,8 @@ type Props = {
   createProgramme: (request: ProgrammeRequest) => Promise<boolean>;
 };
 export function ListeningDialog({ close, setup, busy, now, turns, setTurns, draft, setDraft, undoNotice, enqueue, createProgramme }: Props) {
-  const dialog = useRef<HTMLDialogElement>(null), controller = useRef<AbortController|null>(null), log = useRef<HTMLDivElement>(null);
+  const { ref: dialog, dismiss } = useModalDialog(close);
+  const controller = useRef<AbortController|null>(null), log = useRef<HTMLDivElement>(null);
   const mounted = useRef(true), retry = useRef<{ request: ListeningRequest; programmeId?: string } | null>(null);
   const [sending,setSending] = useState(false), [error,setError] = useState('');
   const following = useRef(true);
@@ -21,13 +23,13 @@ export function ListeningDialog({ close, setup, busy, now, turns, setTurns, draf
   function latestReply() { following.current = true; setUnread(false); log.current?.scrollTo({top:log.current.scrollHeight,behavior:'instant'}); }
   const [mode,setMode] = useState<ListeningMode>('enqueue'), [adding,setAdding] = useState(''), [replacing,setReplacing] = useState(false), [resultNote,setResultNote] = useState('');
   useEffect(() => {
-    const el = dialog.current!, previous = document.activeElement as HTMLElement | null, overflow = document.body.style.overflow;
-    mounted.current = true; document.body.style.overflow = 'hidden'; el.showModal();
+    const el = dialog.current!;
+    mounted.current = true;
     // The soft keyboard can shrink visualViewport without changing layout vh.
     const viewport=window.visualViewport;
     const fit=()=>{if(viewport&&viewport.scale===1){el.dataset.compact=String(viewport.height<500);el.style.setProperty('--dialog-viewport',`${viewport.height}px`);el.style.setProperty('--keyboard-bottom',`${Math.max(0,innerHeight-viewport.height-viewport.offsetTop)}px`);}};
     viewport?.addEventListener('resize',fit);viewport?.addEventListener('scroll',fit);fit();
-    return () => { viewport?.removeEventListener('resize',fit);viewport?.removeEventListener('scroll',fit);mounted.current = false; controller.current?.abort(); el.close(); document.body.style.overflow = overflow; previous?.focus({preventScroll:true}); };
+    return () => { viewport?.removeEventListener('resize',fit);viewport?.removeEventListener('scroll',fit);mounted.current = false; controller.current?.abort(); };
   }, []);
   useEffect(() => { if (following.current) latestReply(); else setUnread(true); }, [turns,sending,error]);
   const available = !!setup?.model.configured && !!setup.music.connected;
@@ -60,9 +62,9 @@ export function ListeningDialog({ close, setup, busy, now, turns, setTurns, draf
   const latest = turns.at(-1);
   const proposal = latest?.role==='assistant' && latest.suggestion?.mode==='replace' ? latest.suggestion.programme : undefined;
   const queueChanged = (turn: ListeningTurn) => !now?.track || !now.programmeId || turn.programmeId !== now.programmeId;
-  return <dialog ref={dialog} className="modal listening-dialog" aria-labelledby="listening-dialog-title" onCancel={e=>{e.preventDefault();close();}} onClick={e=>{if(e.target===e.currentTarget){const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}}}>
+  return <dialog ref={dialog} className="modal listening-dialog" aria-labelledby="listening-dialog-title" onCancel={e=>{e.preventDefault();dismiss();}} onClick={e=>{if(e.target===e.currentTarget){const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dismiss();}}}>
     <div className="modal-inner">
-      <header className="section-heading"><div><StationIdentity label="点歌与选曲"/><h2 id="listening-dialog-title">这会儿，想听什么？</h2></div><button className="icon-button" aria-label="关闭对话" onClick={close}><X size={20}/></button></header>
+      <header className="section-heading"><div><StationIdentity label="点歌与选曲"/><h2 id="listening-dialog-title">这会儿，想听什么？</h2></div><button className="icon-button" aria-label="关闭对话" onClick={dismiss}><X size={20}/></button></header>
       <div className="listening-mode" role="group" aria-label="这次如何选曲"><button aria-pressed={mode==='enqueue'} disabled={sending||!!adding||replacing} onClick={()=>setMode('enqueue')}>点歌加入</button><button aria-pressed={mode==='replace'} disabled={sending||!!adding||replacing} onClick={()=>setMode('replace')}>另选一组</button></div>
       <p className="listening-context">{mode==='enqueue' ? now?.track ? `当前：${now.track.title} · 点歌只加在待播队尾${now.roaming?.enabled?'，原歌单继续漫游':''}。` : '先找歌。开始一个节目后，就能把它加入待播列表。' : '另选一组会更换当前节目；先找候选，最后再确认。'}</p>
       <div className="listening-log" ref={log} onScroll={e=>{const el=e.currentTarget;following.current=el.scrollHeight-el.clientHeight-el.scrollTop<48;if(following.current)setUnread(false);}} role="log" aria-label="听歌对话" aria-live="polite" aria-busy={sending}>

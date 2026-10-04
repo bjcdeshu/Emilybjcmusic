@@ -1,8 +1,8 @@
 import { useState, type CSSProperties, type RefObject, type ReactNode } from "react";
 import type { AudioAnalysis } from "./audio-analysis";
-import { ArrowLeft, Heart, ListMusic, Maximize2, MessageCircle, Minimize2, Moon, Pause, Play, RefreshCw, Settings2, SkipBack, SkipForward, ThumbsDown, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Heart, ListMusic, Maximize2, MessageCircle, Minimize2, Music2, Pause, Play, RefreshCw, Settings2, SkipBack, SkipForward } from "lucide-react";
 import type { NowPlayingState, QueueItem, RadioSettings, SetupStatus } from "@emily/shared";
-import { Cover, Spinner } from "./components";
+import { Spinner } from "./components";
 import { hostingFailureMessage, type PlaybackSnapshot } from "./playback";
 import { RadioSignal } from "./RadioSignal";
 import { RadioSheet } from "./RadioSheet";
@@ -10,6 +10,8 @@ import { ListeningText, useLyrics } from "./ListeningText";
 import { LyricsReading } from './LyricsReading';
 import { SeekControl } from './SeekControl';
 import { HostWordmark } from "./HostWordmark";
+import { ListeningOptions } from "./ListeningOptions";
+import { QueuePanel } from "./QueuePanel";
 
 type Props = {
   analysis: RefObject<AudioAnalysis | null>;
@@ -32,8 +34,7 @@ function SheetSignal() {
 
 export function Player(props: Props) {
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [queueMenu, setQueueMenu] = useState<string | null>(null);
-  const [queueMessage, setQueueMessage] = useState('');
+
   const lyricsResult = useLyrics(props.now?.track?.id);
   const { now, playback, queue, busy } = props;
   const active = playback.status === "playing", wants = playback.wantsPlayback, isDj = playback.phase === "dj";
@@ -54,26 +55,25 @@ export function Player(props: Props) {
       <RadioSignal active={active} analysis={props.analysis} />
     </section>
     <div className="host-preview" data-speaking={isDj && active}>
-      {isDj && <button className="text-button skip-hosting" disabled={busy} onClick={props.skipHosting}>直接听歌<SkipForward size={14} /></button>}
-      <ListeningText trackId={now?.track?.id} speech={speech} language={now?.dj?.language || props.settings?.hostLanguage || "zh"} playback={playback} quiet={quiet} covered={sheet !== null} hosting={() => setSheet("hosting")} result={lyricsResult} lyrics={() => setSheet("lyrics")} />
+      <div className="listening-copy" key={`${now?.track?.id}-${playback.phase}`}><ListeningText trackId={now?.track?.id} speech={speech} language={now?.dj?.language || props.settings?.hostLanguage || "zh"} playback={playback} quiet={quiet} covered={sheet !== null} hosting={() => setSheet("hosting")} result={lyricsResult} lyrics={() => setSheet("lyrics")} /></div>
     </div>
     <div className="player-paper">
       <div className="current-track" key={now?.track?.id || "track"}><h1 className="programme-title">{now?.track?.title || (props.loading ? "正在读取电台" : "此刻，听你喜欢。")}</h1><p>{now?.track?.artist || "选一个歌单，或和 Emily 聊聊想听什么。"}</p></div>
       {!now?.track && <button className="text-button empty-programme-action" onClick={props.library}>选择节目<ListMusic size={15} /></button>}
-      <div className="player-transport"><SeekControl key={`${now?.track?.id}-${playback.phase}`} time={playback.time} duration={playback.duration} disabled={busy} label={isDj ? '主持串场进度' : '歌曲播放进度'} seek={props.seek}/>{controls()}</div>
+      <div className="player-transport"><SeekControl key={`${now?.track?.id}-${playback.phase}`} time={playback.time} duration={playback.duration} disabled={busy} label={isDj ? '主持串场进度' : '歌曲播放进度'} seek={props.seek} action={isDj ? <button className="skip-hosting" disabled={busy} onClick={event => { event.currentTarget.closest(".player-transport")?.querySelector<HTMLButtonElement>(".main-play")?.focus({preventScroll:true}); props.skipHosting(); }}><Music2 size={14}/>直接听歌</button> : playback.sleep ? <button className="timer-shortcut" onClick={() => setSheet("options")} aria-label="查看定时结束">{playback.sleep.mode === "track" ? "本首播完停止" : `${new Date(playback.sleep.deadline).toLocaleTimeString("zh-CN", {hour:"2-digit",minute:"2-digit"})} 停止`}</button> : null}/>{controls()}</div>
       {(playback.message || playback.warning) && <div className={`playback-message ${playback.status === "error" || playback.status === "blocked" ? "needs-action" : ""}`} role={playback.status === "error" ? "alert" : "status"}><p>{playback.message || playback.warning}</p>{playback.status === "error" && now?.track && <button className="text-button" disabled={busy} onClick={props.retry}><RefreshCw size={15} />重新解析</button>}{playback.status === "blocked" && <button className="text-button" onClick={props.play}><Play size={15} />点此继续</button>}</div>}
       <div className="listening-tools"><button className={`icon-button feedback-button ${props.feedbackKind === "like" ? "selected" : ""}`} disabled={!now?.track || props.feedbackBusy || props.feedbackKind === "like"} aria-label={props.feedbackKind === "like" ? "已喜欢这首歌" : "喜欢这首歌"} aria-pressed={props.feedbackKind === "like"} onClick={() => props.feedback("like")}><Heart size={21} fill={props.feedbackKind === "like" ? "currentColor" : "none"} /></button><button className="text-button" aria-label="聊聊想听什么" onClick={props.conversation}><MessageCircle size={20} />聊聊</button><button className="text-button queue-entry" aria-label={`查看队列，接下来 ${upcoming.length} 首`} onClick={() => setSheet("queue")}><ListMusic size={21} /><span>队列{now?.roaming?.enabled && <i className="roaming-dot" aria-label="漫游已开启" />}</span></button></div>
       {!sheet && props.undoNotice}
       {now?.roaming && (now.roaming.preparing || (!now.roaming.enabled && now.roaming.message)) && <p className="roaming-status" role="status">{now.roaming.preparing ? "正在准备下一批" : now.roaming.message}</p>}
     </div>
-    {sheet && <RadioSheet initialCurrent={sheet === 'queue'} title={sheet === 'queue' ? `接下来 · ${upcoming.length} 首待播` : sheetTitles[sheet]} close={() => setSheet(null)} transport={<><SheetSignal /><div className="sheet-track"><b>{now?.track?.title || "还没有节目"}</b><small>{now?.track?.artist}</small></div>{controls()}</>}>
+    {sheet && <RadioSheet initialCurrent={sheet === 'queue'} title={sheet === 'queue' ? `接下来 · ${upcoming.length} 首待播` : sheetTitles[sheet]} close={() => setSheet(null)} transport={<><SheetSignal /><div className="sheet-track"><b>{now?.track?.title || "还没有节目"}</b><small>{now?.track?.artist}</small></div>{controls()}</>}>{dismiss => <>
       {!props.online && <p className="sheet-warning" role="status">当前网络已断开。已缓冲内容可能继续，重新连接后请手动播放或重试。</p>}
       {props.undoNotice}
       {(playback.message || playback.warning) && <p className={playback.status === 'error' || playback.warning ? 'sheet-warning' : 'sheet-status'} role={playback.status === "error" ? "alert" : "status"}>{playback.message || playback.warning}{playback.status === "error" && <button className="text-button" onClick={props.retry}>重新解析</button>}</p>}
       {sheet === "hosting" && <div className="transcript-card"><p className="transcript-full" lang={now?.dj?.language || props.settings?.hostLanguage || "zh"}>{speech || "当前没有主持文案。"}</p>{now?.dj && now.dj.status !== "tts_ready" && <p className="transcript-note">{now.dj.status === "tts_pending" ? "主持音频尚在准备，本次播放不等待。" : hostingFailureMessage(now.dj, true)}</p>}</div>}
       {sheet === "lyrics" && <LyricsReading key={now?.track?.id} result={lyricsResult} playback={playback} />}
-      {sheet === "queue" && <><p className="muted tiny">调整待播不会打断当前歌曲；移出不代表不喜欢。</p>{queueMessage && <p role="status" className="inline-good">{queueMessage}</p>}<div className="queue-track-list">{queue.length ? queue.map((item, index) => <div className="queue-item" key={item.id}><div className="queue-item-main"><button className={`queue-row ${index === currentIndex ? "current" : ""}`} aria-current={index === currentIndex ? "true" : undefined} disabled={busy || item.status === "failed"} onClick={() => { if(index !== currentIndex) props.selectTrack(item.track.id); setSheet(null); }}><span className="queue-index">{String(index + 1).padStart(2, "0")}</span><Cover title={item.track.title} url={item.track.coverUrl} /><span><b>{item.track.title}</b><small>{item.track.artist}</small></span><small>{item.status === "failed" ? "不可用" : index === currentIndex ? "当前" : index < currentIndex ? "已播" : "待播"}</small></button>{index > currentIndex && <button className="icon-button queue-more" aria-label={`调整待播：${item.track.title}`} aria-expanded={queueMenu === item.id} disabled={busy || props.queueEditing} onClick={() => setQueueMenu(queueMenu === item.id ? null : item.id)}>···</button>}</div>{queueMenu === item.id && index > currentIndex && <div className="queue-actions"><button className="text-button" disabled={busy || props.queueEditing || index === currentIndex + 1} onClick={() => void props.editQueue(item.id, 'next').then(ok => { if(ok) { setQueueMenu(null); setQueueMessage('已移到下一首，当前播放不变。'); } })}>下一首播放</button><button className="text-button" disabled={busy || props.queueEditing} onClick={() => void props.editQueue(item.id, 'remove').then(ok => { if(ok) { setQueueMenu(null); setQueueMessage('已移出待播，没有写入不喜欢反馈。'); } })}>移出待播</button></div>}</div>) : <p className="muted tiny">还没有队列。先选歌单，或者搜索一首想听的歌。</p>}</div></>}
-      {sheet === "options" && <div className="listening-option-content"><div className="sleep-control"><label htmlFor="sleep-timer">定时结束</label><select id="sleep-timer" value={playback.sleep?.mode === 'track' ? 'track' : playback.sleep ? 'active' : 'off'} onChange={e => { const value = e.target.value; props.sleep(value === 'off' ? null : value === 'track' ? 'track' : Number(value) as 15 | 30 | 60); }}><option value="off">不设定时</option><option value="track" disabled={!now?.currentItemId}>这首歌播完就停</option>{playback.sleep?.mode === 'time' && <option value="active">将在 {new Date(playback.sleep.deadline).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})} 停止</option>}<option value="15">15 分钟后</option><option value="30">30 分钟后</option><option value="60">60 分钟后</option></select><p className="muted tiny">仅本页生效，刷新或退出后取消；切换歌曲取消“本首播完”。手机冻结页面时，到点停止可能延后，恢复页面会立即核对。</p>{playback.sleep && <button className="text-button" onClick={() => props.sleep(null)}>取消定时</button>}</div><button className={`quiet-button ${quiet ? "selected" : ""}`} aria-pressed={quiet} disabled={!props.settings} onClick={props.quiet}><Moon size={18} />安静模式</button><div className="volume-control">{playback.volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}<input type="range" aria-label="音量" min="0" max="1" step="0.01" value={playback.volume} onChange={(e) => props.volume(Number(e.target.value))} /><output>{Math.round(playback.volume * 100)}%</output></div><button className={`text-button feedback-button ${props.feedbackKind === "less_like_this" ? "selected" : ""}`} disabled={!now?.track || props.feedbackBusy} aria-label="减少类似歌曲（跳过不会自动点踩）" aria-pressed={props.feedbackKind === "less_like_this"} onClick={() => props.feedback("less_like_this")}><ThumbsDown size={16} />少来一点类似音乐</button>{now?.programmeTitle && <p className="programme-info"><b>{now.programmeTitle}</b><span>{sourceLabel}</span></p>}{now?.track && <p className="programme-info">{now.track.title} — {now.track.artist}</p>}{now?.dj?.failure && <p className="programme-warning">{hostingFailureMessage(now.dj, true)}</p>}{now?.warning && <p className="programme-warning">{now.warning}</p>}{now?.roaming && <div className="roaming-control"><button className={`text-button ${now.roaming.enabled ? "roaming-active" : ""}`} aria-pressed={now.roaming.enabled} onClick={props.roaming}>原歌单漫游 · {now.roaming.enabled ? "开启" : "关闭"}</button><span>{now.roaming.message || "每批最多12首，本轮不重复"}</span></div>}</div>}
-    </RadioSheet>}
+      {sheet === "queue" && <QueuePanel queue={queue} currentIndex={currentIndex} programmeId={now?.programmeId} currentItemId={now?.currentItemId} busy={busy} editing={props.queueEditing} select={props.selectTrack} close={dismiss} edit={props.editQueue}/>}
+      {sheet === "options" && <ListeningOptions now={now} playback={playback} quiet={quiet} canSetQuiet={!!props.settings} setQuiet={props.quiet} volume={props.volume} sleep={props.sleep} feedbackKind={props.feedbackKind} feedbackBusy={props.feedbackBusy} less={() => props.feedback("less_like_this")} roaming={props.roaming} sourceLabel={sourceLabel}/>}
+    </>}</RadioSheet>}
   </section>;
 }

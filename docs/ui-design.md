@@ -2,7 +2,19 @@
 
 2026-10-01 / Pi. David rejected the inconsistency of 4c70e9f. On e4e1b01 he liked the audio bars and improved atmosphere, but requested better lower-region integration. This is partial positive feedback, not whole-product approval.
 
-## Current refinement — restrained rhythm (2026-10-02)
+## Current refinement — quiet interaction polish (2026-10-04)
+
+David confirms directly skipping hosting works, but calls its UI uncomfortable and asks for the whole UI/interaction/motion to be polished. Preserve the accepted full-screen radio and paper reading pages, not a visual reset. Signature remains Emily's dot wordmark and measured sound. Palette stays night#090c13/stage#121417/sheet#19211f/paper#f5f7f5/mint#85ddbc with existing UI/meta type roles; no new font/image/decorative material.
+
+- Voice→music handoff is a secondary music-note action in the stable elapsed/action/duration strip.44px target, faint pill surface, no overlay on sound bars, no next-track icon or transport displacement. Text/lyric slot has a shared footprint and phase-only fade; actual words/times unchanged.
+- Motion vocabulary:140ms press/color,280ms ease-out entry,180ms exit. Native sheets remain opaque; backdrop fades and sheet translates32px/40px, not spring bounce. Native top layer, focus/scroll lock remain until exit completes; instant reduce/hidden and240ms fallback prevent trapped dialogs. No extra motion engine, gesture-only affordance or RAF.
+- Queue is a calm list with one current surface and only next/current context; overflow reveals two44px actions in-place, invisible actions inert. Precise result message and focus restore, no animated row reordering that might move a tap target.
+- Listening options separate timer, listening preferences and programme. Direct duration choices, actual deadline, explicit cancel; explanatory caveats remain in labelled disclosure. Voice/quiet/time boundaries unchanged.
+- History uses two compact segmented choices, refresh icon, content fade, light empty-state hint. Record/privacy disclosure is readable on demand, not a wall of implementation copy above songs. Chat loses redundant identity header to give conversation/composer more room; common button/nav/confirmation/undo states share the same motion tokens.
+
+Verify whole-screen short-viewports, repeated keyboard/escape/backdrop, close during motion/reduce, source/time identity, and no audible change from presentation. Technical regressions and Pi visual review are separate from David acceptance.
+
+## Previous refinement — restrained rhythm (2026-10-02)
 
 David approved proceeding after finding the current finish insufficiently refined. Preserve the comfortable full-screen structure, dot identity, stable text/transport. Actual nonoverlapping frequency groups≤24 replace short-window RMS fence; fft2048 improves bass-bin resolution without changing the single audio graph. Bars attack85ms/release330ms, low-height/low-contrast strokes with edge fade. Low-frequency energy rise relative to its recent650ms floor drives a capped accent, not periodic/BPM animation. The rim moves≤3.6%, not the button. Slow900/1600ms body light follows musical energy, no fixed room/stage drift; voice accents weaker and host-dot prominent only in speech. Dialog-open suppresses background response, opaque sheet translates without opacity crossfade and uses a dark blurred backdrop. Text weight/green light reduced, no new decorative objects. Pause/silence/hidden/offscreen/reduced-motion flatten motion; track/DJ source changes clear history. Historical drift/RMS descriptions below document earlier releases, not current runtime.
 

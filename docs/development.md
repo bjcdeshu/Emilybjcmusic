@@ -1,6 +1,10 @@
 # Emily Development Guide
 
-## 当前阶段：六项日常体验优化已发布9f9a57c（功能0170579，2026-10-04，Pi）
+## 当前阶段：整站交互与动效精修实施中（2026-10-04，Pi）
+
+David在9f9a57c实用后确认「直接听歌」功能没问题，但UI很不舒服，要求进一步打磨整体UI/交互/设计/动效。Pi唯一写入者（任务01a0f204-d57a-75b4-93d4-c35f2fa8aeae）从clean d8e29be接续。计划：跳主持移入稳定的进度/transport语义区；native sheet完整进出与焦点生命周期；待播菜单/定时/回看信息层级；统一按钮、导航、内容轻过渡。保留已认可的整屏夜色/点阵身份/native sheet与纸色阅读页、Sulafat/完整v6、单audio与六项功能语义。只改前端呈现，不新增供应商请求、付费服务、人格记忆或服务端功能。实现已完成：44px跳主持迁入进度行，固定文本槽与phase轻淡过渡，音频/transport不重挂；useModalDialog统一280ms进入/180ms退出，保留native modal/焦点/scroll lock至动画结束，240ms安全兜底，reduce/hidden即时清理；queue渐展/inert/焦点恢复和过期scope guard，ListeningOptions分组直接定时，回看分段控件/说明折叠，chat与共享点击/导航/反馈节奏统一。Windows typecheck/build/web41/完整browser8通过0skip，未改后端不额外全跑server/deployment；首次browser两项因旧测试在退出动画结束前找到双暂停按钮，改等实际detached并保留原断言后完整通过。新增fixture检查四视口44px跳过/transport不跳/skip后焦点/队列remove后焦点/退出期间仍modal/reduce清理/聊天draft和焦点。证据polish-*.log/design-polish；未调用真实TTS或writer。RN已只读确认仍9f9a57c、两unitsactive/adapter1964070，待候选构建/窄发布/无生成线上呈现检查；技术通过不代替David审美认可。
+
+## 上轮：六项日常体验优化已发布9f9a57c（功能0170579，2026-10-04，Pi）
 
 David本人新反馈『我刚试了试没问题了，整体Emily很舒服了』，并明确批准六项增量优化：暂停态续听位置/已听串场不重复；本次直接听歌；队列下一首/移出/撤销加入；本首结束及15/30/60分钟定时停止；Emily内喜欢/最近实际播放回看；清晰且真实的等待/错误/冷却提示。保持Sulafat、完整串场v6、整屏/native sheet/单audio、原歌单漫游与本人权益，不重做视觉/引擎或加付费服务。新反馈取代旧的用户未认可状态，但不是Pi补跑技术验收。
 

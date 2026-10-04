@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, CheckCircle2, LoaderCircle, QrCode, RefreshCw, X }
 import type { MusicQrPollResponse, MusicQrSession, SetupStatus } from "@emily/shared";
 import { api, errorMessage, post, safeUrl } from "./api";
 import { HostWordmark } from "./HostWordmark";
+import { useModalDialog } from "./useModalDialog";
 
 export function StationIdentity({ label = "Personal radio" }: { label?: string }) {
   return <div className="station-identity"><span className="sr-only">Emily</span><HostWordmark /><span className="station-label">{label}</span></div>;
@@ -28,14 +29,9 @@ export function Cover({ url, title, className = "" }: { url?: string | undefined
 }
 
 export function Modal({ title, children, close }: { title: string; children: ReactNode; close: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    dialog?.showModal();
-    return () => dialog?.close();
-  }, []);
-  return <dialog className="modal" ref={ref} aria-labelledby="modal-title" onCancel={(e) => { e.preventDefault(); close(); }} onClick={(e) => { if (e.target === ref.current) close(); }}>
-    <div className="modal-inner"><header className="section-heading"><div><StationIdentity label="音乐账号" /><h2 id="modal-title">{title}</h2></div><button className="icon-button" aria-label="关闭" onClick={close}><X size={22} /></button></header>{children}</div>
+  const { ref, dismiss } = useModalDialog(close);
+  return <dialog className="modal" ref={ref} aria-labelledby="modal-title" onCancel={(e) => { e.preventDefault(); dismiss(); }} onClick={(e) => { if (e.target === e.currentTarget) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) dismiss(); } }}>
+    <div className="modal-inner"><header className="section-heading"><div><StationIdentity label="音乐账号" /><h2 id="modal-title">{title}</h2></div><button className="icon-button" aria-label="关闭" onClick={dismiss}><X size={22} /></button></header>{children}</div>
   </dialog>;
 }
 
@@ -44,7 +40,7 @@ export function SetupIndicators({ setup, openQr, showSettings }: { setup: SetupS
   return <div className="provider-strip" aria-label="服务状态">
     <button onClick={setup?.music.connected ? showSettings : openQr} disabled={!setup?.music.configured}><span className={`status-dot ${setup?.music.connected ? "good" : ""}`} /><span><b>网易云</b><small>{music}</small></span></button>
     <button onClick={showSettings}><span className={`status-dot ${setup?.model.configured ? "good" : ""}`} /><span><b>节目编排</b><small>{setup ? setup.model.configured ? "模型已配置" : "歌单模式" : "等待连接"}</small></span></button>
-    <button onClick={showSettings}><span className={`status-dot ${setup?.tts.available ? "good" : ""}`} /><span><b>Emily · 主持</b><small>{setup ? setup.tts.available ? "语音可用" : "语音未就绪" : "等待连接"}</small></span></button>
+    <button onClick={showSettings}><span className={`status-dot ${setup?.tts.available ? "good" : ""}`} /><span><b>Emily · 主持</b><small>{setup ? setup.tts.available ? "语音已配置" : "语音未就绪" : "等待连接"}</small></span></button>
   </div>;
 }
 
