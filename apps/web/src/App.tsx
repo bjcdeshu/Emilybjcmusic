@@ -58,7 +58,15 @@ export function App() {
       if (!sessionRef.current?.authenticated || (!force && Date.now() - checkpointAt.current < 10_000)) return;
       checkpointAt.current = Date.now();
       const revision = epoch.current;
-      void api('/api/listening/checkpoint', { method: 'POST', body: JSON.stringify(value), keepalive: true }).then(() => { if (revision === epoch.current) checkpointError.current = false; }).catch(e => {
+      void api<{ clearedRestartNotice: boolean; warning?: string }>('/api/listening/checkpoint', { method: 'POST', body: JSON.stringify(value), keepalive: true }).then(result => {
+        if (revision !== epoch.current) return;
+        checkpointError.current = false;
+        if (result.clearedRestartNotice) setNow(current => {
+          if (current?.currentItemId !== value.itemId || current.programmeId !== value.programmeId) return current;
+          const { warning, ...rest } = current;
+          return result.warning ? { ...rest, warning: result.warning } : rest;
+        });
+      }).catch(e => {
         if (revision === epoch.current && !checkpointError.current && e?.status !== 409) { checkpointError.current = true; setNotice({ kind: 'info', text: '本次续听位置暂未保存，当前播放不受影响。' }); }
       });
     },

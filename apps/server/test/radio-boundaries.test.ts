@@ -88,9 +88,9 @@ test("restart hint expires only after successful access resolution; other progra
     assert.equal(app.services.radio.now().warning,programmeWarning,"normal playback must not erase unrelated warnings");
     await app.close();
     app=fixtureApp(directory,env,{tts:new FixtureTts(directory,true)});
-    assert.match(app.services.radio.now().warning || "",/restart/);
+    assert.match(app.services.radio.now().warning || "",/重启/);
     await app.services.radio.pause();
-    assert.match(app.services.radio.now().warning || "",/restart/);
+    assert.match(app.services.radio.now().warning || "",/重启/);
     await app.services.radio.play();
     assert.equal(app.services.radio.now().warning,undefined,"successfully resolving access removes obsolete restart hint");
   } finally { await app.close(); await provider.close(); await rm(directory,{recursive:true,force:true}); }

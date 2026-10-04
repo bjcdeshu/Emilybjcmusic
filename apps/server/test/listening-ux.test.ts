@@ -26,6 +26,9 @@ test('listening checkpoint is scoped, bounded, paused after restart, and recent 
     const calls=provider.requests.length;
     const resumed=await app.inject({method:'POST',url:'/api/player/resume',headers:headers(cookie),payload:scope}); assert.equal(resumed.statusCode,200);assert.equal(provider.requests.length,calls,'resume intent never regenerates TTS or resolves songs');
     await app.close();app=fixtureApp(dir,env,{tts:new FixtureTts(dir,true)});assert.equal(app.services.radio.now().status,'paused');assert.equal(app.services.radio.now().resume?.positionMs,32100);
+    assert.match(app.services.radio.now().warning || '',/重启/);
+    app.services.radio.resume(scope.programmeId,scope.itemId);assert.match(app.services.radio.now().warning || '',/重启/,'intent alone does not claim playable media');
+    assert.equal(app.services.radio.checkpoint({...base,phase:'song',sampledAt:Date.now(),heard:true}),true);assert.doesNotMatch(app.services.radio.now().warning || '',/重启/);assert.match(app.services.radio.now().warning || '',/简短报幕/,'unrelated fixture fallback stays visible');
     await app.services.radio.move(1);assert.equal(app.services.radio.now().resume,undefined);
     assert.throws(()=>app.services.radio.checkpoint({...base,phase:'song'}),/播放位置/);
     assert.throws(()=>app.services.radio.resume(scope.programmeId,scope.itemId),/节目已改变/);

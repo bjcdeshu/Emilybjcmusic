@@ -66,7 +66,7 @@ export class Radio {
     if (this.state.items.length) {
       this.state.status = "paused";
       this.restartNotice = true;
-      this.state.warning = "Playback is paused after a restart. Press play to recheck account access and the track URL.";
+      this.state.warning = "服务重启后已暂停，点播放继续；歌曲仍按本人权限获取。";
     } else this.state.status = "idle";
     delete this.state.startedAt;
     if (repaired) this.persist();
@@ -114,20 +114,25 @@ export class Radio {
     };
   }
   /** Browser reports real media position; never infer playback from elapsed server time. */
-  checkpoint(input: ListeningCheckpoint & { heard?: boolean }): void {
+  checkpoint(input: ListeningCheckpoint & { heard?: boolean }): boolean {
     const current = this.state.items[this.state.index];
     if (!current || input.programmeId !== this.state.programmeId || input.itemId !== current.id || (input.phase === "dj" && (!current.dj || !input.djId || input.djId !== current.dj.id))) throw new AppError(409, "LISTENING_CHANGED", "播放位置已改变，没有覆盖新的续听位置。");
     const previous = this.store.get<ListeningCheckpoint>("listening_checkpoint");
-    if (input.sampledAt > this.clock() + 60_000 || (previous?.programmeId === input.programmeId && previous.itemId === input.itemId && previous.sampledAt > input.sampledAt)) return;
+    if (input.sampledAt > this.clock() + 60_000 || (previous?.programmeId === input.programmeId && previous.itemId === input.itemId && previous.sampledAt > input.sampledAt)) return false;
+    let clearedRestartNotice = false;
     const { heard, ...checkpoint } = input;
     this.store.set("listening_checkpoint", checkpoint);
     if (heard && input.phase === "song") {
+      // A real song playing report also proves the browser reached playable media.
+      // Intent-only resume/position restoration must not clear the restart notice.
+      if (this.restartNotice) { delete this.state.warning; this.restartNotice = false; clearedRestartNotice = true; this.persist(); }
       const key = `${input.programmeId}:${input.itemId}`;
       if (this.store.get<string>("listening_last_heard") !== key) {
         this.store.recordListening(current.track, this.clock());
         this.store.set("listening_last_heard", key);
       }
     }
+    return clearedRestartNotice;
   }
   resume(programmeId: string, itemId: string): PlayerActionResponse {
     if (this.busy || this.closed || programmeId !== this.state.programmeId || itemId !== this.state.items[this.state.index]?.id) throw new AppError(409, "LISTENING_CHANGED", "节目已改变，请重新读取当前电台。");
