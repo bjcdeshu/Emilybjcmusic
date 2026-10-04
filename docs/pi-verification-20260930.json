@@ -1,5 +1,18 @@
 {
   "date": "2026-09-30",
+  "dailyListeningControls": {
+    "date":"2026-10-04","feature":"0170579","release":"9f9a57c","deployed":true,
+    "userApprovedSixIncrementalChanges":true,"priorOverallComfortFeedbackPositive":true,"newControlsSubjectivelyAccepted":false,
+    "localFeature":{"typecheck":true,"testTypecheck":true,"build":true,"server":77,"web":41,"browser":8,"built":true,"skipped":0},
+    "localNoticeFix":{"typecheck":true,"testTypecheck":true,"build":true,"server":77,"web":41,"focusedDailyBrowser":1,"built":true,"skipped":0},
+    "rnBothCandidates":{"build":true,"testTypecheck":true,"server":77,"web":41,"built":true,"skipped":0},
+    "deployment":{"backups":["pre-0170579","pre-9f9a57c"],"sqliteEnvConsistent":true,"preflight":true,"health":200,"onlyEmilyRestart":true,"adapterPidUnchanged":1964070,"emilyNRestarts":0,"envUnchanged":true,"schemaMigration":false,"dependencyChanges":false},
+    "features":["server checkpoint exact programme/item/phase, restore paused, song skips heard DJ","one-off skip hosting with pause and settings preserved","future queue next/remove/exact undo, metadata only, no dislike","page-local real-song-ended and15/30/60min wall-clock timer","owner liked/recent100 metadata, actual song-start reports only","safe failure categories, known cooldown timestamp and persistent restriction, no retries"],
+    "live":{"queueBefore":13,"queueAfter":13,"hostChars":101,"hostLettersNumbers":91,"hostDurationSeconds":24.4,"naturalHostEndedToOriginalSong":true,"privateRange206":true,"pausedReloadPositionSeconds":12,"noHostReplay":true,"realSongEndedStopsWithoutNext":true,"timeModeUiSetCancel":true,"recentActualSong":true,"likedCollectionRead":true,"queueNextWasNoop":true,"newProgramme":false,"addedOrRemovedSongs":false,"likesWritten":false,"settingsWritten":false,"originalProgrammeQueueRoamingSettingsHistoryCredentialPreserved":true,"singleAudio":true,"fourViewportControlsFit":true,"finalPausedLogout":true,"pageErrors":[],"finalNoticeCheckCompleted":true,"newProviderGenerationRequests":0,"currentV6GeminiReady":true,"nextV6GeminiReady":false},
+    "failuresRetained":["first full server run had3 prior HTTP fixture failures; subsequent complete runs77 passed, no removed assertions or larger budget","first browser7/8: new undo squeezed short-screen composer, fixed by moving into chat scroll area","cooldown fixture failed after simulated clock exceeded retryAt, fixed fixture timestamp","live first timer check failed after successful long-host chain, bounded rerun completed after seek-step alignment; first exact cause not captured","notice test initially expected all warnings cleared, corrected to preserve legitimate fallback warning","first final live assertion failed without detailed cause, subsequent read-only state and bounded repeat confirm cleared notice"],
+    "limitations":["no physical Xiaomi/background suspension assurance; wall-clock15/30/60 checked with simulated fixture not real timed wait","pagehide checkpoint best-effort, not crash-proof or concurrent-device ownership locking","destructive queue/remove/like exercised in fixtures, not production data","next segment retains old tts_failed without details, not tested by new generation; no provider quota or long-term availability guarantee","unchanged deployment9 not rerun; actual candidate preflight passed","old Oct3 long-audio failure remains historical; new Oct4 current long audio success is separate evidence"],
+    "assets":["index-DMJ5OOuH.css","index-qpkWMq3q.js"]
+  },
   "paragraphHostingV6": {
     "date":"2026-10-03","release":"13237d1","hostingVersion":6,"deployed":true,"liveAudioAcceptance":false,
     "local":{"typecheck":true,"testTypecheck":true,"build":true,"server":74,"browser":7,"built":true,"skipped":0},

@@ -1,8 +1,20 @@
 # Emily 上线准备
 
-本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新13237d1完整串场v6已发布，保留正式Gemini Flash-Lite/Sulafat；当前Google429后的应用冷却阻止新语音，本轮长稿→原歌尚未通过；旧9e345f3/v5短稿链路成功仅为历史证据；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
+本页包含部署方案、实际运行导航和验收清单；2026-09-30已部署独立HTTPS，本人授权、2首真实歌曲数据及浏览器连播已通过；David已取消物理小米/锁屏专项验收门槛；最新9f9a57c（功能0170579）六项日常控制已发布，保留完整串场v6/正式Gemini Flash-Lite/Sulafat；10月4日当前101字/24.4秒长稿→原歌与暂停续听已通过，下一段旧tts_failed未重生成，不代表长期供应商可用；旧9e345f3/v5短稿链路成功仅为历史证据；此前2e993d4 TTS口语稿/一致试听/本地解码检查已发布，保留536815c安全点歌/阅读连续性/拖动预览已发布，保留a11d094主持字标/面板真实三频提示，保留69e7c08克制律动/不透明面板，保留7d2c642主持表达/日文名字安全承接，保留已肯定的整屏布局，设计实际反馈优先。当前状态以 [development.md](development.md) 为准。
 
-## 最新窄发布：13237d1（2026-10-03，完整串场v6；长稿语音待恢复验证）
+## 最新窄发布：9f9a57c（功能0170579，2026-10-04）
+
+David批准六项增量体验，Pi唯一写入。从clean ea8db54实现，保持voice/hosting/OAPI/queue。owner checkpoint/collection/queue-edit/resume复用kv和既有catalogue，无schema迁移/新依赖。Gemini冷却现在保存于私有kv，更新不改额度或绕过供应商限制；短阶段提示和options详情，不承诺到点供应商恢复。页面用户定时不创建服务器timer。
+
+Windows0170579 typecheck/testtypecheck/build/server77/web41/browser8/built，RN build/testtypecheck/server77/web41/built通过0skip。9f9a57c仅真实播放后清旧重启提示及中文说明，另跑Windows类型/构建/77/41/built/daily browser1、RN构建/testtypecheck/77/41/built。没有重跑未改的deployment9；发布preflight已实际通过。
+
+生产两次配对备份pre-0170579、pre-9f9a57c，目录700/文件600、停Emily一致SQLite+env/cmp；env不改、只Emily重启，adapter PID1964070保留，health200/两unitsactive/NRestarts0。current=/opt/emily/releases/9f9a57c，assets index-DMJ5OOuH.css/index-qpkWMq3q.js。代码回滚0170579或13237d1保留现有DB/env，不能盲还旧SQLite覆盖用户数据，不为冷却而回滚/重启。
+
+真实Chrome：当前101字/91文字数字v6 Gemini24.4秒自然ended→同一原歌、Range206/private-no-store；歌曲12秒暂停后刷新恢复不重念主持；本首真实ended停止且未推进；30分钟UI设置/取消、collection最近实际播放与喜欢入口、四视口/单audio。第一轮timer检查脚本失败后有界复验通过，最后notice窄验也记录首次断言失败及复验通过，不隐去失败。最终paused/logout；13首/programme/漫游/settings/history/授权与配对备份一致，只有新增续听/最近播放元数据。未生产加歌/删歌/like/新programme/更换声线，queue仅原下一项next幂等no-op。Google固定窗口计数保持1，0新增生成；下一段旧tts_failed未变，不能声称均ready。
+
+私有证据Emily-private/daily-review-20261004（仅David/SYSTEM/Administrators ACL）；普通测试six-*.log及design-daily。运维changes/2026-10-04-emily-daily-controls.md。线上有界结果不证明所有设备/音源/长期稳定，时限定时受后台冻结影响，异常退出位置保存best-effort。
+
+## 历史窄发布：13237d1（2026-10-03，完整串场v6；当时长稿语音待恢复验证）
 
 David实际纠正v5串场太短；Pi保留Sulafat及TTS/OAPI/UI/曲目，恢复每段完整展开，目标约90–160字/3–5句、硬280。正常稿与最多一次编辑稿共同检查≥60文字/数字、剔除metadata后≥40；长度是回归防线，不是自然度分数。编辑仍共享原HOST_ONE≤20s/batch deadline，失败才短报幕+warning，不重排曲目。Windows typecheck/testtypecheck/build/server74/browser7/built、RN build/testtypecheck/server74/built通过0skip；未重跑未改的web38/deployment9。最终一轮真实writer虚构情境9段91–123字，仍有假设句式同质化等质量边界，不是用户听感认可。
 

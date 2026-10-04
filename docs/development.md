@@ -1,16 +1,20 @@
 # Emily Development Guide
 
-## 当前阶段：六项日常体验优化实施中（2026-10-04，Pi）
+## 当前阶段：六项日常体验优化已发布9f9a57c（功能0170579，2026-10-04，Pi）
 
 David本人新反馈『我刚试了试没问题了，整体Emily很舒服了』，并明确批准六项增量优化：暂停态续听位置/已听串场不重复；本次直接听歌；队列下一首/移出/撤销加入；本首结束及15/30/60分钟定时停止；Emily内喜欢/最近实际播放回看；清晰且真实的等待/错误/冷却提示。保持Sulafat、完整串场v6、整屏/native sheet/单audio、原歌单漫游与本人权益，不重做视觉/引擎或加付费服务。新反馈取代旧的用户未认可状态，但不是Pi补跑技术验收。
 
-Pi（任务01a0f204-d57a-75b4-93d4-c35f2fa8aeae）仍唯一写入者，从clean ea8db54、pi/emily-continue-20260930接续。六项0170579已发布，Windows typecheck/testtypecheck/build/server77/web41/browser8/built、RN build/testtypecheck/server77/web41/built全部通过0skip。线上13首、settings/history/授权/programme/完整queue/漫游/index保持；当前真实长稿101字/91文字数字、Gemini24.4秒自然ended→原歌、私有Range206/no-store已通过，已补上之前长语音未通过项。刷新歌曲12秒位置暂停续听/不重念串场、本首真实ended停止不换歌、历史喜欢/最近实际播放入口、四视口/单audio检查通过，最终paused/logout。续听与最近播放采用owner服务端有界元数据，浏览器不持久化聊天/歌单/音频；续听仅匹配同programme/queue item、保持暂停。定时停止基于真实ended/墙钟，不假造音乐进度，手机后台限制须明确。新增owner checkpoint/collection/resume/queue-edit接口，复用kv无需schema迁移；实际播放每10秒及边界保存位置，近期100首仅真实song playing报告，不从programme捏造历史。单次跳过保持pause；队列仅未来item精确操作、seen保留、撤销不还原旧快照。定时只本页生效，真实ended/墙钟核对，刷新退出取消、手动切歌取消本首模式。Gemini安全failure枚举与已知retryAt，不猜Google恢复；新冷却持久于私有kv、防重启绕过。准备只重启Emily，保留DB/env及adapter。
+Pi（任务01a0f204-d57a-75b4-93d4-c35f2fa8aeae）仍唯一写入者，从clean ea8db54、pi/emily-continue-20260930接续。六项0170579已发布，Windows typecheck/testtypecheck/build/server77/web41/browser8/built、RN build/testtypecheck/server77/web41/built全部通过0skip。线上13首、settings/history/授权/programme/完整queue/漫游/index保持；当前真实长稿101字/91文字数字、Gemini24.4秒自然ended→原歌、私有Range206/no-store已通过，已补上之前长语音未通过项。刷新歌曲12秒位置暂停续听/不重念串场、本首真实ended停止不换歌、历史喜欢/最近实际播放入口、四视口/单audio检查通过，最终paused/logout。续听与最近播放采用owner服务端有界元数据，浏览器不持久化聊天/歌单/音频；续听仅匹配同programme/queue item、保持暂停。定时停止基于真实ended/墙钟，不假造音乐进度，手机后台限制须明确。新增owner checkpoint/collection/resume/queue-edit接口，复用kv无需schema迁移；实际播放每10秒及边界保存位置，近期100首仅真实song playing报告，不从programme捏造历史。单次跳过保持pause；队列仅未来item精确操作、seen保留、撤销不还原旧快照。定时只本页生效，真实ended/墙钟核对，刷新退出取消、手动切歌取消本首模式。Gemini安全failure枚举与已知retryAt，不猜Google恢复；新冷却持久于私有kv、防重启绕过。两次窄发布都只重启Emily，保留DB/env及adapter。
 
 回归过程保留事实：首次新增完整server运行3项既有HTTP fixture发生PROVIDER_UNAVAILABLE，未删断言/扩等待，后续两次完整77全部通过；新增web41通过。浏览器首轮7/8因撤销提示挤压小屏聊天输入，移入聊天滚动区修复并保留旧视口断言。补冷却UI fixture最初受模拟墙钟快进影响，retryAt早于测试浏览器时间，修正fixture时间而非放松冷却判定；最终完整browser8/8。证据../.tmp/emily-deployment-review/six-*，浏览器design-daily；不代表物理小米后台或15/30/60分钟真实等待验收。无真实writer/TTS调用用于开发。
 
 0170579发布：pre-0170579一致SQLite+env/cmp，env未改，只有Emily重启、adapter PID1964070保持、health200/NRestarts0。线上第一轮真实host成功，但定时检查脚本中止，未冒称完整通过；后将seek数值显式对齐0.1秒步长，有界续查完成timer/collection/四视口，未重播主持（正确歌曲phase续听）。前次失败没有记录详细错误，故不声称确证根因。在线队列仅下一项next幂等no-op，未加歌/删歌/喜欢/新programme/改偏好；破坏性队列路径以fixture验证。私有证据Emily-private/daily-review-20261004，ACL仅David/SYSTEM/Administrators。
 
-随后修线上观察到的旧重启提示：resume意图不虚称音源已验证，真实song playing checkpoint才清除重启提示并返回剩余warning，UI同步，不删其他报幕/服务警告；提示改中文。新增边界保留其他warning检查。此窄修Windows类型/构建/server77/web41/built、daily browser1通过（没有冒称重新跑browser8）；待最终发布。
+随后修线上观察到的旧重启提示：resume意图不虚称音源已验证，真实song playing checkpoint才清除重启提示并返回剩余warning，UI同步，不删其他报幕/服务警告；提示改中文。新增边界保留其他warning检查。此窄修9f9a57c的Windows typecheck/testtypecheck/build/server77/web41/built、daily browser1，以及RN build/testtypecheck/server77/web41/built通过0skip（没有冒称重新跑browser8）；保留所有旧断言。增加fixture先错误要求所有warning消失，实际有效短报幕warning被保留；修正为只移除重启提示并保留其余warning。pre-9f9a57c一致SQLite+env备份/cmp、原子切current9f9a57c、preflight/health200/两unitsactive/NRestarts0，adapter PID1964070未动，env/schema/依赖/Node/DNS/proxy不改。最终assets index-DMJ5OOuH.css/index-qpkWMq3q.js。
+
+最终实播续听窄验：首次检测出现AssertionError（初版未采集详细断言，不能断定根因），随后只读确认服务端已清重启提示；补安全诊断的一次复验completed=true，12秒歌曲暂停恢复、实际播放后UI无旧重启提示，13首/原programme/settings/history保持、singleaudio/pageErrors[]、最终paused/logout。未重复长稿TTS或全业务回归。发布前后Google本地固定窗口计数均1，0新增供应商生成请求；当前v6/Gemini ready，但下一段仍为此前tts_failed且无旧失败细节，不能声称当前+下一段均ready或长期供应商稳定。当前长段技术链路通过；David10月4日对原整体舒适度肯定，不等于本轮新六项已获主观验收。
+
+本轮完成，未建立后台恢复轮询/定时生成或收费回退。页面定时是用户主动控制，不是服务器常驻任务；后台冻结可能延迟，15/30/60精确到时仅fixture墙钟覆盖。破坏性queue移出/真实like写入未在生产试验，自动fixture通过。异常退出保存best-effort，跨设备并发不承诺接力锁。代码回滚优先0170579（仅撤notice修正）或13237d1（撤六项），保留当前DB/env，不盲还SQLite，不为冷却而重启。运维changes/2026-10-04-emily-daily-controls.md；证据six-*.log/私有daily-review-20261004。
 
 ## 上轮：完整串场v6已发布13237d1；当时Gemini冷却，新长稿语音未验收（2026-10-03历史观察）
 
